@@ -74,6 +74,10 @@ docs/             Architecture & domain rules
 _bmad-output/     Planning artifacts
 ```
 
+## Deploy to production (Render)
+
+See **[DEPLOY.md](DEPLOY.md)** for step-by-step Render + Railway MySQL setup.
+
 ## Documentation
 
 - [Domain rules](docs/architecture/domain-rules.md) — canonical business logic

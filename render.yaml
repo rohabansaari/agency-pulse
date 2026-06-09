@@ -1,0 +1,77 @@
+# AgencyPulse — Render Blueprint
+# Deploy: Render Dashboard → New → Blueprint → connect Rohabansari/agency-pulse
+#
+# BEFORE deploying: create MySQL on Railway (see DEPLOY.md), then add DB_* env vars
+# on the agencypulse-api service in Render after the first blueprint sync.
+
+previews:
+  generation: automatic
+
+services:
+  - type: web
+    name: agencypulse-api
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./docker/render/Dockerfile.api
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_NAME
+        value: AgencyPulse
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: info
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        fromService:
+          type: web
+          name: agencypulse-api
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: agencypulse-web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: CACHE_STORE
+        value: database
+      - key: SESSION_DRIVER
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: BROADCAST_CONNECTION
+        value: log
+      - key: FILESYSTEM_DISK
+        value: local
+
+  - type: web
+    name: agencypulse-web
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./docker/render/Dockerfile.frontend
+    dockerContext: .
+    envVars:
+      - key: RENDER_EXTERNAL_URL
+        fromService:
+          type: web
+          name: agencypulse-api
+          envVarKey: RENDER_EXTERNAL_URL
