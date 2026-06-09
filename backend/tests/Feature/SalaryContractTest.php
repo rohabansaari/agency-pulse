@@ -39,7 +39,7 @@ class SalaryContractTest extends TestCase
         ], $overrides);
     }
 
-    public function test_admin_must_assign_salary_when_creating_employee(): void
+    public function test_admin_can_create_employee_without_salary_contract(): void
     {
         $admin = User::factory()->admin()->create();
         Sanctum::actingAs($admin);
@@ -49,9 +49,16 @@ class SalaryContractTest extends TestCase
                 'name' => 'No Salary',
                 'email' => 'nosalary@example.com',
                 'password' => 'password123',
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
             ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['salary_type']);
+            ->assertCreated();
+
+        $employee = User::query()->where('email', 'nosalary@example.com')->first();
+        $this->assertNotNull($employee);
+        $this->assertDatabaseMissing('employee_salary_contracts', [
+            'user_id' => $employee->id,
+        ]);
     }
 
     public function test_admin_can_create_employee_with_hourly_salary_contract(): void

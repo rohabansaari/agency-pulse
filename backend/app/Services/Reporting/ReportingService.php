@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Services\Payroll\PayrollSettingsService;
 use App\Services\Projects\ProjectAccessService;
 use App\Services\Tenant\TenantContext;
+use App\Support\WorkforceMembers;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -42,13 +43,14 @@ class ReportingService
         $filterStart = $rangeStart ?? $weekStart;
         $filterEnd = $rangeEnd ?? $weekEnd;
 
-        $activeEmployeeIds = $this->activeEmployeeIds($orgId);
+        $activeEmployeeIds = $this->activeWorkforceMemberIds($orgId);
         $employeeCount = $activeEmployeeIds->count();
+        $workforceUserIds = $activeEmployeeIds->all();
 
-        $hoursToday = $this->sumTrackedSeconds($orgId, $todayStart, $todayEnd);
-        $hoursWeek = $this->sumTrackedSeconds($orgId, $weekStart, $weekEnd);
-        $hoursMonth = $this->sumTrackedSeconds($orgId, $monthStart, $monthEnd);
-        $hoursInRange = $this->sumTrackedSeconds($orgId, $filterStart, $filterEnd);
+        $hoursToday = $this->sumTrackedSeconds($orgId, $todayStart, $todayEnd, $workforceUserIds);
+        $hoursWeek = $this->sumTrackedSeconds($orgId, $weekStart, $weekEnd, $workforceUserIds);
+        $hoursMonth = $this->sumTrackedSeconds($orgId, $monthStart, $monthEnd, $workforceUserIds);
+        $hoursInRange = $this->sumTrackedSeconds($orgId, $filterStart, $filterEnd, $workforceUserIds);
 
         $expectedMonth = $this->utilization->expectedSeconds(
             $employeeCount,
@@ -70,6 +72,7 @@ class ReportingService
         $trackingUserIds = TimeEntry::query()
             ->trackedTimers()
             ->where('organization_id', $orgId)
+            ->whereIn('user_id', $workforceUserIds)
             ->where('status', TimeEntryStatus::Running)
             ->pluck('user_id')
             ->unique();
@@ -97,7 +100,7 @@ class ReportingService
             'hours_week_seconds' => $hoursWeek,
             'hours_month_seconds' => $hoursMonth,
             'hours_in_range_seconds' => $hoursInRange,
-            'active_timers' => $this->countRunningTimers($orgId),
+            'active_timers' => $this->countRunningTimers($orgId, $workforceUserIds),
             'active_employees' => $employeeCount,
             'active_projects' => Project::query()
                 ->where('organization_id', $orgId)
@@ -538,7 +541,7 @@ class ReportingService
         Collection $trackingUserIds
     ): array {
         $employees = User::query()
-            ->whereIn('id', $this->activeEmployeeIds($orgId))
+            ->whereIn('id', $this->activeWorkforceMemberIds($orgId))
             ->with('workTeam')
             ->orderBy('name')
             ->get();
@@ -718,14 +721,12 @@ class ReportingService
     }
 
     /**
+     * Active employees and managers (workforce). Admins excluded.
+     *
      * @return Collection<int, int>
      */
-    private function activeEmployeeIds(int $orgId): Collection
+    private function activeWorkforceMemberIds(int $orgId): Collection
     {
-        return OrganizationMember::query()
-            ->where('organization_id', $orgId)
-            ->where('status', OrganizationMemberStatus::Active)
-            ->where('role', UserRole::Employee)
-            ->pluck('user_id');
+        return WorkforceMembers::activeMemberUserIds($orgId);
     }
 }

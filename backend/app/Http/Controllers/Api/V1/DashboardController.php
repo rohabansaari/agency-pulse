@@ -18,6 +18,7 @@ use App\Services\Reporting\ReportingService;
 use App\Services\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use App\Support\ReportDateRange;
 
 class DashboardController extends Controller
@@ -137,16 +138,16 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        $employeeCount = OrganizationMember::query()
+        $workforceMemberCount = OrganizationMember::query()
             ->where('organization_id', $orgId)
             ->where('status', OrganizationMemberStatus::Active)
-            ->where('role', UserRole::Employee)
+            ->whereIn('role', [UserRole::Employee, UserRole::Manager])
             ->count();
 
-        $unassignedEmployees = OrganizationMember::query()
+        $unassignedWorkforce = OrganizationMember::query()
             ->where('organization_id', $orgId)
             ->where('status', OrganizationMemberStatus::Active)
-            ->where('role', UserRole::Employee)
+            ->whereIn('role', [UserRole::Employee, UserRole::Manager])
             ->whereNotIn('user_id', TeamMember::query()->select('user_id'))
             ->count();
 
@@ -154,8 +155,8 @@ class DashboardController extends Controller
             'role' => UserRole::Admin->value,
             'date_range' => $report['date_range'],
             'team_count' => $teams->count(),
-            'employee_count' => $employeeCount,
-            'unassigned_employees' => $unassignedEmployees,
+            'employee_count' => $workforceMemberCount,
+            'unassigned_employees' => $unassignedWorkforce,
             'active_projects' => $report['active_projects'],
             'active_employees' => $report['active_employees'],
             'today_tracked_seconds' => $report['hours_today_seconds'],

@@ -296,7 +296,7 @@ class ManualTimeEntryTest extends TestCase
             ->assertJsonValidationErrors(['authorization']);
     }
 
-    public function test_admin_can_create_manual_entry_for_employee(): void
+    public function test_admin_cannot_create_manual_entry_for_employee(): void
     {
         ['manager' => $manager, 'employee' => $employee, 'project' => $project, 'team' => $team] = $this->setupEligibleEmployee();
         $admin = User::factory()->admin()->create(['organization_id' => $employee->organization_id]);
@@ -313,17 +313,7 @@ class ManualTimeEntryTest extends TestCase
                 'manager_id' => $manager->id,
                 'team_id' => $team->id,
             ])
-            ->assertCreated()
-            ->assertJsonPath('entry.user_id', $employee->id)
-            ->assertJsonPath('entry.status', TimeEntryStatus::Approved->value);
-
-        $this->assertDatabaseHas('time_entries', [
-            'user_id' => $employee->id,
-            'type' => TimeEntryType::Manual->value,
-            'status' => TimeEntryStatus::Approved->value,
-            'approved_by' => $admin->id,
-            'manager_id' => $manager->id,
-        ]);
+            ->assertForbidden();
     }
 
     public function test_employee_can_view_manual_entry_history(): void

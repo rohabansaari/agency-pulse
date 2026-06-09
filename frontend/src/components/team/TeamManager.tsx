@@ -61,13 +61,6 @@ export function TeamManager({ user }: { user: User }) {
   const [createEmail, setCreateEmail] = useState("");
 
   const [createPassword, setCreatePassword] = useState("");
-
-  const [createSalaryType, setCreateSalaryType] = useState<"hourly" | "monthly">("hourly");
-
-  const [createHourlyRate, setCreateHourlyRate] = useState("");
-
-  const [createMonthlySalary, setCreateMonthlySalary] = useState("");
-
   const [createPayrollPin, setCreatePayrollPin] = useState("");
 
   const [createPayrollPinConfirmation, setCreatePayrollPinConfirmation] = useState("");
@@ -151,29 +144,15 @@ export function TeamManager({ user }: { user: User }) {
     try {
 
       await createEmployee({
-
         name: createName,
-
         email: createEmail,
-
         password: createPassword,
-
-        salary_type: createSalaryType,
-
-        hourly_rate:
-          createSalaryType === "hourly" ? Number(createHourlyRate) : undefined,
-
-        monthly_salary:
-          createSalaryType === "monthly" ? Number(createMonthlySalary) : undefined,
-
         payroll_pin: vaultStatus?.requires_pin_on_employee_create
           ? createPayrollPin
           : undefined,
-
         payroll_pin_confirmation: vaultStatus?.requires_pin_on_employee_create
           ? createPayrollPinConfirmation
           : undefined,
-
       });
 
       setShowCreate(false);
@@ -183,13 +162,6 @@ export function TeamManager({ user }: { user: User }) {
       setCreateEmail("");
 
       setCreatePassword("");
-
-      setCreateSalaryType("hourly");
-
-      setCreateHourlyRate("");
-
-      setCreateMonthlySalary("");
-
       setCreatePayrollPin("");
 
       setCreatePayrollPinConfirmation("");
@@ -430,87 +402,10 @@ export function TeamManager({ user }: { user: User }) {
 
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-
-            <label className="block text-sm">
-
-              <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
-
-                Salary type *
-
-              </span>
-
-              <select
-
-                required
-
-                value={createSalaryType}
-
-                onChange={(e) =>
-
-                  setCreateSalaryType(e.target.value as "hourly" | "monthly")
-
-                }
-
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-
-              >
-
-                <option value="hourly">Hourly</option>
-
-                <option value="monthly">Monthly</option>
-
-              </select>
-
-            </label>
-
-            {createSalaryType === "hourly" ? (
-
-              <input
-
-                required
-
-                type="number"
-
-                min="0"
-
-                step="0.01"
-
-                placeholder="Hourly rate"
-
-                value={createHourlyRate}
-
-                onChange={(e) => setCreateHourlyRate(e.target.value)}
-
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-
-              />
-
-            ) : (
-
-              <input
-
-                required
-
-                type="number"
-
-                min="0"
-
-                step="0.01"
-
-                placeholder="Monthly salary"
-
-                value={createMonthlySalary}
-
-                onChange={(e) => setCreateMonthlySalary(e.target.value)}
-
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-
-              />
-
-            )}
-
-          </div>
+          <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-400">
+            Salary contracts are configured under Payroll after the employee is created. No
+            compensation data is collected here.
+          </p>
 
           {vaultStatus?.requires_pin_on_employee_create ? (
 

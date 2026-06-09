@@ -31,9 +31,7 @@ class ManualTimeEntryController extends Controller
             UserRole::Manager => response()->json(
                 $this->manualTime->contextForManager($request->user())
             ),
-            UserRole::Admin => response()->json(
-                $this->manualTime->contextForAdmin()
-            ),
+            UserRole::Admin => abort(403, 'Administrators cannot submit manual time entries.'),
             default => abort(403),
         };
     }
@@ -113,39 +111,11 @@ class ManualTimeEntryController extends Controller
             ], 201);
         }
 
-        if ($role !== UserRole::Admin) {
-            abort(403);
+        if ($role === UserRole::Admin) {
+            abort(403, 'Administrators cannot submit manual time entries.');
         }
 
-        $validated = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
-            'date' => ['required', 'date'],
-            'duration' => ['required', 'integer', 'min:60', 'max:86400'],
-            'description' => ['required', 'string', 'max:2000'],
-            'project_id' => [
-                'required',
-                'integer',
-                Rule::exists('projects', 'id')->where(
-                    fn ($query) => $query->where('organization_id', TenantContext::id())
-                ),
-            ],
-            'manager_id' => ['required', 'integer', 'exists:users,id'],
-            'team_id' => ['nullable', 'integer', 'exists:teams,id'],
-            'auto_approve' => ['sometimes', 'boolean'],
-        ]);
-
-        $employee = User::query()->findOrFail($validated['user_id']);
-
-        $entry = $this->manualTime->createForEmployeeByAdmin(
-            $request->user(),
-            $employee,
-            $validated
-        );
-
-        return response()->json([
-            'message' => 'Manual time entry created for employee.',
-            'entry' => new TimeEntryResource($entry->load(['project', 'user', 'assignedManager', 'team'])),
-        ], 201);
+        abort(403);
     }
 
     public function index(Request $request): AnonymousResourceCollection

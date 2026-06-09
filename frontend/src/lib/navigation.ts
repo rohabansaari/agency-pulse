@@ -12,7 +12,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "My Teams", href: "/my-teams", roles: ["manager"] },
   { label: "Projects", href: "/projects", roles: ["admin", "manager"] },
   { label: "My Projects", href: "/projects", roles: ["employee"] },
-  { label: "Time Tracking", href: "/time", roles: ["admin", "manager", "employee"] },
+  { label: "Time Tracking", href: "/time", roles: ["manager", "employee"] },
   { label: "Leave", href: "/leave", roles: ["employee"] },
   { label: "Leave", href: "/leave/approvals", roles: ["manager"] },
   { label: "Leave Management", href: "/admin/leave", roles: ["admin"] },
@@ -27,7 +27,6 @@ const ROLE_NAV: Record<UserRole, string[]> = {
   manager: ["Dashboard", "Time Tracking", "My Teams", "Projects", "Leave", "Reports"],
   admin: [
     "Dashboard",
-    "Time Tracking",
     "Teams",
     "Projects",
     "Leave Management",

@@ -362,7 +362,7 @@ function AdminView({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Employees" value={String(data.employee_count)} accent="blue" />
+        <StatCard label="Workforce" value={String(data.employee_count)} sub="Employees + managers" accent="blue" />
         <StatCard label="Teams" value={String(data.team_count)} accent="blue" />
         <StatCard label="Projects" value={String(data.active_projects)} />
         <StatCard

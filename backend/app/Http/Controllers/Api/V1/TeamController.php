@@ -63,7 +63,7 @@ class TeamController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', Password::defaults()],
-            'salary_type' => ['required', Rule::enum(SalaryType::class)],
+            'salary_type' => ['sometimes', Rule::enum(SalaryType::class)],
             'hourly_rate' => ['required_if:salary_type,hourly', 'nullable', 'numeric', 'min:0'],
             'monthly_salary' => ['required_if:salary_type,monthly', 'nullable', 'numeric', 'min:0'],
             'effective_from' => ['sometimes', 'date'],
@@ -104,7 +104,9 @@ class TeamController extends Controller
 
             $this->membershipRoleSync->syncFromMembership($membership);
 
-            $this->adminPayroll->createInitialContract($user, $validated);
+            if (! empty($validated['salary_type'])) {
+                $this->adminPayroll->createInitialContract($user, $validated);
+            }
 
             if (! empty($validated['payroll_pin'])) {
                 $this->payrollVault->setPinOnFirstEmployee($request->user(), $validated['payroll_pin']);
@@ -114,7 +116,9 @@ class TeamController extends Controller
         });
 
         return response()->json([
-            'message' => 'Employee account created with salary contract.',
+            'message' => empty($validated['salary_type'])
+                ? 'Employee account created. Configure salary under Payroll when ready.'
+                : 'Employee account created with salary contract.',
             'member' => new TeamMemberResource($membership),
         ], 201);
     }

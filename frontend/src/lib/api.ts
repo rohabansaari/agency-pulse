@@ -325,10 +325,6 @@ export async function createEmployee(data: {
   name: string;
   email: string;
   password: string;
-  salary_type: "hourly" | "monthly";
-  hourly_rate?: number;
-  monthly_salary?: number;
-  effective_from?: string;
   payroll_pin?: string;
   payroll_pin_confirmation?: string;
 }): Promise<TeamMember> {

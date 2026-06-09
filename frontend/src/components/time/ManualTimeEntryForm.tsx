@@ -15,15 +15,14 @@ import {
 } from "@/lib/api";
 
 import type { ManualTimeContext, ManualTimeProjectOption, UserRole } from "@/lib/types";
-
+import { DatePicker } from "@/components/ui/DatePicker";
+import { ddMmYyyyToIso, todayDdMmYyyy } from "@/lib/dates";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 
 
-function todayIsoDate(): string {
-
-  return new Date().toISOString().slice(0, 10);
-
+function todayDisplayDate(): string {
+  return todayDdMmYyyy();
 }
 
 
@@ -68,7 +67,7 @@ export function ManualTimeEntryForm({
 
   const [managerId, setManagerId] = useState("");
 
-  const [date, setDate] = useState(todayIsoDate());
+  const [date, setDate] = useState(todayDisplayDate());
 
   const [hours, setHours] = useState("1");
 
@@ -321,6 +320,7 @@ export function ManualTimeEntryForm({
     setSubmitting(true);
 
     try {
+      const apiDate = ddMmYyyyToIso(date);
 
       const payload =
 
@@ -328,7 +328,7 @@ export function ManualTimeEntryForm({
 
           ? {
 
-              date,
+              date: apiDate,
 
               duration: durationSeconds,
 
@@ -344,7 +344,7 @@ export function ManualTimeEntryForm({
 
             ? {
 
-                date,
+                date: apiDate,
 
                 duration: durationSeconds,
 
@@ -360,7 +360,7 @@ export function ManualTimeEntryForm({
 
                 user_id: Number(userId),
 
-                date,
+                date: apiDate,
 
                 duration: durationSeconds,
 
@@ -380,7 +380,7 @@ export function ManualTimeEntryForm({
 
       setHours("1");
 
-      setDate(todayIsoDate());
+      setDate(todayDisplayDate());
 
       onSubmitted?.();
 
@@ -634,29 +634,13 @@ export function ManualTimeEntryForm({
 
 
 
-        <label className="block text-sm">
-
-          <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
-
-            Date *
-
-          </span>
-
-          <input
-
-            required
-
-            type="date"
-
-            value={date}
-
-            onChange={(event) => setDate(event.target.value)}
-
-            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-
-          />
-
-        </label>
+        <DatePicker
+          id="manual-entry-date"
+          label="Date *"
+          value={date}
+          onChange={setDate}
+          required
+        />
 
 
 

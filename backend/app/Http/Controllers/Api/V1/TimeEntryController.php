@@ -14,6 +14,7 @@ use App\Services\Payroll\PayrollPeriodLockService;
 use App\Services\Projects\ProjectAccessService;
 use App\Services\Reporting\ReportingService;
 use App\Services\Tenant\TenantContext;
+use App\Support\WorkforceMembers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -32,6 +33,12 @@ class TimeEntryController extends Controller
     public function start(Request $request): JsonResponse
     {
         $user = $request->user();
+
+        if ($user->currentRole() === UserRole::Admin) {
+            throw ValidationException::withMessages([
+                'timer' => ['Administrators cannot track time. Use employee or manager accounts for time tracking.'],
+            ]);
+        }
 
         $validated = $request->validate([
             'project_id' => [
@@ -94,6 +101,12 @@ class TimeEntryController extends Controller
     {
         $user = $request->user();
 
+        if ($user->currentRole() === UserRole::Admin) {
+            throw ValidationException::withMessages([
+                'timer' => ['Administrators cannot track time.'],
+            ]);
+        }
+
         $entry = TimeEntry::query()
             ->trackedTimers()
             ->where('user_id', $user->id)
@@ -126,6 +139,11 @@ class TimeEntryController extends Controller
     public function today(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
+
+        if ($user->currentRole() === UserRole::Admin) {
+            abort(403, 'Administrators cannot track time.');
+        }
+
         $startOfDay = Carbon::today();
         $endOfDay = Carbon::today()->endOfDay();
 
@@ -191,17 +209,21 @@ class TimeEntryController extends Controller
     {
         $startOfDay = Carbon::today();
         $endOfDay = Carbon::today()->endOfDay();
+        $orgId = TenantContext::id();
+        $workforceIds = WorkforceMembers::activeMemberUserIds($orgId)->all();
 
         $entries = TimeEntry::query()
             ->with(['user', 'project'])
-            ->where('organization_id', TenantContext::id())
+            ->where('organization_id', $orgId)
+            ->whereIn('user_id', $workforceIds)
             ->whereBetween('start_time', [$startOfDay, $endOfDay])
             ->orderByDesc('start_time')
             ->get();
 
         $totalDuration = (int) TimeEntry::query()
             ->countable()
-            ->where('organization_id', TenantContext::id())
+            ->where('organization_id', $orgId)
+            ->whereIn('user_id', $workforceIds)
             ->whereBetween('start_time', [$startOfDay, $endOfDay])
             ->sum('duration');
 

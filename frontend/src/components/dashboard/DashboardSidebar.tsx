@@ -125,9 +125,9 @@ export function DashboardSidebar({
               key={item.href}
               href={item.href}
               onClick={onNavigate}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                 active
-                  ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
+                  ? "bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-900/50"
                   : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100"
               }`}
             >

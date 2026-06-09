@@ -99,3 +99,27 @@ function toSortable(value: string): string {
 
   return `${match[3]}-${match[2]}-${match[1]}`;
 }
+
+/** Convert dd/mm/yyyy to yyyy-mm-dd for API payloads. */
+export function ddMmYyyyToIso(value: string): string {
+  const parsed = parseDdMmYyyy(value);
+  if (!parsed) {
+    return value;
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+/** Convert yyyy-mm-dd (or ISO date) to dd/mm/yyyy for display. */
+export function isoToDdMmYyyy(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return formatDateDdMmYyyy(parsed);
+}

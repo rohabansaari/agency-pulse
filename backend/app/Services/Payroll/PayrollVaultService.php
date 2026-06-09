@@ -34,7 +34,7 @@ class PayrollVaultService
 
         return OrganizationMember::query()
             ->where('organization_id', $organization->id)
-            ->where('role', UserRole::Employee)
+            ->whereIn('role', [UserRole::Employee, UserRole::Manager])
             ->where('status', OrganizationMemberStatus::Active)
             ->count();
     }

@@ -2,11 +2,11 @@
 
 import {
   compareDdMmYyyy,
-  formatAsDdMmYyyyTyping,
   formatDateDdMmYyyy,
   isValidDdMmYyyy,
   todayDdMmYyyy,
 } from "@/lib/dates";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { useEffect, useState } from "react";
 
 export type ReportDateRange = {
@@ -110,33 +110,32 @@ export function ReportDateRangeFilter({
             type="button"
             disabled={disabled}
             onClick={() => applyPreset(preset)}
-            className="rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             {label}
           </button>
         ))}
-        <input
-          aria-label="Start date"
+        <DatePicker
+          hideLabel
           value={draftStart}
+          onChange={setDraftStart}
           disabled={disabled}
-          onChange={(event) => setDraftStart(formatAsDdMmYyyyTyping(event.target.value))}
-          placeholder="dd/mm/yyyy"
-          className="w-[88px] rounded-md border border-zinc-200 px-2 py-1 text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+          compact
         />
         <span className="text-[11px] text-zinc-400">–</span>
-        <input
-          aria-label="End date"
+        <DatePicker
+          hideLabel
           value={draftEnd}
+          onChange={setDraftEnd}
+          minDate={draftStart}
           disabled={disabled}
-          onChange={(event) => setDraftEnd(formatAsDdMmYyyyTyping(event.target.value))}
-          placeholder="dd/mm/yyyy"
-          className="w-[88px] rounded-md border border-zinc-200 px-2 py-1 text-[11px] dark:border-zinc-700 dark:bg-zinc-900"
+          compact
         />
         <button
           type="button"
           disabled={disabled}
           onClick={applyCustom}
-          className="rounded-md bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className="rounded-md bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
         >
           Apply
         </button>

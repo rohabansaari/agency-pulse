@@ -7,6 +7,8 @@ import {
   submitOvertimeRequest,
 } from "@/lib/api";
 import type { UserRole } from "@/lib/types";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { ddMmYyyyToIso, todayDdMmYyyy } from "@/lib/dates";
 import { useCallback, useEffect, useState } from "react";
 
 function hoursToSeconds(hours: string): number {
@@ -30,7 +32,7 @@ export function OvertimeRequestForm({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [forSelf, setForSelf] = useState(role === "manager");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayDdMmYyyy());
   const [hours, setHours] = useState("1");
   const [reason, setReason] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -88,7 +90,7 @@ export function OvertimeRequestForm({
 
     try {
       const response = await submitOvertimeRequest({
-        date,
+        date: ddMmYyyyToIso(date),
         duration,
         reason,
         project_id: Number.parseInt(projectId, 10),
@@ -156,16 +158,13 @@ export function OvertimeRequestForm({
       {success ? <p className="mb-3 text-sm text-green-600 dark:text-green-400">{success}</p> : null}
 
       <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">Date</span>
-          <input
-            type="date"
-            required
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </label>
+        <DatePicker
+          id="overtime-date"
+          label="Date"
+          value={date}
+          onChange={setDate}
+          required
+        />
         <label className="block text-sm">
           <span className="text-zinc-600 dark:text-zinc-400">Hours</span>
           <input

@@ -162,6 +162,7 @@ export function TimeTracker({ user }: { user?: User }) {
   const [manualRefreshKey, setManualRefreshKey] = useState(0);
   const isEmployee = user?.role === "employee";
   const isManager = user?.role === "manager";
+  const isAdmin = user?.role === "admin";
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(GENERAL_TIME_VALUE);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
@@ -334,6 +335,20 @@ export function TimeTracker({ user }: { user?: User }) {
           ))}
         </div>
         <div className="h-72 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />
+      </div>
+    );
+  }
+
+  if (isAdmin) {
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          Time tracking unavailable
+        </h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          Administrators manage the organization but do not track time. Use employee or manager
+          accounts for timers, manual entries, and overtime requests.
+        </p>
       </div>
     );
   }
