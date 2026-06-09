@@ -1,0 +1,217 @@
+# AgencyPulse — local development stack
+
+x-laravel-env: &laravel-env
+  APP_NAME: AgencyPulse
+  APP_ENV: local
+  APP_DEBUG: "true"
+  APP_URL: http://localhost:8080
+  FRONTEND_URL: http://localhost:3000
+
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: debug
+
+  DB_CONNECTION: mysql
+  DB_HOST: mysql
+  DB_PORT: 3306
+  DB_DATABASE: agencypulse
+  DB_USERNAME: agencypulse
+  DB_PASSWORD: secret
+
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_PASSWORD: null
+
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: redis
+  BROADCAST_CONNECTION: log
+  FILESYSTEM_DISK: local
+
+
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: agencypulse-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/storage:/var/www/html/storage
+      - ./backend/bootstrap/cache:/var/www/html/bootstrap/cache
+
+    environment:
+      <<: *laravel-env
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - agencypulse
+
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: agencypulse-nginx
+    restart: unless-stopped
+
+    ports:
+      - "8080:80"
+
+    volumes:
+      - ./backend:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+    depends_on:
+      - app
+      - frontend
+
+    networks:
+      - agencypulse
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    container_name: agencypulse-frontend
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+
+    networks:
+      - agencypulse
+
+
+  mysql:
+    image: mysql:8.0
+    container_name: agencypulse-mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: agencypulse
+      MYSQL_USER: agencypulse
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: rootsecret
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootsecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - agencypulse
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: agencypulse-redis
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes --appendfsync everysec
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - agencypulse
+
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: agencypulse-queue
+    restart: unless-stopped
+
+    working_dir: /var/www/html
+
+    command: php artisan queue:work redis --sleep=1 --tries=3 --max-time=3600
+
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/storage:/var/www/html/storage
+      - ./backend/bootstrap/cache:/var/www/html/bootstrap/cache
+
+    environment:
+      <<: *laravel-env
+
+    depends_on:
+      - app
+      - mysql
+      - redis
+
+    networks:
+      - agencypulse
+
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: agencypulse-scheduler
+    restart: unless-stopped
+
+    working_dir: /var/www/html
+
+    command: php artisan schedule:work
+
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/storage:/var/www/html/storage
+      - ./backend/bootstrap/cache:/var/www/html/bootstrap/cache
+
+    environment:
+      <<: *laravel-env
+
+    depends_on:
+      - app
+      - mysql
+      - redis
+
+    networks:
+      - agencypulse
+
+
+volumes:
+  mysql_data:
+  redis_data:
+  frontend_node_modules:
+
+
+networks:
+  agencypulse:
+    driver: bridge

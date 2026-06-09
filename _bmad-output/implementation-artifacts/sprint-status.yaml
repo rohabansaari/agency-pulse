@@ -1,0 +1,33 @@
+# Sprint status — AgencyPulse
+# Generated: 2026-06-08
+
+generated: "2026-06-08"
+project: AgencyPulse
+last_updated: "2026-06-08"
+
+current_sprint: 1
+sprint_goal: "Employees, departments, clients/projects CRUD"
+
+development_status:
+  # Sprint 0 — Foundation (prerequisites)
+  1-1-project-scaffold-docker: done
+  1-2-organization-registration-sanctum-auth: done
+  1-3-tenant-resolution-middleware: done
+  1-4-belongs-to-organization-global-scope: done
+  1-5-idempotency-middleware-foundation: done
+  9-1-queue-configuration: done
+  9-4-scheduler-setup-skeleton: done
+
+  # Sprint 1 — Team & Project Management
+  2-1-spatie-rbac-with-teams: done
+  2-2-department-crud: backlog
+  2-3-employee-crud-invite: done
+  2-4-client-project-management: done
+  2-5-project-assignments: done
+  4-role-dashboards: done
+  5-sidebar-navigation: done
+
+notes:
+  - Sprint 0 closed 2026-06-08; 23 feature tests passing
+  - Dev DB may need `docker compose exec app php artisan migrate` for new tables
+  - Timer MVP (start/stop/today) implemented ahead of full E3 spec

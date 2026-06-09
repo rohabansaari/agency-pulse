@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Enums\SalaryType;
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\Payroll\AdminPayrollService;
+use App\Services\Payroll\PayrollVaultService;
+use App\Support\PayrollVaultState;
+use App\Support\DisplayDate;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+
+class SalaryContractController extends Controller
+{
+    public function __construct(
+        private readonly AdminPayrollService $adminPayroll,
+        private readonly PayrollVaultService $payrollVault
+    ) {}
+
+    public function index(Request $request): JsonResponse
+    {
+        $contracts = $this->adminPayroll->listActiveContracts();
+        $unlocked = PayrollVaultState::isUnlocked($request);
+
+        return response()->json([
+            'contracts' => $contracts
+                ->map(fn ($contract) => $unlocked
+                    ? $contract
+                    : $this->adminPayroll->maskedContractPayload($contract))
+                ->values(),
+            'financial_data_masked' => ! $unlocked,
+        ]);
+    }
+
+    public function history(Request $request, User $user): JsonResponse
+    {
+        $contracts = $this->adminPayroll->contractHistoryForUser($user);
+        $unlocked = PayrollVaultState::isUnlocked($request);
+
+        return response()->json([
+            'contracts' => $contracts
+                ->map(fn ($contract) => $unlocked
+                    ? $contract
+                    : $this->adminPayroll->maskedContractPayload($contract))
+                ->values(),
+            'financial_data_masked' => ! $unlocked,
+        ]);
+    }
+
+    public function store(Request $request, User $user): JsonResponse
+    {
+        $this->payrollVault->assertUnlocked($request->user());
+
+        $validated = $request->validate([
+            'salary_type' => ['required', Rule::enum(SalaryType::class)],
+            'hourly_rate' => ['required_if:salary_type,hourly', 'nullable', 'numeric', 'min:0'],
+            'monthly_salary' => ['required_if:salary_type,monthly', 'nullable', 'numeric', 'min:0'],
+            'effective_from' => ['sometimes', 'regex:'.DisplayDate::INPUT_PATTERN],
+        ]);
+
+        if (isset($validated['effective_from'])) {
+            $validated['effective_from'] = DisplayDate::parse($validated['effective_from'], 'effective_from')->toDateString();
+        }
+
+        $contract = $this->adminPayroll->versionContract($request->user(), $user, $validated);
+
+        return response()->json([
+            'message' => 'Salary contract updated with a new version.',
+            'contract' => $this->adminPayroll->decryptedContractPayload($contract),
+        ], 201);
+    }
+}
