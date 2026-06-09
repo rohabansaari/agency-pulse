@@ -20,18 +20,23 @@ Free tier note: services **sleep after ~15 min idle**. First visit after sleep m
 
 1. Go to **https://railway.app** → sign in with GitHub.
 2. Click **New Project** → **Provision MySQL**.
-3. Click the **MySQL** tile → **Variables** tab.
-4. Copy these values:
+3. Click the **MySQL** tile → **Settings** → **Networking**.
+4. Enable **Public Networking** (TCP proxy). Railway will show a **public hostname** and **port** (e.g. `roundhouse.proxy.rlwy.net` and `12345`).
 
-| Railway variable | You will paste as |
-|------------------|-------------------|
-| `MYSQLHOST` | `DB_HOST` |
-| `MYSQLPORT` | `DB_PORT` (usually `3306`) |
-| `MYSQLDATABASE` | `DB_DATABASE` |
-| `MYSQLUSER` | `DB_USERNAME` |
-| `MYSQLPASSWORD` | `DB_PASSWORD` |
+   **Important:** Do **not** use `mysql.railway.internal` or any `*.railway.internal` host on Render. That hostname only works inside Railway. Render is outside Railway and will fail with `Name does not resolve`.
 
-5. Open **Settings** → **Networking** → enable **Public Networking** (required so Render can connect).
+5. Click the **MySQL** tile → **Variables** (or **Connect**) tab.
+6. After public networking is on, use the **public** connection values:
+
+| Render variable | Where to get it on Railway |
+|-----------------|---------------------------|
+| `DB_HOST` | Public proxy hostname (e.g. `roundhouse.proxy.rlwy.net`) — **not** `mysql.railway.internal` |
+| `DB_PORT` | Public proxy port from Networking (often **not** `3306`) |
+| `DB_DATABASE` | `MYSQLDATABASE` (usually `railway`) |
+| `DB_USERNAME` | `MYSQLUSER` (usually `root`) |
+| `DB_PASSWORD` | `MYSQLPASSWORD` |
+
+If `MYSQLHOST` still shows `mysql.railway.internal`, ignore it for Render — use the **public** host + port from **Settings → Networking** instead.
 
 Keep this tab open.
 
@@ -63,11 +68,13 @@ Keep this tab open.
 | `APP_DEBUG` | `false` |
 | `LOG_CHANNEL` | `stderr` |
 | `DB_CONNECTION` | `mysql` |
-| `DB_HOST` | *paste `MYSQLHOST` from Railway* |
-| `DB_PORT` | `3306` |
-| `DB_DATABASE` | *paste `MYSQLDATABASE`* |
-| `DB_USERNAME` | *paste `MYSQLUSER`* |
-| `DB_PASSWORD` | *paste `MYSQLPASSWORD`* |
+| `DB_HOST` | Copy the **value** of Railway `MYSQLHOST` (e.g. `containers-us-west-123.railway.app`) — not the word `MYSQLHOST` |
+| `DB_PORT` | Copy Railway `MYSQLPORT` (usually `3306`) |
+| `DB_DATABASE` | Copy Railway `MYSQLDATABASE` value |
+| `DB_USERNAME` | Copy Railway `MYSQLUSER` value |
+| `DB_PASSWORD` | Copy Railway `MYSQLPASSWORD` value |
+
+Do **not** leave placeholder text like `<paste MYSQLHOST>` — Laravel will try to connect to that literal string and fail.
 | `CACHE_STORE` | `database` |
 | `SESSION_DRIVER` | `database` |
 | `QUEUE_CONNECTION` | `database` |
@@ -153,7 +160,9 @@ Use the **frontend** URL for the app — not the API URL.
 | Problem | Fix |
 |---------|-----|
 | API build fails | Open **Logs** on Render; ensure Dockerfile path is `docker/render/Dockerfile.api` |
-| Database connection error | Railway **Public Networking** on; double-check `DB_*` values |
+| `getaddrinfo for mysql.railway.internal failed` | `DB_HOST` is Railway's **private** host — enable **Public Networking** on Railway and use the **public** proxy hostname + port |
+| `getaddrinfo for <paste MYSQLHOST> failed` | `DB_HOST` still has placeholder text — paste the real Railway hostname |
+| Database connection error | Railway **Public Networking** on; double-check all `DB_*` **values** from Railway Variables |
 | Frontend `Missing script: "build"` + Playwright download in logs | **Root Directory** must be `frontend`, not repo root |
 | Frontend API errors | `NEXT_PUBLIC_API_URL` must be `https://YOUR-API.onrender.com/api/v1` then **Manual Deploy** frontend |
 | Payroll 404 | Open frontend URL, not API URL |
