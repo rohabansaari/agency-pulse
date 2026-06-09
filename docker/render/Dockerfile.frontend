@@ -10,9 +10,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ .
 
-# Render injects RENDER_EXTERNAL_URL from the linked API service at build time.
-ARG RENDER_EXTERNAL_URL
-ENV NEXT_PUBLIC_API_URL=${RENDER_EXTERNAL_URL}/api/v1
+# Set NEXT_PUBLIC_API_URL in Render env before building (manual free deploy).
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN npm run build
 

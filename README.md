@@ -76,7 +76,7 @@ _bmad-output/     Planning artifacts
 
 ## Deploy to production (Render)
 
-See **[DEPLOY.md](DEPLOY.md)** for step-by-step Render + Railway MySQL setup.
+See **[DEPLOY.md](DEPLOY.md)** for free-tier Render + Railway MySQL setup (no Blueprint required).
 
 ## Documentation
 

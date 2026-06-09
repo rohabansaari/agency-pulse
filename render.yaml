@@ -1,5 +1,5 @@
-# AgencyPulse — Render Blueprint
-# Deploy: Render Dashboard → New → Blueprint → connect Rohabansari/agency-pulse
+# AgencyPulse — Render Blueprint (PAID Render plan required)
+# Free tier: use manual deploy — see DEPLOY.md
 #
 # BEFORE deploying: create MySQL on Railway (see DEPLOY.md), then add DB_* env vars
 # on the agencypulse-api service in Render after the first blueprint sync.
