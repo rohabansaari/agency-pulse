@@ -17,7 +17,9 @@ WORKDIR /var/www/html
 
 COPY backend/ .
 
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader \
+# Skip composer scripts during build — artisan needs APP_KEY/DB at runtime, not image build time.
+ENV COMPOSER_ALLOW_SUPERUSER=1
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts \
     && mkdir -p storage/framework/{cache/data,sessions,views,testing} storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 

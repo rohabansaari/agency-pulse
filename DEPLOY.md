@@ -59,6 +59,7 @@ Keep this tab open.
 |-----|--------|
 | `APP_NAME` | `AgencyPulse` |
 | `APP_ENV` | `production` |
+| `APP_KEY` | `base64:...` *(required — generate locally: `docker compose exec app php artisan key:generate --show`)* |
 | `APP_DEBUG` | `false` |
 | `LOG_CHANNEL` | `stderr` |
 | `DB_CONNECTION` | `mysql` |
@@ -71,7 +72,7 @@ Keep this tab open.
 | `SESSION_DRIVER` | `database` |
 | `QUEUE_CONNECTION` | `database` |
 
-`APP_KEY` is auto-generated on first deploy if missing (or add one from `php artisan key:generate --show` locally).
+`APP_KEY` is **required** — the API container will not start without it.
 
 5. Click **Deploy Web Service**.
 6. Wait until status is **Live** (first build ~5–10 min).
