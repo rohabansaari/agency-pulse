@@ -100,10 +100,12 @@ Save to redeploy.
 | **Name** | `agencypulse-web` |
 | **Region** | Same as API |
 | **Branch** | `main` |
-| **Root Directory** | `frontend` |
+| **Root Directory** | **`frontend`** *(critical — if blank, Render builds the repo root and fails)* |
 | **Runtime** | **Node** |
 | **Build Command** | `npm install && npm run build` |
 | **Start Command** | `npm start` |
+
+If you already created the service with the wrong root, open **Settings** → set **Root Directory** to `frontend` → **Save** → **Manual Deploy**.
 | **Instance Type** | **Free** |
 
 3. **Environment Variables**:
@@ -152,6 +154,7 @@ Use the **frontend** URL for the app — not the API URL.
 |---------|-----|
 | API build fails | Open **Logs** on Render; ensure Dockerfile path is `docker/render/Dockerfile.api` |
 | Database connection error | Railway **Public Networking** on; double-check `DB_*` values |
+| Frontend `Missing script: "build"` + Playwright download in logs | **Root Directory** must be `frontend`, not repo root |
 | Frontend API errors | `NEXT_PUBLIC_API_URL` must be `https://YOUR-API.onrender.com/api/v1` then **Manual Deploy** frontend |
 | Payroll 404 | Open frontend URL, not API URL |
 | 502 on API | Check logs; migrations may fail if `DB_*` wrong |
