@@ -153,6 +153,7 @@ export interface PersonalTimeReport {
   hours_in_range_seconds?: number;
   date_range?: ReportDateRange;
   leave_breakdown?: LeaveBreakdown;
+  overtime_summary?: OvertimeSummary;
 }
 
 export interface LeaveContext {
