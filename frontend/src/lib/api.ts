@@ -673,20 +673,39 @@ export async function finalizePayrollRun(
   );
 }
 
+export async function updatePayrollRun(
+  id: number,
+  data: { period_start?: string; period_end?: string },
+): Promise<{ message: string; payroll_run: PayrollRun }> {
+  return apiFetch<{ message: string; payroll_run: PayrollRun }>(
+    `/payroll-runs/${id}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+export async function deletePayrollRun(id: number): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/payroll-runs/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function recalculatePayrollRun(
+  id: number,
+): Promise<{ message: string; payroll_run: PayrollRun }> {
+  return apiFetch<{ message: string; payroll_run: PayrollRun }>(
+    `/payroll-runs/${id}/recalculate`,
+    { method: "POST", body: JSON.stringify({}) },
+  );
+}
+
 export async function lockPayrollRun(
   id: number,
 ): Promise<{ message: string; payroll_run: PayrollRun }> {
   return apiFetch<{ message: string; payroll_run: PayrollRun }>(
     `/payroll-runs/${id}/lock`,
-    { method: "POST", body: JSON.stringify({}) },
-  );
-}
-
-export async function unlockPayrollRun(
-  id: number,
-): Promise<{ message: string; payroll_run: PayrollRun }> {
-  return apiFetch<{ message: string; payroll_run: PayrollRun }>(
-    `/payroll-runs/${id}/unlock`,
     { method: "POST", body: JSON.stringify({}) },
   );
 }

@@ -4,12 +4,14 @@ import { LeaveDateInput } from "@/components/leave/LeaveDateInput";
 import {
   ApiError,
   createPayrollRun,
+  deletePayrollRun,
   fetchPayrollRun,
   fetchPayrollRuns,
   finalizePayrollRun,
   formatApiErrors,
   lockPayrollRun,
-  unlockPayrollRun,
+  recalculatePayrollRun,
+  updatePayrollRun,
 } from "@/lib/api";
 import { formatDuration } from "@/lib/time";
 import type { PayrollRun, PayrollRunEmployeeRecord, PayrollRunStatus } from "@/lib/types";
@@ -36,8 +38,9 @@ function StatusBadge({ status }: { status: PayrollRunStatus }) {
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status]}`}
+      title={status === "locked" ? "Secured audit record — immutable" : undefined}
     >
-      {status}
+      {status === "locked" ? "locked · secured" : status}
     </span>
   );
 }
@@ -72,6 +75,9 @@ export function AdminPayrollPage() {
   const [expandedRunId, setExpandedRunId] = useState<number | null>(null);
   const [runDetails, setRunDetails] = useState<Record<number, PayrollRun>>({});
   const [loadingDetailId, setLoadingDetailId] = useState<number | null>(null);
+  const [editingRunId, setEditingRunId] = useState<number | null>(null);
+  const [editPeriodStart, setEditPeriodStart] = useState("");
+  const [editPeriodEnd, setEditPeriodEnd] = useState("");
 
   const [filterRange, setFilterRange] = useState<ReportDateRange>(() =>
     presetDateRange("month"),
@@ -199,26 +205,90 @@ export function AdminPayrollPage() {
 
   async function runAction(
     id: number,
-    action: "finalize" | "lock" | "unlock",
+    action: "finalize" | "lock" | "recalculate" | "delete",
   ) {
     setActingId(id);
     setError("");
     setSuccess("");
 
     try {
-      const response =
-        action === "finalize"
-          ? await finalizePayrollRun(id)
-          : action === "lock"
-            ? await lockPayrollRun(id)
-            : await unlockPayrollRun(id);
-      setSuccess(response.message);
+      if (action === "delete") {
+        if (!window.confirm("Delete this draft payroll run? This cannot be undone.")) {
+          return;
+        }
+        const response = await deletePayrollRun(id);
+        setSuccess(response.message);
+        setExpandedRunId(null);
+        setRunDetails((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+        if (editingRunId === id) {
+          setEditingRunId(null);
+        }
+      } else {
+        const response =
+          action === "finalize"
+            ? await finalizePayrollRun(id)
+            : action === "lock"
+              ? await lockPayrollRun(id)
+              : await recalculatePayrollRun(id);
+        setSuccess(response.message);
+        setRunDetails((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+      }
       await load();
     } catch (err) {
       setError(
         err instanceof ApiError
           ? formatApiErrors(err.errors) || err.message
           : `Failed to ${action} payroll run.`,
+      );
+    } finally {
+      setActingId(null);
+    }
+  }
+
+  function startEditRun(run: PayrollRun) {
+    setEditingRunId(run.id);
+    setEditPeriodStart(run.period_start);
+    setEditPeriodEnd(run.period_end);
+    setError("");
+    setSuccess("");
+  }
+
+  async function handleEditRun(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editingRunId) {
+      return;
+    }
+
+    setActingId(editingRunId);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await updatePayrollRun(editingRunId, {
+        period_start: editPeriodStart,
+        period_end: editPeriodEnd,
+      });
+      setSuccess(response.message);
+      setEditingRunId(null);
+      setRunDetails((current) => {
+        const next = { ...current };
+        delete next[editingRunId];
+        return next;
+      });
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? formatApiErrors(err.errors) || err.message
+          : "Failed to update payroll run.",
       );
     } finally {
       setActingId(null);
@@ -233,7 +303,7 @@ export function AdminPayrollPage() {
             Payroll runs
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Create immutable payroll snapshots, finalize periods to lock time data, and lock runs when complete.
+            Draft runs can be edited or deleted. Finalized runs lock time data. Locked runs are secured audit records.
           </p>
         </div>
         <ReportDateRangeFilter
@@ -382,43 +452,49 @@ export function AdminPayrollPage() {
                               : "Details"}
                         </button>
                         {run.status === "draft" ? (
-                          <button
-                            type="button"
-                            disabled={actingId === run.id || !financialUnlocked}
-                            onClick={() => void runAction(run.id, "finalize")}
-                            className="rounded-md border border-amber-300 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-950/30"
-                          >
-                            Finalize
-                          </button>
-                        ) : null}
-                        {run.status === "finalized" ? (
                           <>
                             <button
                               type="button"
                               disabled={actingId === run.id || !financialUnlocked}
-                              onClick={() => void runAction(run.id, "lock")}
-                              className="rounded-md border border-green-300 px-2.5 py-1 text-xs font-medium text-green-800 hover:bg-green-50 disabled:opacity-50 dark:border-green-700 dark:text-green-200 dark:hover:bg-green-950/30"
+                              onClick={() => startEditRun(run)}
+                              className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
                             >
-                              Lock
+                              Edit
                             </button>
                             <button
                               type="button"
                               disabled={actingId === run.id || !financialUnlocked}
-                              onClick={() => void runAction(run.id, "unlock")}
-                              className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                              onClick={() => void runAction(run.id, "recalculate")}
+                              className="rounded-md border border-blue-300 px-2.5 py-1 text-xs font-medium text-blue-800 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-700 dark:text-blue-200 dark:hover:bg-blue-950/30"
                             >
-                              Unlock
+                              Recalculate
+                            </button>
+                            <button
+                              type="button"
+                              disabled={actingId === run.id || !financialUnlocked}
+                              onClick={() => void runAction(run.id, "delete")}
+                              className="rounded-md border border-red-300 px-2.5 py-1 text-xs font-medium text-red-800 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-200 dark:hover:bg-red-950/30"
+                            >
+                              Delete
+                            </button>
+                            <button
+                              type="button"
+                              disabled={actingId === run.id || !financialUnlocked}
+                              onClick={() => void runAction(run.id, "finalize")}
+                              className="rounded-md border border-amber-300 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-950/30"
+                            >
+                              Finalize
                             </button>
                           </>
                         ) : null}
-                        {run.status === "locked" ? (
+                        {run.status === "finalized" ? (
                           <button
                             type="button"
                             disabled={actingId === run.id || !financialUnlocked}
-                            onClick={() => void runAction(run.id, "unlock")}
-                            className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                            onClick={() => void runAction(run.id, "lock")}
+                            className="rounded-md border border-green-300 px-2.5 py-1 text-xs font-medium text-green-800 hover:bg-green-50 disabled:opacity-50 dark:border-green-700 dark:text-green-200 dark:hover:bg-green-950/30"
                           >
-                            Unlock
+                            Lock
                           </button>
                         ) : null}
                       </div>
@@ -427,6 +503,40 @@ export function AdminPayrollPage() {
                   {isExpanded ? (
                     <tr>
                       <td colSpan={7} className="bg-zinc-50 px-3 py-4 dark:bg-zinc-950/50">
+                        {editingRunId === run.id ? (
+                          <form className="mb-4 grid gap-3 sm:grid-cols-2" onSubmit={handleEditRun}>
+                            <LeaveDateInput
+                              id={`edit-period-start-${run.id}`}
+                              label="Period start"
+                              value={editPeriodStart}
+                              onChange={setEditPeriodStart}
+                              hint="dd/mm/yyyy"
+                            />
+                            <LeaveDateInput
+                              id={`edit-period-end-${run.id}`}
+                              label="Period end"
+                              value={editPeriodEnd}
+                              onChange={setEditPeriodEnd}
+                              hint="dd/mm/yyyy"
+                            />
+                            <div className="flex gap-2 sm:col-span-2">
+                              <button
+                                type="submit"
+                                disabled={actingId === run.id || !financialUnlocked}
+                                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                              >
+                                Save & recalculate
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingRunId(null)}
+                                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs dark:border-zinc-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        ) : null}
                         {renderEmployeeRecords(detail?.employee_records, masked)}
                       </td>
                     </tr>

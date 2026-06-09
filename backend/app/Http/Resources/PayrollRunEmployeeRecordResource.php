@@ -28,7 +28,7 @@ class PayrollRunEmployeeRecordResource extends JsonResource
             'overtime_hours_seconds' => $this->overtime_hours_seconds,
             'overtime_rate_percent_snapshot' => $unlocked ? $this->overtime_rate_percent_snapshot : null,
             'overtime_pay_snapshot' => $unlocked ? $this->overtime_pay_snapshot : null,
-            'hourly_equivalent_snapshot' => $unlocked ? $this->hourly_equivalent_snapshot : null,
+            'hourly_equivalent_snapshot' => null,
             'gross_salary_snapshot' => $unlocked ? $this->gross_salary_snapshot : null,
             'deduction_mode_snapshot' => $this->deduction_mode_snapshot,
             'working_days_per_month_snapshot' => $this->working_days_per_month_snapshot,

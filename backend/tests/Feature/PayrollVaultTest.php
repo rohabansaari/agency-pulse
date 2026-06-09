@@ -84,7 +84,7 @@ class PayrollVaultTest extends TestCase
         $this->assertNotSame('5678', $raw);
     }
 
-    public function test_salary_contracts_are_masked_until_vault_unlocked(): void
+    public function test_salary_contracts_never_expose_numeric_salary_values(): void
     {
         $admin = User::factory()->admin()->create();
         Sanctum::actingAs($admin);
@@ -104,16 +104,19 @@ class PayrollVaultTest extends TestCase
         $this->withHeaders($this->headers($admin))
             ->getJson('/api/v1/payroll/salary-contracts')
             ->assertOk()
-            ->assertJsonPath('financial_data_masked', true)
-            ->assertJsonPath('contracts.0.hourly_rate', null);
+            ->assertJsonPath('contracts.0.hourly_rate', null)
+            ->assertJsonPath('contracts.0.monthly_salary', null)
+            ->assertJsonPath('contracts.0.has_salary', true)
+            ->assertJsonPath('contracts.0.salary_type', 'hourly');
 
         $this->unlockVault($admin);
 
         $this->withHeaders($this->headers($admin))
             ->getJson('/api/v1/payroll/salary-contracts')
             ->assertOk()
-            ->assertJsonPath('financial_data_masked', false)
-            ->assertJsonPath('contracts.0.hourly_rate', '80.00');
+            ->assertJsonPath('contracts.0.hourly_rate', null)
+            ->assertJsonPath('contracts.0.monthly_salary', null)
+            ->assertJsonPath('contracts.0.has_salary', true);
     }
 
     public function test_incorrect_pin_does_not_unlock_vault(): void

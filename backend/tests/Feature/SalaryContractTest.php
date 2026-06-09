@@ -114,7 +114,9 @@ class SalaryContractTest extends TestCase
                 'effective_from' => now()->addDay()->format('d/m/Y'),
             ])
             ->assertCreated()
-            ->assertJsonPath('contract.hourly_rate', '95.00');
+            ->assertJsonPath('contract.has_salary', true)
+            ->assertJsonPath('contract.hourly_rate', null)
+            ->assertJsonPath('contract.monthly_salary', null);
 
         $original->refresh();
         $this->assertFalse($original->is_active);

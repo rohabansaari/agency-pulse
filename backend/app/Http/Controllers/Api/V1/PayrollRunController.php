@@ -51,6 +51,46 @@ class PayrollRunController extends Controller
         return new PayrollRunResource($this->payrollRuns->show($payrollRun));
     }
 
+    public function update(Request $request, PayrollRun $payrollRun): JsonResponse
+    {
+        $this->payrollVault->assertUnlocked($request->user());
+
+        $validated = $request->validate([
+            'period_start' => ['sometimes', 'regex:'.DisplayDate::INPUT_PATTERN],
+            'period_end' => ['sometimes', 'regex:'.DisplayDate::INPUT_PATTERN],
+        ]);
+
+        $run = $this->payrollRuns->update($payrollRun, $request->user(), $validated);
+
+        return response()->json([
+            'message' => 'Draft payroll run updated and recalculated.',
+            'payroll_run' => new PayrollRunResource($run),
+        ]);
+    }
+
+    public function destroy(Request $request, PayrollRun $payrollRun): JsonResponse
+    {
+        $this->payrollVault->assertUnlocked($request->user());
+
+        $this->payrollRuns->delete($payrollRun, $request->user());
+
+        return response()->json([
+            'message' => 'Draft payroll run deleted.',
+        ]);
+    }
+
+    public function recalculate(Request $request, PayrollRun $payrollRun): JsonResponse
+    {
+        $this->payrollVault->assertUnlocked($request->user());
+
+        $run = $this->payrollRuns->recalculate($payrollRun, $request->user());
+
+        return response()->json([
+            'message' => 'Draft payroll run recalculated from current time data.',
+            'payroll_run' => new PayrollRunResource($run),
+        ]);
+    }
+
     public function finalize(Request $request, PayrollRun $payrollRun): JsonResponse
     {
         $this->payrollVault->assertUnlocked($request->user());
@@ -71,18 +111,6 @@ class PayrollRunController extends Controller
 
         return response()->json([
             'message' => 'Payroll run locked.',
-            'payroll_run' => new PayrollRunResource($run),
-        ]);
-    }
-
-    public function unlock(Request $request, PayrollRun $payrollRun): JsonResponse
-    {
-        $this->payrollVault->assertUnlocked($request->user());
-
-        $run = $this->payrollRuns->unlock($payrollRun, $request->user());
-
-        return response()->json([
-            'message' => 'Payroll run unlocked and returned to draft.',
             'payroll_run' => new PayrollRunResource($run),
         ]);
     }

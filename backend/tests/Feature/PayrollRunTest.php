@@ -414,26 +414,9 @@ class PayrollRunTest extends TestCase
             ->assertJsonValidationErrors(['payroll_period']);
     }
 
-    public function test_admin_can_unlock_payroll_and_allow_edits_again(): void
+    public function test_finalized_payroll_run_cannot_be_unlocked_or_deleted(): void
     {
-        ['admin' => $admin, 'employee' => $employee] = $this->setupPayrollFixture();
-        $manager = User::factory()->manager()->create(['organization_id' => $admin->organization_id]);
-        $team = Team::query()->where('organization_id', $admin->organization_id)->first();
-        $team->update(['manager_id' => $manager->id]);
-
-        $entry = TimeEntry::create([
-            'user_id' => $employee->id,
-            'organization_id' => $admin->organization_id,
-            'type' => TimeEntryType::Leave,
-            'team_id' => $team->id,
-            'manager_id' => $manager->id,
-            'duration' => UtilizationCalculator::SECONDS_PER_WORK_DAY,
-            'is_paid' => true,
-            'source' => TimeEntrySource::Employee,
-            'status' => TimeEntryStatus::Pending,
-            'start_time' => Carbon::today(),
-            'end_time' => Carbon::today()->addHours(8),
-        ]);
+        ['admin' => $admin] = $this->setupPayrollFixture();
 
         Sanctum::actingAs($admin);
         $create = $this->withHeaders($this->headers($admin))
@@ -450,14 +433,51 @@ class PayrollRunTest extends TestCase
             ->assertOk();
 
         $this->withHeaders($this->headers($admin))
-            ->postJson("/api/v1/payroll-runs/{$runId}/unlock")
-            ->assertOk()
-            ->assertJsonPath('payroll_run.status', PayrollRunStatus::Draft->value);
+            ->deleteJson("/api/v1/payroll-runs/{$runId}")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
 
-        Sanctum::actingAs($manager);
-        $this->withHeaders($this->headers($manager))
-            ->postJson("/api/v1/time/leave/{$entry->id}/approve")
+        $this->withHeaders($this->headers($admin))
+            ->postJson("/api/v1/payroll-runs/{$runId}/recalculate")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
+    }
+
+    public function test_admin_can_recalculate_and_delete_draft_payroll_run(): void
+    {
+        ['admin' => $admin, 'employee' => $employee] = $this->setupPayrollFixture();
+
+        Sanctum::actingAs($admin);
+        $create = $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/payroll-runs', [
+                'period_start' => $this->displayDate(Carbon::today()),
+                'period_end' => $this->displayDate(Carbon::today()),
+            ])
+            ->assertCreated();
+
+        $runId = $create->json('payroll_run.id');
+
+        TimeEntry::create([
+            'user_id' => $employee->id,
+            'organization_id' => $admin->organization_id,
+            'type' => TimeEntryType::Tracked,
+            'project_id' => Project::query()->first()->id,
+            'duration' => 7200,
+            'status' => TimeEntryStatus::Stopped,
+            'start_time' => Carbon::today()->addHours(14),
+            'end_time' => Carbon::today()->addHours(16),
+        ]);
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson("/api/v1/payroll-runs/{$runId}/recalculate")
+            ->assertOk()
+            ->assertJsonPath('payroll_run.total_hours_snapshot', 3600 + 1800 + UtilizationCalculator::SECONDS_PER_WORK_DAY + 7200);
+
+        $this->withHeaders($this->headers($admin))
+            ->deleteJson("/api/v1/payroll-runs/{$runId}")
             ->assertOk();
+
+        $this->assertDatabaseMissing('payroll_runs', ['id' => $runId]);
     }
 
     public function test_approved_overtime_included_in_payroll_snapshot(): void

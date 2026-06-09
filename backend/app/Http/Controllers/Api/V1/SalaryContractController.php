@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Payroll\AdminPayrollService;
 use App\Services\Payroll\PayrollVaultService;
-use App\Support\PayrollVaultState;
 use App\Support\DisplayDate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,31 +21,15 @@ class SalaryContractController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $contracts = $this->adminPayroll->listActiveContracts();
-        $unlocked = PayrollVaultState::isUnlocked($request);
-
         return response()->json([
-            'contracts' => $contracts
-                ->map(fn ($contract) => $unlocked
-                    ? $contract
-                    : $this->adminPayroll->maskedContractPayload($contract))
-                ->values(),
-            'financial_data_masked' => ! $unlocked,
+            'contracts' => $this->adminPayroll->listActiveContracts()->values(),
         ]);
     }
 
     public function history(Request $request, User $user): JsonResponse
     {
-        $contracts = $this->adminPayroll->contractHistoryForUser($user);
-        $unlocked = PayrollVaultState::isUnlocked($request);
-
         return response()->json([
-            'contracts' => $contracts
-                ->map(fn ($contract) => $unlocked
-                    ? $contract
-                    : $this->adminPayroll->maskedContractPayload($contract))
-                ->values(),
-            'financial_data_masked' => ! $unlocked,
+            'contracts' => $this->adminPayroll->contractHistoryForUser($user)->values(),
         ]);
     }
 
@@ -69,7 +52,7 @@ class SalaryContractController extends Controller
 
         return response()->json([
             'message' => 'Salary contract updated with a new version.',
-            'contract' => $this->adminPayroll->decryptedContractPayload($contract),
+            'contract' => $this->adminPayroll->publicContractPayload($contract),
         ], 201);
     }
 }

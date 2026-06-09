@@ -12,23 +12,6 @@ import { usePayrollVault } from "@/components/payroll/PayrollVaultProvider";
 import type { SalaryContract, SalaryType } from "@/lib/types";
 import { useCallback, useEffect, useState } from "react";
 
-function formatMoney(value: string | null, masked: boolean): string {
-  if (masked || !value) {
-    return "••••••";
-  }
-
-  const amount = Number.parseFloat(value);
-  if (Number.isNaN(amount)) {
-    return value;
-  }
-
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
-
 export function SalaryContractsPanel() {
   const { financialUnlocked } = usePayrollVault();
   const [contracts, setContracts] = useState<SalaryContract[]>([]);
@@ -64,8 +47,8 @@ export function SalaryContractsPanel() {
   function startEdit(contract: SalaryContract) {
     setEditingUserId(contract.user_id);
     setSalaryType(contract.salary_type);
-    setHourlyRate(contract.hourly_rate ?? "");
-    setMonthlySalary(contract.monthly_salary ?? "");
+    setHourlyRate("");
+    setMonthlySalary("");
     setEffectiveFrom(todayDdMmYyyy());
     setSuccess("");
     setError("");
@@ -108,7 +91,7 @@ export function SalaryContractsPanel() {
         Employee salary contracts
       </h2>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-        Compensation is encrypted at rest. Updates create a new contract version.
+        Compensation is encrypted at rest and never displayed. Updates create a new contract version.
       </p>
 
       {error ? (
@@ -129,7 +112,7 @@ export function SalaryContractsPanel() {
               <tr>
                 <th className="px-3 py-2 font-medium">Employee</th>
                 <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium">Rate / Salary</th>
+                <th className="px-3 py-2 font-medium">Salary</th>
                 <th className="px-3 py-2 font-medium">Effective from</th>
                 <th className="px-3 py-2 font-medium">Actions</th>
               </tr>
@@ -143,13 +126,8 @@ export function SalaryContractsPanel() {
                   <td className="px-3 py-3 capitalize text-zinc-600 dark:text-zinc-400">
                     {contract.salary_type}
                   </td>
-                  <td className="px-3 py-3 text-zinc-700 dark:text-zinc-300">
-                    {contract.salary_type === "hourly"
-                      ? `${formatMoney(contract.hourly_rate, contract.financial_data_masked ?? !financialUnlocked)}/hr`
-                      : formatMoney(
-                          contract.monthly_salary,
-                          contract.financial_data_masked ?? !financialUnlocked,
-                        )}
+                  <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">
+                    {contract.has_salary ? "Configured (hidden)" : "—"}
                   </td>
                   <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">
                     {contract.effective_from}
@@ -174,7 +152,7 @@ export function SalaryContractsPanel() {
       {editingUserId ? (
         <form onSubmit={handleUpdate} className="mt-6 space-y-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
           <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-            New salary version
+            New salary version (values are never shown after save)
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className="block text-sm">
@@ -232,7 +210,7 @@ export function SalaryContractsPanel() {
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !financialUnlocked}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
               {saving ? "Saving…" : "Save new version"}

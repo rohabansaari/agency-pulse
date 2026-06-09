@@ -84,7 +84,7 @@ class PayrollRunService
 
 
 
-        $this->assertNoOverlappingLockedRun($periodStart, $periodEnd);
+        $this->assertNoOverlappingRun($periodStart, $periodEnd);
 
 
 
@@ -182,6 +182,106 @@ class PayrollRunService
 
 
 
+    public function update(PayrollRun $run, User $admin, array $data): PayrollRun
+    {
+        $this->ensureAdmin($admin);
+        $this->ensureSameOrganization($run);
+        $this->ensureDraft($run);
+
+        $periodStart = isset($data['period_start'])
+            ? DisplayDate::parse($data['period_start'], 'period_start')
+            : $run->period_start->copy();
+        $periodEnd = isset($data['period_end'])
+            ? DisplayDate::parse($data['period_end'], 'period_end')
+            : $run->period_end->copy();
+
+        if ($periodEnd->lt($periodStart)) {
+            throw ValidationException::withMessages([
+                'period_end' => ['Period end must be on or after period start.'],
+            ]);
+        }
+
+        $this->assertNoOverlappingRun($periodStart, $periodEnd, $run->id);
+
+        $run->update([
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+        ]);
+
+        $recalculated = $this->recalculate($run, $admin);
+
+        $this->audit->log('payroll_run.updated', $recalculated, $admin, [
+            'period_start' => DisplayDate::format($periodStart),
+            'period_end' => DisplayDate::format($periodEnd),
+        ]);
+
+        return $recalculated;
+    }
+
+    public function recalculate(PayrollRun $run, User $admin): PayrollRun
+    {
+        $this->ensureAdmin($admin);
+        $this->ensureSameOrganization($run);
+        $this->ensureDraft($run);
+
+        return DB::transaction(function () use ($run, $admin) {
+            $run->entries()->delete();
+            $run->employeeRecords()->delete();
+
+            $snapshot = $this->buildSnapshot($run->period_start, $run->period_end);
+
+            $run->update([
+                'total_hours_snapshot' => $snapshot['total_seconds'],
+                'total_pay_snapshot' => $snapshot['total_pay'],
+                'total_net_snapshot' => $snapshot['total_net'],
+            ]);
+
+            foreach ($snapshot['lines'] as $line) {
+                PayrollRunEntry::create([
+                    'payroll_run_id' => $run->id,
+                    ...$line,
+                ]);
+            }
+
+            foreach ($snapshot['employee_records'] as $record) {
+                PayrollRunEmployeeRecord::create([
+                    'payroll_run_id' => $run->id,
+                    ...$record,
+                ]);
+            }
+
+            $this->audit->log('payroll_run.recalculated', $run->fresh(), $admin, [
+                'period_start' => DisplayDate::format($run->period_start),
+                'period_end' => DisplayDate::format($run->period_end),
+            ]);
+
+            return $run->fresh([
+                'creator',
+                'entries.user',
+                'entries.timeEntry',
+                'employeeRecords.user',
+            ]);
+        });
+    }
+
+    public function delete(PayrollRun $run, User $admin): void
+    {
+        $this->ensureAdmin($admin);
+        $this->ensureSameOrganization($run);
+        $this->ensureDraft($run);
+
+        DB::transaction(function () use ($run, $admin) {
+            $this->audit->log('payroll_run.deleted', $run, $admin, [
+                'period_start' => DisplayDate::format($run->period_start),
+                'period_end' => DisplayDate::format($run->period_end),
+            ]);
+
+            $run->entries()->delete();
+            $run->employeeRecords()->delete();
+            $run->delete();
+        });
+    }
+
     public function finalize(PayrollRun $run, User $admin): PayrollRun
 
     {
@@ -271,73 +371,11 @@ class PayrollRunService
 
 
         return $run->fresh(['creator', 'finalizer', 'locker', 'entries.user', 'employeeRecords.user']);
-
     }
-
-
-
-    public function unlock(PayrollRun $run, User $admin): PayrollRun
-
-    {
-
-        $this->ensureAdmin($admin);
-
-        $this->ensureSameOrganization($run);
-
-
-
-        if (! in_array($run->status, [PayrollRunStatus::Finalized, PayrollRunStatus::Locked], true)) {
-
-            throw ValidationException::withMessages([
-
-                'status' => ['Only finalized or locked payroll runs can be unlocked.'],
-
-            ]);
-
-        }
-
-
-
-        $previousStatus = $run->status->value;
-
-
-
-        $run->update([
-
-            'status' => PayrollRunStatus::Draft,
-
-            'finalized_by' => null,
-
-            'finalized_at' => null,
-
-            'locked_by' => null,
-
-            'locked_at' => null,
-
-        ]);
-
-
-
-        $this->audit->log('payroll_run.unlocked', $run->fresh(), $admin, [
-
-            'previous_status' => $previousStatus,
-
-        ]);
-
-
-
-        return $run->fresh(['creator', 'entries.user', 'employeeRecords.user']);
-
-    }
-
-
 
     /**
-
      * @return Collection<int, PayrollRun>
-
      */
-
     public function listForOrganization(?Carbon $rangeStart = null, ?Carbon $rangeEnd = null): Collection
 
     {
@@ -466,42 +504,39 @@ class PayrollRunService
 
 
 
-    private function assertNoOverlappingLockedRun(Carbon $periodStart, Carbon $periodEnd): void
-
+    private function assertNoOverlappingRun(Carbon $periodStart, Carbon $periodEnd, ?int $exceptRunId = null): void
     {
-
         $overlap = PayrollRun::query()
-
             ->where('organization_id', TenantContext::id())
-
+            ->when($exceptRunId !== null, fn ($query) => $query->where('id', '!=', $exceptRunId))
             ->whereIn('status', [
-
                 PayrollRunStatus::Draft->value,
-
                 PayrollRunStatus::Finalized->value,
-
                 PayrollRunStatus::Locked->value,
-
             ])
-
             ->whereDate('period_start', '<=', $periodEnd->toDateString())
-
             ->whereDate('period_end', '>=', $periodStart->toDateString())
-
             ->exists();
 
-
-
         if ($overlap) {
-
             throw ValidationException::withMessages([
-
                 'period_start' => ['A payroll run already exists for an overlapping period.'],
-
             ]);
-
         }
+    }
 
+    private function ensureDraft(PayrollRun $run): void
+    {
+        if ($run->status !== PayrollRunStatus::Draft) {
+            throw ValidationException::withMessages([
+                'status' => ['Only draft payroll runs can be modified.'],
+            ]);
+        }
+    }
+
+    private function assertNoOverlappingLockedRun(Carbon $periodStart, Carbon $periodEnd): void
+    {
+        $this->assertNoOverlappingRun($periodStart, $periodEnd);
     }
 
 

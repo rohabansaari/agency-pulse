@@ -105,6 +105,27 @@ class AdminPayrollService
     }
 
     /**
+     * Safe contract payload for HTTP responses — never exposes numeric salary values.
+     *
+     * @return array<string, mixed>
+     */
+    public function publicContractPayload(EmployeeSalaryContract $contract): array
+    {
+        return [
+            'id' => $contract->id,
+            'user_id' => $contract->user_id,
+            'user_name' => $contract->relationLoaded('user') ? $contract->user?->name : null,
+            'salary_type' => $contract->salary_type->value,
+            'has_salary' => true,
+            'hourly_rate' => null,
+            'monthly_salary' => null,
+            'effective_from' => DisplayDate::format($contract->effective_from),
+            'effective_to' => DisplayDate::format($contract->effective_to),
+            'is_active' => $contract->is_active,
+        ];
+    }
+
+    /**
      * @return Collection<int, array<string, mixed>>
      */
     public function listActiveContracts(): Collection
@@ -115,7 +136,7 @@ class AdminPayrollService
             ->where('is_active', true)
             ->orderBy('user_id')
             ->get()
-            ->map(fn (EmployeeSalaryContract $contract) => $this->decryptedContractPayload($contract));
+            ->map(fn (EmployeeSalaryContract $contract) => $this->publicContractPayload($contract));
     }
 
     /**
@@ -130,10 +151,12 @@ class AdminPayrollService
             ->where('user_id', $employee->id)
             ->orderByDesc('effective_from')
             ->get()
-            ->map(fn (EmployeeSalaryContract $contract) => $this->decryptedContractPayload($contract));
+            ->map(fn (EmployeeSalaryContract $contract) => $this->publicContractPayload($contract));
     }
 
     /**
+     * Internal payroll calculation payload — not for HTTP responses.
+     *
      * @return array<string, mixed>
      */
     public function decryptedContractPayload(EmployeeSalaryContract $contract): array

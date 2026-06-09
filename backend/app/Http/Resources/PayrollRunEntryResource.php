@@ -24,7 +24,7 @@ class PayrollRunEntryResource extends JsonResource
             'user_name' => $this->whenLoaded('user', fn () => $this->user?->name),
             'entry_type' => $this->entry_type,
             'duration_seconds' => $this->duration_seconds,
-            'hourly_rate_snapshot' => $unlocked ? $this->hourly_rate_snapshot : null,
+            'hourly_rate_snapshot' => null,
             'pay_snapshot' => $unlocked ? $this->pay_snapshot : null,
             'financial_data_masked' => ! $unlocked,
             'entry_date' => $this->whenLoaded(

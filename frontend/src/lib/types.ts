@@ -395,12 +395,12 @@ export interface SalaryContract {
   user_id: number;
   user_name?: string | null;
   salary_type: SalaryType;
-  hourly_rate: string | null;
-  monthly_salary: string | null;
+  has_salary: boolean;
+  hourly_rate?: null;
+  monthly_salary?: null;
   effective_from: string;
   effective_to: string | null;
   is_active: boolean;
-  financial_data_masked?: boolean;
 }
 
 export type PayrollRunStatus = "draft" | "finalized" | "locked";
