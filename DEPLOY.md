@@ -91,7 +91,8 @@ Do **not** leave placeholder text like `<paste MYSQLHOST>` — Laravel will try 
 | Key | Value |
 |-----|--------|
 | `APP_URL` | `https://agencypulse-api.onrender.com` |
-| `FRONTEND_URL` | `https://agencypulse-web.onrender.com` *(add after Part 3, or your frontend URL)* |
+| `FRONTEND_URL` | `https://agencypulse-web.onrender.com` *(your frontend URL — also enables CORS for signup/login)* |
+| `CORS_ALLOWED_ORIGINS` | *(optional)* extra origins, comma-separated, if you use a custom domain |
 
 Save to redeploy.
 
@@ -164,6 +165,7 @@ Use the **frontend** URL for the app — not the API URL.
 | `getaddrinfo for <paste MYSQLHOST> failed` | `DB_HOST` still has placeholder text — paste the real Railway hostname |
 | Database connection error | Railway **Public Networking** on; double-check all `DB_*` **values** from Railway Variables |
 | Frontend `Missing script: "build"` + Playwright download in logs | **Root Directory** must be `frontend`, not repo root |
+| Signup/login fails with generic error | Set `FRONTEND_URL` on API to your frontend URL, redeploy API; confirm `NEXT_PUBLIC_API_URL` on frontend and redeploy web |
 | Frontend API errors | `NEXT_PUBLIC_API_URL` must be `https://YOUR-API.onrender.com/api/v1` then **Manual Deploy** frontend |
 | Payroll 404 | Open frontend URL, not API URL |
 | 502 on API | Check logs; migrations may fail if `DB_*` wrong |
