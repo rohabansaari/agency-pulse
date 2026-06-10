@@ -3,7 +3,7 @@
 
 
 import { AppShell } from "@/components/dashboard/AppShell";
-
+import { OnboardingFollowUpBanner } from "@/components/onboarding/OnboardingFollowUpBanner";
 import { RoleDebugPanel } from "@/components/dashboard/RoleDebugPanel";
 
 import { RoleDashboard } from "@/components/dashboard/RoleDashboard";
@@ -75,6 +75,7 @@ export default function DashboardPage() {
     <AppShell>
 
       <div className="space-y-6">
+        <OnboardingFollowUpBanner />
         {loading ? (
 
           <div className="grid gap-4 sm:grid-cols-3">

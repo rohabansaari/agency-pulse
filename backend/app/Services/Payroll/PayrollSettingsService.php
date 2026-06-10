@@ -24,7 +24,7 @@ class PayrollSettingsService
                 'eobi_percent' => 0,
                 'social_security_percent' => 0,
                 'custom_deduction_percent' => 0,
-                'overtime_enabled' => false,
+                'overtime_enabled' => true,
                 'overtime_rate_percentage' => 125,
             ]
         );

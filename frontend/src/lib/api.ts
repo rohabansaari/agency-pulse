@@ -820,6 +820,24 @@ export async function updateOnboardingStep(step: number): Promise<{ status: Onbo
   });
 }
 
+export async function skipOnboardingStep(step: number): Promise<{ status: OnboardingStatus }> {
+  return apiFetch<{ status: OnboardingStatus }>("/onboarding/skip-step", {
+    method: "POST",
+    body: JSON.stringify({ step }),
+  });
+}
+
+export async function changePayrollPin(data: {
+  current_pin: string;
+  payroll_pin: string;
+  payroll_pin_confirmation: string;
+}): Promise<{ message: string; status: PayrollVaultStatus }> {
+  return apiFetch<{ message: string; status: PayrollVaultStatus }>("/payroll/vault/change-pin", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function createOnboardingEmployee(data: {
   name: string;
   email: string;
@@ -874,6 +892,46 @@ export async function completeOnboarding(): Promise<{ message: string; status: O
     method: "POST",
     body: JSON.stringify({}),
   });
+}
+
+export type EmployeeCsvImportResponse = {
+  message: string;
+  created: number;
+  failed_count: number;
+  total: number;
+  failed: { row: number; data: Record<string, string>; errors: string[] }[];
+  results: CsvImportResult[];
+  status?: OnboardingStatus;
+};
+
+export async function importTeamEmployees(file: File): Promise<EmployeeCsvImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const token = getToken();
+  const organizationId = getOrganizationId();
+
+  const response = await fetch(`${API_BASE}/team/import-employees`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(organizationId ? { "X-Organization-Id": String(organizationId) } : {}),
+    },
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ApiError(response.status, data);
+  }
+
+  return data;
+}
+
+export function teamSampleCsvUrl(): string {
+  return `${API_BASE}/team/import-employees/sample.csv`;
 }
 
 export async function updatePassword(data: {

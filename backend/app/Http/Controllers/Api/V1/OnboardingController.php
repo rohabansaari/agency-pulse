@@ -54,7 +54,7 @@ class OnboardingController extends Controller
         $this->ensureAdmin($request);
 
         $validated = $request->validate([
-            'step' => ['required', 'integer', 'min:1', 'max:6'],
+            'step' => ['required', 'integer', 'min:1', 'max:5'],
         ]);
 
         $organization = $this->onboarding->updateStep(
@@ -80,11 +80,12 @@ class OnboardingController extends Controller
         ]);
 
         $result = $this->onboardingEmployees->createEmployee($validated, $request->user());
+        $organization = $this->onboarding->markStepCompleted(TenantContext::get(), 3);
 
         return response()->json([
             'message' => $result['message'],
             'member' => new TeamMemberResource($result['member']),
-            'status' => $this->onboarding->status($request->user(), TenantContext::get()),
+            'status' => $this->onboarding->status($request->user(), $organization),
         ], 201);
     }
 
@@ -98,6 +99,9 @@ class OnboardingController extends Controller
 
         $csvContent = (string) file_get_contents($validated['file']->getRealPath());
         $result = $this->onboardingEmployees->importCsv($csvContent, $request->user());
+        $organization = $result['created'] > 0
+            ? $this->onboarding->markStepCompleted(TenantContext::get(), 3)
+            : TenantContext::get();
 
         return response()->json([
             'message' => $result['message'],
@@ -130,6 +134,24 @@ class OnboardingController extends Controller
             fclose($handle);
         }, 'employee-import-sample.csv', [
             'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    public function skipStep(Request $request): JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $validated = $request->validate([
+            'step' => ['required', 'integer', Rule::in([3, 4, 5])],
+        ]);
+
+        $organization = $this->onboarding->markStepSkipped(
+            TenantContext::get(),
+            (int) $validated['step']
+        );
+
+        return response()->json([
+            'status' => $this->onboarding->status($request->user(), $organization),
         ]);
     }
 

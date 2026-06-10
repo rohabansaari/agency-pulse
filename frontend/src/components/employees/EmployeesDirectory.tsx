@@ -1,6 +1,7 @@
 "use client";
 
 import { EmployeeActionsMenu } from "@/components/employees/EmployeeActionsMenu";
+import { EmployeeCsvImport } from "@/components/onboarding/EmployeeCsvImport";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import {
   ApiError,
@@ -45,6 +46,8 @@ export function EmployeesDirectory({ user }: { user: User }) {
   const [createPayrollPinConfirmation, setCreatePayrollPinConfirmation] = useState("");
   const [vaultStatus, setVaultStatus] = useState<PayrollVaultStatus | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     setError("");
@@ -141,13 +144,28 @@ export function EmployeesDirectory({ user }: { user: User }) {
             rows={exportRows}
           />
           {canCreate ? (
-            <button
-              type="button"
-              onClick={() => setShowCreate(true)}
-              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              Create employee
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImport((value) => !value);
+                  setShowCreate(false);
+                }}
+                className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium dark:border-zinc-600"
+              >
+                Import CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreate(true);
+                  setShowImport(false);
+                }}
+                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Create employee
+              </button>
+            </>
           ) : null}
         </div>
       </div>
@@ -156,6 +174,18 @@ export function EmployeesDirectory({ user }: { user: User }) {
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
           {error}
         </p>
+      ) : null}
+
+      {showImport && canCreate ? (
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/50">
+          <p className="mb-3 text-sm font-medium text-zinc-900 dark:text-zinc-50">Import employees from CSV</p>
+          <EmployeeCsvImport
+            variant="employees"
+            submitting={importing}
+            onSubmittingChange={setImporting}
+            onImported={() => void load()}
+          />
+        </div>
       ) : null}
 
       {showCreate ? (

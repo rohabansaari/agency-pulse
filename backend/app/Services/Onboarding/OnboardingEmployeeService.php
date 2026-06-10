@@ -79,7 +79,7 @@ class OnboardingEmployeeService
 
         return [
             'member' => $membership,
-            'message' => 'Employee added. They can set a password when they first sign in.',
+            'message' => 'Employee added with active status. They can set a password when they first sign in.',
         ];
     }
 

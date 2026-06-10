@@ -4,7 +4,9 @@ import {
   ApiError,
   formatApiErrors,
   importOnboardingEmployees,
+  importTeamEmployees,
   onboardingSampleCsvUrl,
+  teamSampleCsvUrl,
 } from "@/lib/api";
 import { downloadCsv } from "@/lib/csv";
 import type { CsvImportResult, OnboardingStatus } from "@/lib/types";
@@ -18,7 +20,7 @@ type ImportResponse = {
   total: number;
   failed: { row: number; data: Record<string, string>; errors: string[] }[];
   results: CsvImportResult[];
-  status: OnboardingStatus;
+  status?: OnboardingStatus;
 };
 
 function resultHeaders(results: CsvImportResult[], includeStatus = true): string[] {
@@ -50,22 +52,27 @@ function resultRows(results: CsvImportResult[], headers: string[], includeStatus
 }
 
 export function EmployeeCsvImport({
+  variant = "onboarding",
   submitting,
   onSubmittingChange,
   onStatusChange,
+  onImported,
 }: {
+  variant?: "onboarding" | "employees";
   submitting: boolean;
   onSubmittingChange: (value: boolean) => void;
-  onStatusChange: (status: OnboardingStatus) => void;
+  onStatusChange?: (status: OnboardingStatus) => void;
+  onImported?: () => void;
 }) {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [importReport, setImportReport] = useState<ImportResponse | null>(null);
 
   async function downloadSampleCsv() {
+    const sampleUrl = variant === "employees" ? teamSampleCsvUrl() : onboardingSampleCsvUrl();
     const token = getToken();
     const organizationId = getOrganizationId();
-    const response = await fetch(onboardingSampleCsvUrl(), {
+    const response = await fetch(sampleUrl, {
       headers: {
         Accept: "text/csv",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -90,9 +97,17 @@ export function EmployeeCsvImport({
     setError("");
     setImportReport(null);
     try {
-      const response = await importOnboardingEmployees(csvFile);
+      const response =
+        variant === "employees"
+          ? await importTeamEmployees(csvFile)
+          : await importOnboardingEmployees(csvFile);
       setImportReport(response);
-      onStatusChange(response.status);
+      if (response.status && onStatusChange) {
+        onStatusChange(response.status);
+      }
+      if (response.created > 0) {
+        onImported?.();
+      }
       setCsvFile(null);
     } catch (err) {
       setError(err instanceof ApiError ? formatApiErrors(err.errors) || err.message : "CSV import failed.");
@@ -118,37 +133,23 @@ export function EmployeeCsvImport({
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <button
-              type="button"
-              onClick={() => void downloadSampleCsv()}
-              className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
-            >
-              Download sample CSV
-            </button>
-            <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-              Columns: <span className="font-mono">name, email, salary, salary_type, role</span>
-            </p>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => void downloadSampleCsv()}
+          className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+        >
+          Download sample CSV
+        </button>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div className="rounded-md bg-white/80 p-3 text-xs dark:bg-zinc-900/80">
             <p className="font-semibold text-zinc-700 dark:text-zinc-300">Allowed roles</p>
-            <ul className="mt-1 list-inside list-disc text-zinc-600 dark:text-zinc-400">
-              <li>employee</li>
-              <li>manager</li>
-              <li>sub_admin</li>
-            </ul>
+            <p className="mt-1 text-zinc-600 dark:text-zinc-400">employee, manager, sub_admin</p>
             <p className="mt-2 text-zinc-500">Admin and Super Admin cannot be imported.</p>
           </div>
           <div className="rounded-md bg-white/80 p-3 text-xs dark:bg-zinc-900/80">
             <p className="font-semibold text-zinc-700 dark:text-zinc-300">Allowed salary types</p>
-            <ul className="mt-1 list-inside list-disc text-zinc-600 dark:text-zinc-400">
-              <li>monthly</li>
-              <li>hourly</li>
-            </ul>
-            <p className="mt-2 text-zinc-500">Extra columns (e.g. department) are ignored automatically.</p>
+            <p className="mt-1 text-zinc-600 dark:text-zinc-400">monthly, hourly</p>
+            <p className="mt-2 text-zinc-500">Extra columns are ignored automatically.</p>
           </div>
         </div>
       </div>

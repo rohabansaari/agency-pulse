@@ -13,6 +13,7 @@ use App\Http\Resources\EmployeeProfileResource;
 use App\Services\Auth\MembershipRoleSync;
 use App\Services\Auth\RoleMutationGuard;
 use App\Services\Employee\EmployeeDirectoryService;
+use App\Services\Onboarding\OnboardingEmployeeService;
 use App\Services\Payroll\AdminPayrollService;
 use App\Services\Payroll\PayrollVaultService;
 use App\Services\Tenant\TenantContext;
@@ -25,6 +26,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TeamController extends Controller
 {
@@ -32,7 +34,8 @@ class TeamController extends Controller
         private readonly MembershipRoleSync $membershipRoleSync,
         private readonly AdminPayrollService $adminPayroll,
         private readonly PayrollVaultService $payrollVault,
-        private readonly EmployeeDirectoryService $employeeDirectory
+        private readonly EmployeeDirectoryService $employeeDirectory,
+        private readonly OnboardingEmployeeService $employeeImport
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -318,5 +321,45 @@ class TeamController extends Controller
             ->exists()) {
             abort(404);
         }
+    }
+
+    public function importEmployees(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
+        ]);
+
+        $csvContent = (string) file_get_contents($validated['file']->getRealPath());
+        $result = $this->employeeImport->importCsv($csvContent, $request->user());
+
+        return response()->json([
+            'message' => $result['message'],
+            'created' => $result['created'],
+            'failed_count' => $result['failed_count'],
+            'total' => $result['total'],
+            'failed' => $result['failed'],
+            'results' => $result['results'],
+        ]);
+    }
+
+    public function sampleCsv(): StreamedResponse
+    {
+        $headers = ['name', 'email', 'salary', 'salary_type', 'role'];
+        $rows = [
+            ['John Doe', 'john@example.com', '100000', 'monthly', 'employee'],
+            ['Jane Smith', 'jane@example.com', '1200', 'hourly', 'manager'],
+            ['Mark Wilson', 'mark@example.com', '85000', 'monthly', 'sub_admin'],
+        ];
+
+        return response()->streamDownload(function () use ($headers, $rows): void {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, $headers);
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        }, 'employee-import-sample.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }

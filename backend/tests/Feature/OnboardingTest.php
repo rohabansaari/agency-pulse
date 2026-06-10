@@ -153,7 +153,7 @@ class OnboardingTest extends TestCase
             ->assertCreated();
 
         $this->withHeaders($this->headers($admin))
-            ->patchJson('/api/v1/onboarding/step', ['step' => 6])
+            ->patchJson('/api/v1/onboarding/step', ['step' => 5])
             ->assertOk();
 
         $this->withHeaders($this->headers($admin))

@@ -19,6 +19,7 @@ class Organization extends Model
         'status',
         'onboarding_completed',
         'onboarding_step',
+        'onboarding_skipped_steps',
         'timezone',
         'logo_url',
         'website',
@@ -32,6 +33,7 @@ class Organization extends Model
             'status' => OrganizationStatus::class,
             'onboarding_completed' => 'boolean',
             'onboarding_step' => 'integer',
+            'onboarding_skipped_steps' => 'array',
             'payroll_pin' => 'encrypted',
             'payroll_pin_created_at' => 'datetime',
         ];

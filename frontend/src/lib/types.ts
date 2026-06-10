@@ -46,6 +46,8 @@ export interface OnboardingStatus {
   };
   pin_configured: boolean;
   requirements_met: boolean;
+  skipped_steps?: number[];
+  follow_up_steps?: number[];
 }
 
 export interface CsvImportResult {

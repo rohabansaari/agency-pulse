@@ -10,9 +10,9 @@ import {
   fetchOnboardingStatus,
   formatApiErrors,
   initializePayrollPin,
+  skipOnboardingStep,
   updateOnboardingOrganization,
   updateOnboardingStep,
-  updatePassword,
 } from "@/lib/api";
 import { clearToken, getToken } from "@/lib/auth";
 import type { OnboardingStatus, UserRole } from "@/lib/types";
@@ -26,7 +26,6 @@ const STEPS = [
   { id: 3, title: "Employees", required: false, blurb: "Invite your team now or add people later." },
   { id: 4, title: "Teams", required: false, blurb: "Group people for reporting and assignments." },
   { id: 5, title: "Projects", required: false, blurb: "Track client work and billable time." },
-  { id: 6, title: "Password", required: false, blurb: "Replace a temporary password before you finish." },
 ] as const;
 
 const TIMEZONES = [
@@ -82,10 +81,6 @@ export function OnboardingWizard() {
   const [projectName, setProjectName] = useState("");
   const [projectClient, setProjectClient] = useState("");
   const [projectsCreated, setProjectsCreated] = useState<string[]>([]);
-
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
 
   const loadStatus = useCallback(async () => {
     const next = await fetchOnboardingStatus();
@@ -231,32 +226,15 @@ export function OnboardingWizard() {
     }
   }
 
-  async function handlePasswordSubmit(event: FormEvent) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError("");
-    try {
-      await updatePassword({
-        current_password: currentPassword,
-        password: newPassword,
-        password_confirmation: confirmPassword,
-      });
-      setSuccess("Password updated.");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (err) {
-      setError(err instanceof ApiError ? formatApiErrors(err.errors) || err.message : "Unable to update password.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   async function handleSkipOptional() {
     setSubmitting(true);
     setError("");
     try {
-      if (step < 6) {
+      if (step >= 3 && step <= 5) {
+        const response = await skipOnboardingStep(step);
+        setStatus(response.status);
+      }
+      if (step < 5) {
         await goToStep(step + 1);
       } else {
         await finishOnboarding();
@@ -491,35 +469,7 @@ export function OnboardingWizard() {
                   {projectsCreated.length > 0 ? (
                     <CreatedList items={projectsCreated} />
                   ) : null}
-                  <OptionalActions submitting={submitting} onBack={() => goToStep(4)} onSkip={handleSkipOptional} onContinue={() => goToStep(6)} />
-                </div>
-              ) : null}
-
-              {step === 6 ? (
-                <div className="space-y-3">
-                  <form onSubmit={handlePasswordSubmit} className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Current password" className="sm:col-span-2">
-                      <input required type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={inputClass} />
-                    </Field>
-                    <Field label="New password">
-                      <input required type="password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputClass} />
-                    </Field>
-                    <Field label="Confirm password">
-                      <input required type="password" minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} />
-                    </Field>
-                    <div className="sm:col-span-2">
-                      <button type="submit" disabled={submitting} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
-                        Update password
-                      </button>
-                    </div>
-                  </form>
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-700">
-                    <button type="button" onClick={() => goToStep(5)} className="text-sm text-zinc-600 dark:text-zinc-400">Back</button>
-                    <div className="flex gap-2">
-                      <button type="button" disabled={submitting} onClick={handleSkipOptional} className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600">Skip</button>
-                      <button type="button" disabled={submitting} onClick={handleFinish} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white">Finish</button>
-                    </div>
-                  </div>
+                  <OptionalActions submitting={submitting} onBack={() => goToStep(4)} onSkip={handleSkipOptional} onContinue={() => void handleFinish()} continueLabel="Finish setup" />
                 </div>
               ) : null}
             </div>
@@ -571,25 +521,6 @@ function OnboardingProgressTrack({
           className="absolute inset-y-0 left-0 rounded-full bg-blue-600 transition-all duration-300 ease-out dark:bg-blue-500"
           style={{ width: `${percent}%` }}
         />
-      </div>
-      <div className="mt-2 grid grid-cols-6 gap-1">
-        {steps.map((item) => {
-          const done = item.id < currentStep;
-          const active = item.id === currentStep;
-          return (
-            <div
-              key={item.id}
-              className={`h-1 rounded-full transition-colors ${
-                done
-                  ? "bg-emerald-500"
-                  : active
-                    ? "bg-blue-600 dark:bg-blue-500"
-                    : "bg-zinc-200 dark:bg-zinc-700"
-              }`}
-              title={item.title}
-            />
-          );
-        })}
       </div>
     </div>
   );
@@ -673,18 +604,20 @@ function OptionalActions({
   onBack,
   onSkip,
   onContinue,
+  continueLabel = "Continue",
 }: {
   submitting: boolean;
   onBack: () => void;
   onSkip: () => void;
   onContinue: () => void;
+  continueLabel?: string;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-700">
       <button type="button" onClick={onBack} className="text-sm text-zinc-600 dark:text-zinc-400">Back</button>
       <div className="flex gap-2">
         <button type="button" disabled={submitting} onClick={onSkip} className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600">Skip</button>
-        <button type="button" disabled={submitting} onClick={onContinue} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white">Continue</button>
+        <button type="button" disabled={submitting} onClick={onContinue} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white">{continueLabel}</button>
       </div>
     </div>
   );

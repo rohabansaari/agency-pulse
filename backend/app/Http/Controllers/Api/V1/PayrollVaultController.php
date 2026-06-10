@@ -31,6 +31,7 @@ class PayrollVaultController extends Controller
 
         $organization = TenantContext::get();
         $this->onboarding->updateStep($organization, 3);
+        $this->onboarding->enableOvertimeForOrganization($organization);
         $this->onboarding->tryMarkComplete($organization);
 
         return response()->json([
