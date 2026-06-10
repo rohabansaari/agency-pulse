@@ -1,4 +1,4 @@
-import { clearToken, getOrganizationId, getToken, setOrganizationId, setToken } from "./auth";
+import { clearToken, getOrganizationId, getToken, setOrganizationId, setToken, clearOrganizationId } from "./auth";
 import { getPayrollPin } from "./payroll-pin";
 import type {
   ApiValidationError,
@@ -31,6 +31,7 @@ import type {
   OvertimeContext,
   OvertimeRequest,
   EmployeeProfile,
+  PlatformDashboard,
 } from "./types";
 
 const API_BASE =
@@ -99,6 +100,8 @@ function persistAuthSession(response: AuthResponse): void {
 
   if (response.current_organization_id) {
     setOrganizationId(response.current_organization_id);
+  } else {
+    clearOrganizationId();
   }
 }
 
@@ -142,6 +145,8 @@ export async function fetchMe(): Promise<MeResponse> {
 
   if (response.current_organization_id) {
     setOrganizationId(response.current_organization_id);
+  } else {
+    clearOrganizationId();
   }
 
   return response;
@@ -392,6 +397,22 @@ function dateRangeQuery(range?: ReportDateRange): string {
   });
 
   return `?${params.toString()}`;
+}
+
+export async function fetchPlatformDashboard(): Promise<PlatformDashboard> {
+  return apiFetch<PlatformDashboard>("/platform/dashboard", { tenant: false });
+}
+
+export async function updateSuperAdminPassword(data: {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+}): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/platform/password", {
+    method: "PATCH",
+    tenant: false,
+    body: JSON.stringify(data),
+  });
 }
 
 export async function fetchDashboard(range?: ReportDateRange): Promise<DashboardData> {

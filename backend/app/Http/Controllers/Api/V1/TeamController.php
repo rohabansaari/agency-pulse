@@ -76,7 +76,7 @@ class TeamController extends Controller
                 'regex:/^\d{4,8}$/',
                 'confirmed',
             ],
-            'role' => ['required', Rule::enum(UserRole::class)],
+            'role' => ['required', Rule::enum(UserRole::class), Rule::notIn([UserRole::SuperAdmin->value])],
         ]);
 
         $assignedRole = UserRole::from($validated['role']);
@@ -153,7 +153,7 @@ class TeamController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
-            'role' => ['required', Rule::enum(UserRole::class)],
+            'role' => ['required', Rule::enum(UserRole::class), Rule::notIn([UserRole::SuperAdmin->value])],
         ]);
 
         if (in_array($validated['role'], [UserRole::Admin->value, UserRole::SubAdmin->value], true)) {
@@ -233,7 +233,7 @@ class TeamController extends Controller
             ]);
         } else {
             $validated = $request->validate([
-                'role' => ['sometimes', Rule::enum(UserRole::class)],
+                'role' => ['sometimes', Rule::enum(UserRole::class), Rule::notIn([UserRole::SuperAdmin->value])],
                 'status' => ['sometimes', Rule::enum(OrganizationMemberStatus::class)],
                 'name' => ['sometimes', 'string', 'max:255'],
             ]);

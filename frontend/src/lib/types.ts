@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "sub_admin" | "manager" | "employee";
+export type UserRole = "super_admin" | "admin" | "sub_admin" | "manager" | "employee";
 
 export interface OrganizationMembership {
   id: number;
@@ -442,6 +442,14 @@ export interface AdminDashboard {
   employee_breakdown?: EmployeeReportBreakdown[];
   overtime_summary?: OvertimeSummary;
   teams: WorkTeam[];
+}
+
+export interface PlatformDashboard {
+  role: "super_admin";
+  organizations_total: number;
+  organizations_active: number;
+  organizations_suspended: number;
+  tenant_users_total: number;
 }
 
 export type DashboardData = EmployeeDashboard | ManagerDashboard | AdminDashboard;

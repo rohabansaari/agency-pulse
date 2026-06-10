@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum UserRole: string
 {
+    case SuperAdmin = 'super_admin';
     case Admin = 'admin';
     case SubAdmin = 'sub_admin';
     case Manager = 'manager';
@@ -12,11 +13,32 @@ enum UserRole: string
     public function label(): string
     {
         return match ($this) {
+            self::SuperAdmin => 'Super Admin',
             self::Admin => 'Admin',
             self::SubAdmin => 'Sub Admin',
             self::Manager => 'Manager',
             self::Employee => 'Employee',
         };
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this === self::SuperAdmin;
+    }
+
+    /**
+     * Roles that belong to an organization workforce.
+     *
+     * @return list<UserRole>
+     */
+    public static function organizationRoles(): array
+    {
+        return [
+            self::Admin,
+            self::SubAdmin,
+            self::Manager,
+            self::Employee,
+        ];
     }
 
     public function isFullAdmin(): bool

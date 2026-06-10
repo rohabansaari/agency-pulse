@@ -15,7 +15,11 @@ Route::get('/health', [HealthController::class, 'show']);
 
 Route::prefix('auth')->group(base_path('routes/api/v1/auth.php'));
 
-Route::middleware(['auth:sanctum', 'tenant', 'idempotency'])->group(function () {
+Route::middleware(['auth:sanctum', 'super.admin'])->prefix('platform')->group(
+    base_path('routes/api/v1/platform.php')
+);
+
+Route::middleware(['auth:sanctum', 'block.super.admin', 'tenant', 'idempotency'])->group(function () {
     Route::get('/user', [UserController::class, 'show']);
     Route::get('/dashboard', [DashboardController::class, 'show']);
     Route::prefix('reports')->group(base_path('routes/api/v1/reports.php'));

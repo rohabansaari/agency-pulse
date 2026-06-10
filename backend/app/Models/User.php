@@ -45,6 +45,10 @@ class User extends Authenticatable
 
     public function currentRole(): ?UserRole
     {
+        if ($this->isSuperAdmin()) {
+            return UserRole::SuperAdmin;
+        }
+
         if (TenantContext::has()) {
             $membership = $this->membershipFor(TenantContext::id());
 
@@ -52,6 +56,11 @@ class User extends Authenticatable
         }
 
         return $this->role;
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === UserRole::SuperAdmin && $this->organization_id === null;
     }
 
     public function isAdmin(): bool

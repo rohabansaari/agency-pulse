@@ -79,12 +79,16 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('api-token')->plainTextToken;
-        $memberships = $user->memberships()->with('organization')->get();
+        $memberships = $user->isSuperAdmin()
+            ? collect()
+            : $user->memberships()->with('organization')->get();
 
         return response()->json([
             'user' => new UserResource($user),
             'memberships' => OrganizationMemberResource::collection($memberships),
-            'current_organization_id' => $user->organization_id ?? $memberships->first()?->organization_id,
+            'current_organization_id' => $user->isSuperAdmin()
+                ? null
+                : ($user->organization_id ?? $memberships->first()?->organization_id),
             'token' => $token,
         ]);
     }
@@ -92,12 +96,16 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
-        $memberships = $user->memberships()->with('organization')->get();
+        $memberships = $user->isSuperAdmin()
+            ? collect()
+            : $user->memberships()->with('organization')->get();
 
         return response()->json([
             'user' => new UserResource($user),
             'memberships' => OrganizationMemberResource::collection($memberships),
-            'current_organization_id' => $user->organization_id ?? $memberships->first()?->organization_id,
+            'current_organization_id' => $user->isSuperAdmin()
+                ? null
+                : ($user->organization_id ?? $memberships->first()?->organization_id),
         ]);
     }
 

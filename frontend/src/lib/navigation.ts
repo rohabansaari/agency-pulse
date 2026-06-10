@@ -7,6 +7,7 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
+  { label: "Platform", href: "/platform", roles: ["super_admin"] },
   { label: "Dashboard", href: "/dashboard", roles: ["admin", "sub_admin", "manager", "employee"] },
   { label: "Teams", href: "/teams", roles: ["admin", "sub_admin"] },
   { label: "My Teams", href: "/my-teams", roles: ["manager"] },
@@ -24,6 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 const ROLE_NAV: Record<UserRole, string[]> = {
+  super_admin: ["Platform"],
   employee: ["Dashboard", "Time Tracking", "My Projects", "Leave"],
   manager: ["Dashboard", "Time Tracking", "My Teams", "Projects", "Leave", "Reports"],
   sub_admin: [
@@ -127,6 +129,10 @@ export function isPrivilegedMember(role: UserRole): boolean {
   return IMMUTABLE_ROLES.includes(role);
 }
 
+export function isSuperAdmin(role: UserRole): boolean {
+  return role === "super_admin";
+}
+
 export function isAdmin(role: UserRole): boolean {
   return role === "admin";
 }
@@ -148,6 +154,7 @@ export function isEmployee(role: UserRole): boolean {
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
+  super_admin: "Super Admin",
   admin: "Admin",
   sub_admin: "Sub Admin",
   manager: "Manager",
@@ -155,6 +162,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export const ROLE_BADGE_STYLES: Record<UserRole, string> = {
+  super_admin: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950 dark:text-fuchsia-200",
   admin: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
   sub_admin: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200",
   manager: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",

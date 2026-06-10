@@ -20,7 +20,7 @@ export default function LoginPage() {
 
     try {
       const response = await login(email, password);
-      router.push("/dashboard");
+      router.push(response.user.role === "super_admin" ? "/platform" : "/dashboard");
     } catch (err) {
       if (err instanceof ApiError) {
         setError(formatApiErrors(err.errors) || err.message);
