@@ -14,7 +14,7 @@ import {
   updateOnboardingStep,
   updatePassword,
 } from "@/lib/api";
-import { clearToken } from "@/lib/auth";
+import { clearToken, getToken } from "@/lib/auth";
 import type { OnboardingStatus, UserRole } from "@/lib/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
