@@ -80,10 +80,8 @@ class TeamsController extends Controller
 
             $query->where('manager_id', $user->id);
 
-        } elseif ($role !== UserRole::Admin) {
-
+        } elseif (! $role?->isOperationalAdmin()) {
             abort(403);
-
         }
 
 

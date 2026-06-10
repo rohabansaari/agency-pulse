@@ -30,6 +30,7 @@ class EmployeeProfileResource extends JsonResource
             'time_summary' => $this->resource['time_summary'],
             'has_active_timer' => $this->resource['has_active_timer'],
             'last_activity_at' => $this->resource['last_activity_at'],
+            'manager_metrics' => $this->resource['manager_metrics'] ?? null,
         ];
     }
 }

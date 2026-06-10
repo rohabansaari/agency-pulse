@@ -120,6 +120,20 @@ class EmployeeManagementTest extends TestCase
 
 
 
+    public function test_sub_admin_cannot_create_employee(): void
+    {
+        $subAdmin = User::factory()->subAdmin()->create();
+        Sanctum::actingAs($subAdmin);
+
+        $this->withHeaders($this->headers($subAdmin))
+            ->postJson('/api/v1/team/create-employee', [
+                'name' => 'Blocked',
+                'email' => 'subadmin-blocked@example.com',
+                'password' => 'password123',
+            ])
+            ->assertForbidden();
+    }
+
     public function test_manager_cannot_create_employee(): void
 
     {

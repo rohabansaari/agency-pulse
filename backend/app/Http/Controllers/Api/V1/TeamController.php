@@ -36,7 +36,7 @@ class TeamController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        if ($request->user()?->currentRole() !== UserRole::Admin) {
+        if (! $request->user()?->currentRole()?->isOperationalAdmin()) {
             abort(403);
         }
 
@@ -47,6 +47,10 @@ class TeamController extends Controller
 
     public function profile(User $user): EmployeeProfileResource
     {
+        if (! request()->user()?->currentRole()?->isOperationalAdmin()) {
+            abort(403);
+        }
+
         $this->ensureUserInTenant($user);
 
         return new EmployeeProfileResource(
@@ -147,8 +151,8 @@ class TeamController extends Controller
             'role' => ['required', Rule::enum(UserRole::class)],
         ]);
 
-        if ($validated['role'] === UserRole::Admin->value) {
-            $this->ensureCanAssignAdmin($request);
+        if (in_array($validated['role'], [UserRole::Admin->value, UserRole::SubAdmin->value], true)) {
+            $this->ensureCanAssignPrivilegedRole($request, $validated['role']);
         }
 
         $membership = DB::transaction(function () use ($validated) {
@@ -199,21 +203,43 @@ class TeamController extends Controller
 
     public function update(Request $request, OrganizationMember $member): JsonResponse
     {
-        if ($request->user()?->currentRole() !== UserRole::Admin) {
+        $actorRole = $request->user()?->currentRole();
+
+        if (! $actorRole?->isOperationalAdmin()) {
             throw ValidationException::withMessages([
-                'authorization' => ['Only organization admins can update team members.'],
+                'authorization' => ['You are not allowed to update team members.'],
             ]);
         }
 
         $this->ensureMemberInTenant($member);
 
-        $validated = $request->validate([
-            'role' => ['sometimes', Rule::enum(UserRole::class)],
-            'status' => ['sometimes', Rule::enum(OrganizationMemberStatus::class)],
-        ]);
+        if ($actorRole === UserRole::SubAdmin) {
+            if ($request->has('role')) {
+                throw ValidationException::withMessages([
+                    'role' => ['Sub admins cannot change member roles.'],
+                ]);
+            }
 
-        if (isset($validated['role'])) {
-            $this->ensureCanAssignAdmin($request, $validated['role']);
+            if (in_array($member->role, [UserRole::Admin, UserRole::SubAdmin], true)) {
+                throw ValidationException::withMessages([
+                    'authorization' => ['Sub admins cannot modify admin accounts.'],
+                ]);
+            }
+
+            $validated = $request->validate([
+                'status' => ['sometimes', Rule::enum(OrganizationMemberStatus::class)],
+                'name' => ['sometimes', 'string', 'max:255'],
+            ]);
+        } else {
+            $validated = $request->validate([
+                'role' => ['sometimes', Rule::enum(UserRole::class)],
+                'status' => ['sometimes', Rule::enum(OrganizationMemberStatus::class)],
+                'name' => ['sometimes', 'string', 'max:255'],
+            ]);
+
+            if (isset($validated['role'])) {
+                $this->ensureCanAssignPrivilegedRole($request, $validated['role']);
+            }
         }
 
         if (isset($validated['status']) && $request->user()->id === $member->user_id) {
@@ -224,6 +250,11 @@ class TeamController extends Controller
 
         if (isset($validated['status']) && $validated['status'] === OrganizationMemberStatus::Active->value) {
             $validated['joined_at'] = $member->joined_at ?? now();
+        }
+
+        if (isset($validated['name'])) {
+            $member->user->forceFill(['name' => $validated['name']])->saveQuietly();
+            unset($validated['name']);
         }
 
         $member->update($validated);
@@ -267,15 +298,17 @@ class TeamController extends Controller
         ]);
     }
 
-    private function ensureCanAssignAdmin(Request $request, ?string $role = null): void
+    private function ensureCanAssignPrivilegedRole(Request $request, ?string $role = null): void
     {
-        if (($role ?? UserRole::Admin->value) !== UserRole::Admin->value) {
+        $targetRole = $role ?? UserRole::Admin->value;
+
+        if (! in_array($targetRole, [UserRole::Admin->value, UserRole::SubAdmin->value], true)) {
             return;
         }
 
         if ($request->user()?->currentRole() !== UserRole::Admin) {
             throw ValidationException::withMessages([
-                'role' => ['Only organization admins can assign the admin role.'],
+                'role' => ['Only organization admins can assign admin or sub admin roles.'],
             ]);
         }
     }

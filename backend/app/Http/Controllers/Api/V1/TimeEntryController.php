@@ -34,7 +34,7 @@ class TimeEntryController extends Controller
     {
         $user = $request->user();
 
-        if ($user->currentRole() === UserRole::Admin) {
+        if ($user->currentRole()?->isOperationalAdmin()) {
             throw ValidationException::withMessages([
                 'timer' => ['Administrators cannot track time. Use employee or manager accounts for time tracking.'],
             ]);
@@ -101,7 +101,7 @@ class TimeEntryController extends Controller
     {
         $user = $request->user();
 
-        if ($user->currentRole() === UserRole::Admin) {
+        if ($user->currentRole()?->isOperationalAdmin()) {
             throw ValidationException::withMessages([
                 'timer' => ['Administrators cannot track time.'],
             ]);
@@ -140,7 +140,7 @@ class TimeEntryController extends Controller
     {
         $user = $request->user();
 
-        if ($user->currentRole() === UserRole::Admin) {
+        if ($user->currentRole()?->isOperationalAdmin()) {
             abort(403, 'Administrators cannot track time.');
         }
 

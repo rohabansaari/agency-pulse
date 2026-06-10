@@ -7,29 +7,40 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", roles: ["admin", "manager", "employee"] },
-  { label: "Teams", href: "/teams", roles: ["admin"] },
+  { label: "Dashboard", href: "/dashboard", roles: ["admin", "sub_admin", "manager", "employee"] },
+  { label: "Teams", href: "/teams", roles: ["admin", "sub_admin"] },
   { label: "My Teams", href: "/my-teams", roles: ["manager"] },
-  { label: "Projects", href: "/projects", roles: ["admin", "manager"] },
+  { label: "Projects", href: "/projects", roles: ["admin", "sub_admin", "manager"] },
   { label: "My Projects", href: "/projects", roles: ["employee"] },
   { label: "Time Tracking", href: "/time", roles: ["manager", "employee"] },
   { label: "Leave", href: "/leave", roles: ["employee"] },
   { label: "Leave", href: "/leave/approvals", roles: ["manager"] },
-  { label: "Leave Management", href: "/admin/leave", roles: ["admin"] },
+  { label: "Leave Management", href: "/admin/leave", roles: ["admin", "sub_admin"] },
+  { label: "Overtime Management", href: "/admin/overtime", roles: ["admin", "sub_admin"] },
   { label: "Payroll", href: "/admin/payroll", roles: ["admin"] },
-  { label: "Reports", href: "/reports", roles: ["admin", "manager"] },
-  { label: "Employees", href: "/employees", roles: ["admin"] },
+  { label: "Reports", href: "/reports", roles: ["admin", "sub_admin", "manager"] },
+  { label: "Employees", href: "/employees", roles: ["admin", "sub_admin"] },
   { label: "Settings", href: "/settings", roles: ["admin"] },
 ];
 
 const ROLE_NAV: Record<UserRole, string[]> = {
   employee: ["Dashboard", "Time Tracking", "My Projects", "Leave"],
   manager: ["Dashboard", "Time Tracking", "My Teams", "Projects", "Leave", "Reports"],
+  sub_admin: [
+    "Dashboard",
+    "Teams",
+    "Projects",
+    "Employees",
+    "Reports",
+    "Leave Management",
+    "Overtime Management",
+  ],
   admin: [
     "Dashboard",
     "Teams",
     "Projects",
     "Leave Management",
+    "Overtime Management",
     "Payroll",
     "Reports",
     "Employees",
@@ -45,7 +56,7 @@ export function navItemsForRole(role: UserRole): NavItem[] {
 }
 
 export function leaveHomeForRole(role: UserRole): string {
-  if (role === "admin") {
+  if (role === "admin" || role === "sub_admin") {
     return "/admin/leave";
   }
 
@@ -57,7 +68,7 @@ export function leaveHomeForRole(role: UserRole): string {
 }
 
 export function canManageProjects(role: UserRole): boolean {
-  return role === "admin" || role === "manager";
+  return role === "admin" || role === "sub_admin" || role === "manager";
 }
 
 export function canSetProjectHourlyRate(role: UserRole): boolean {
@@ -65,30 +76,50 @@ export function canSetProjectHourlyRate(role: UserRole): boolean {
 }
 
 export function canArchiveProjects(role: UserRole): boolean {
-  return role === "admin";
+  return role === "admin" || role === "sub_admin";
 }
 
 export function canViewOrgTimeEntries(role: UserRole): boolean {
-  return role === "admin" || role === "manager";
+  return role === "admin" || role === "sub_admin" || role === "manager";
 }
 
 export function canViewReports(role: UserRole): boolean {
-  return role === "admin" || role === "manager";
+  return role === "admin" || role === "sub_admin" || role === "manager";
 }
 
 export function canManageWorkTeams(role: UserRole): boolean {
-  return role === "admin";
+  return role === "admin" || role === "sub_admin";
 }
 
 export function canViewWorkTeams(role: UserRole): boolean {
-  return role === "admin" || role === "manager";
+  return role === "admin" || role === "sub_admin" || role === "manager";
 }
 
 export function canManageOrgEmployees(role: UserRole): boolean {
   return role === "admin";
 }
 
+export function canViewOrgEmployees(role: UserRole): boolean {
+  return role === "admin" || role === "sub_admin";
+}
+
+export function canEditEmployeeStatus(role: UserRole): boolean {
+  return role === "admin" || role === "sub_admin";
+}
+
 export function isAdmin(role: UserRole): boolean {
+  return role === "admin";
+}
+
+export function isSubAdmin(role: UserRole): boolean {
+  return role === "sub_admin";
+}
+
+export function isOperationalAdmin(role: UserRole): boolean {
+  return role === "admin" || role === "sub_admin";
+}
+
+export function canAccessPayroll(role: UserRole): boolean {
   return role === "admin";
 }
 
@@ -98,12 +129,14 @@ export function isEmployee(role: UserRole): boolean {
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Admin",
+  sub_admin: "Sub Admin",
   manager: "Manager",
   employee: "Employee",
 };
 
 export const ROLE_BADGE_STYLES: Record<UserRole, string> = {
   admin: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
+  sub_admin: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200",
   manager: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
   employee: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200",
 };

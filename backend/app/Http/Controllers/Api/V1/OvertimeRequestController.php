@@ -83,7 +83,7 @@ class OvertimeRequestController extends Controller
 
         $requests = match ($role) {
             UserRole::Manager => $this->overtime->pendingForManager($request->user()),
-            UserRole::Admin => $this->overtime->pendingManagerRequestsForAdmin(),
+            UserRole::Admin, UserRole::SubAdmin => $this->overtime->pendingManagerRequestsForAdmin(),
             default => abort(403),
         };
 

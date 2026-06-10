@@ -118,4 +118,25 @@ class ProjectAccessService
             ->orderBy('name')
             ->get();
     }
+
+    /**
+     * Unique active projects across all teams managed by the given manager.
+     *
+     * @return Collection<int, Project>
+     */
+    public function uniqueActiveProjectsForManagedTeams(User $manager): Collection
+    {
+        $teams = Team::query()
+            ->where('organization_id', TenantContext::id())
+            ->where('manager_id', $manager->id)
+            ->get();
+
+        $projects = collect();
+
+        foreach ($teams as $team) {
+            $projects = $projects->merge($this->activeProjectsForTeam($team));
+        }
+
+        return $projects->unique('id')->sortBy('name')->values();
+    }
 }

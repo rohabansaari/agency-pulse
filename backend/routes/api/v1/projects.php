@@ -18,7 +18,7 @@ Route::get('/{project}', [ProjectController::class, 'show']);
 
 
 
-Route::middleware('rbac:admin,manager')->group(function () {
+Route::middleware('rbac:admin,sub_admin,manager')->group(function () {
 
     Route::post('/', [ProjectController::class, 'store']);
 

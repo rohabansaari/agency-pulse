@@ -41,10 +41,8 @@ class ReportController extends Controller
 
     {
 
-        if ($request->user()?->currentRole() !== UserRole::Admin) {
-
+        if (! $request->user()?->currentRole()?->isOperationalAdmin()) {
             abort(403);
-
         }
 
 
@@ -99,10 +97,8 @@ class ReportController extends Controller
 
         [$rangeStart, $rangeEnd] = ReportDateRange::fromRequest($request);
 
-        if ($role === UserRole::Admin) {
-
+        if ($role?->isOperationalAdmin()) {
             return response()->json($this->reporting->projectReport($project, $rangeStart, $rangeEnd));
-
         }
 
 

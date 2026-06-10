@@ -33,7 +33,7 @@ final class WorkforceMembers
         return OrganizationMember::query()
             ->where('organization_id', $orgId)
             ->where('status', OrganizationMemberStatus::Active)
-            ->where('role', UserRole::Admin)
+            ->whereIn('role', [UserRole::Admin, UserRole::SubAdmin])
             ->pluck('user_id');
     }
 }

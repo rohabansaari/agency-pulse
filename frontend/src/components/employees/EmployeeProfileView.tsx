@@ -53,6 +53,47 @@ export function EmployeeProfileView({ userId }: { userId: number }) {
         <p className="text-sm text-zinc-500">{profile.email}</p>
       </div>
 
+      {profile.role === "manager" && profile.manager_metrics ? (
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Manager metrics</h2>
+          <p className="mt-1 text-xs text-zinc-500">
+            Aggregated across all teams managed by this user.
+          </p>
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+              <dt className="text-xs text-zinc-500">Teams managed</dt>
+              <dd className="text-lg font-semibold">{profile.manager_metrics.teams_managed}</dd>
+            </div>
+            <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+              <dt className="text-xs text-zinc-500">Projects managed</dt>
+              <dd className="text-lg font-semibold">{profile.manager_metrics.projects_managed}</dd>
+            </div>
+            <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+              <dt className="text-xs text-zinc-500">Active employees</dt>
+              <dd className="text-lg font-semibold">{profile.manager_metrics.active_employees}</dd>
+            </div>
+            <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+              <dt className="text-xs text-zinc-500">Team hours (month)</dt>
+              <dd className="text-lg font-semibold">
+                {formatDuration(profile.manager_metrics.total_team_hours_month_seconds)}
+              </dd>
+            </div>
+          </dl>
+          {profile.manager_metrics.managed_teams.length > 0 ? (
+            <ul className="mt-4 space-y-2 text-sm">
+              {profile.manager_metrics.managed_teams.map((team) => (
+                <li key={team.id} className="flex justify-between rounded border border-zinc-100 px-3 py-2 dark:border-zinc-800">
+                  <span>{team.name}</span>
+                  <span className="text-xs text-zinc-500">
+                    {team.members_count} members · {team.active_projects} projects
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Basic information</h2>

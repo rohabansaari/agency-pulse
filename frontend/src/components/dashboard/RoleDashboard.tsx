@@ -476,7 +476,11 @@ export function RoleDashboard({
   data: DashboardData;
   dateRangeFilter?: ReactNode;
 }) {
-  if (data.role === "admin") return <AdminView data={data} filter={dateRangeFilter} />;
-  if (data.role === "manager") return <ManagerView data={data} filter={dateRangeFilter} />;
-  return <EmployeeView data={data} filter={dateRangeFilter} />;
+  if (data.role === "employee") {
+    return <EmployeeView data={data} filter={dateRangeFilter} />;
+  }
+  if (data.role === "manager") {
+    return <ManagerView data={data} filter={dateRangeFilter} />;
+  }
+  return <AdminView data={data} filter={dateRangeFilter} />;
 }

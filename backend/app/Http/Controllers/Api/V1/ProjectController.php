@@ -46,7 +46,7 @@ class ProjectController extends Controller
 
 
 
-        if ($request->boolean('include_archived') && $user->currentRole() === UserRole::Admin) {
+        if ($request->boolean('include_archived') && $user->currentRole()?->isOperationalAdmin()) {
 
             // all statuses
 
@@ -174,10 +174,8 @@ class ProjectController extends Controller
 
 
 
-        $allowedStatuses = $role === UserRole::Admin
-
+        $allowedStatuses = $role?->isOperationalAdmin()
             ? ProjectStatus::cases()
-
             : [ProjectStatus::Active, ProjectStatus::Inactive];
 
 
@@ -224,7 +222,8 @@ class ProjectController extends Controller
 
         $role = $request->user()->currentRole();
 
-        $isAdmin = $role === UserRole::Admin;
+        $isAdmin = $role?->isFullAdmin() ?? false;
+        $canArchive = $role?->isOperationalAdmin() ?? false;
 
 
 
@@ -274,14 +273,10 @@ class ProjectController extends Controller
 
 
 
-        if (isset($validated['status']) && $validated['status'] === ProjectStatus::Archived->value && ! $isAdmin) {
-
+        if (isset($validated['status']) && $validated['status'] === ProjectStatus::Archived->value && ! $canArchive) {
             throw ValidationException::withMessages([
-
-                'status' => ['Only admins can archive projects.'],
-
+                'status' => ['Only operational admins can archive projects.'],
             ]);
-
         }
 
 
@@ -300,14 +295,10 @@ class ProjectController extends Controller
 
 
 
-        if (! in_array($role, [UserRole::Admin, UserRole::Manager], true)) {
-
+        if (! in_array($role, [UserRole::Admin, UserRole::SubAdmin, UserRole::Manager], true)) {
             throw ValidationException::withMessages([
-
                 'authorization' => ['You are not allowed to manage projects.'],
-
             ]);
-
         }
 
     }
@@ -326,10 +317,8 @@ class ProjectController extends Controller
 
 
 
-        if (in_array($user->currentRole(), [UserRole::Admin, UserRole::Manager], true)) {
-
+        if (in_array($user->currentRole(), [UserRole::Admin, UserRole::SubAdmin, UserRole::Manager], true)) {
             return;
-
         }
 
 

@@ -186,7 +186,7 @@ class ProjectAssignmentController extends Controller
 
 
 
-        if (! in_array($role, [UserRole::Admin, UserRole::Manager], true)) {
+        if (! in_array($role, [UserRole::Admin, UserRole::SubAdmin, UserRole::Manager], true)) {
 
             throw ValidationException::withMessages([
 

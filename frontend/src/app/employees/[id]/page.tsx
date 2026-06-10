@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 
 function EmployeeProfilePageContent() {
   const user = useAppUser();
-  const allowed = useRoleRedirect(user.role, ["admin"], "/dashboard");
+  const allowed = useRoleRedirect(user.role, ["admin", "sub_admin"], "/dashboard");
   const params = useParams();
   const userId = Number(params.id);
 

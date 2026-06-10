@@ -1,5 +1,6 @@
 "use client";
 
+import { useAppUser } from "@/components/dashboard/AppShell";
 import {
   LeaveStatusFilter,
   type LeaveStatusFilter as LeaveStatusFilterValue,
@@ -9,6 +10,7 @@ import { LeaveRequestForm } from "@/components/time/LeaveRequestForm";
 import { useState } from "react";
 
 export function AdminLeavePage() {
+  const user = useAppUser();
   const [refreshKey, setRefreshKey] = useState(0);
   const [statusFilter, setStatusFilter] = useState<LeaveStatusFilterValue>("all");
 
@@ -32,7 +34,7 @@ export function AdminLeavePage() {
           Assign paid leave
         </h2>
         <div className="mt-4">
-          <LeaveRequestForm role="admin" onSubmitted={handleUpdated} />
+          <LeaveRequestForm role={user.role} onSubmitted={handleUpdated} />
         </div>
       </section>
 

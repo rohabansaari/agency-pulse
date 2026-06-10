@@ -104,7 +104,7 @@ export function LeaveRequestForm({
       return;
     }
 
-    if ((role === "manager" || role === "admin") && !userId) {
+    if ((role === "manager" || role === "admin" || role === "sub_admin") && !userId) {
       setError("Select an employee.");
       return;
     }
@@ -173,7 +173,7 @@ export function LeaveRequestForm({
     );
   }
 
-  const showEmployeePicker = role === "manager" || role === "admin";
+  const showEmployeePicker = role === "manager" || role === "admin" || role === "sub_admin";
   const minLeaveDate = role === "employee" ? todayDdMmYyyy() : undefined;
 
   function handleStartDateChange(value: string) {

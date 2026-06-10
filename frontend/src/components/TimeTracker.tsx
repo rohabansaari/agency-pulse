@@ -163,7 +163,7 @@ export function TimeTracker({ user }: { user?: User }) {
   const [manualRefreshKey, setManualRefreshKey] = useState(0);
   const isEmployee = user?.role === "employee";
   const isManager = user?.role === "manager";
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "sub_admin";
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(GENERAL_TIME_VALUE);
   const [entries, setEntries] = useState<TimeEntry[]>([]);

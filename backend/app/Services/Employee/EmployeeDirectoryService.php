@@ -2,14 +2,17 @@
 
 namespace App\Services\Employee;
 
+use App\Enums\OrganizationMemberStatus;
 use App\Enums\OvertimeRequestStatus;
 use App\Enums\TimeEntryStatus;
 use App\Enums\TimeEntryType;
+use App\Enums\UserRole;
 use App\Models\OrganizationMember;
 use App\Models\OvertimeRequest;
 use App\Models\Team;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Services\Projects\ProjectAccessService;
 use App\Services\Tenant\TenantContext;
 use App\Support\DisplayDate;
 use Illuminate\Support\Carbon;
@@ -18,6 +21,9 @@ use Illuminate\Support\Facades\DB;
 
 class EmployeeDirectoryService
 {
+    public function __construct(
+        private readonly ProjectAccessService $projectAccess
+    ) {}
     /**
      * @return Collection<int, OrganizationMember>
      */
@@ -211,7 +217,7 @@ class EmployeeDirectoryService
             ->where('status', TimeEntryStatus::Running)
             ->first();
 
-        return [
+        $profile = [
             'membership' => $membership,
             'team' => $team ? [
                 'id' => $team->id,
@@ -230,6 +236,76 @@ class EmployeeDirectoryService
                 ->where('organization_id', $orgId)
                 ->where('user_id', $employee->id)
                 ->max(DB::raw('COALESCE(end_time, start_time)')),
+        ];
+
+        if ($membership->role === UserRole::Manager) {
+            $profile['manager_metrics'] = $this->managerMetricsForUser($employee);
+        }
+
+        return $profile;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function managerMetricsForUser(User $manager): array
+    {
+        $orgId = TenantContext::id();
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfMonth();
+
+        $managedTeams = Team::query()
+            ->with('members')
+            ->where('organization_id', $orgId)
+            ->where('manager_id', $manager->id)
+            ->orderBy('name')
+            ->get();
+
+        $managedProjects = $this->projectAccess->uniqueActiveProjectsForManagedTeams($manager);
+
+        $memberUserIds = $managedTeams
+            ->flatMap(fn (Team $team) => $team->members->pluck('id'))
+            ->unique()
+            ->values();
+
+        $activeEmployees = OrganizationMember::query()
+            ->where('organization_id', $orgId)
+            ->whereIn('user_id', $memberUserIds)
+            ->where('status', OrganizationMemberStatus::Active)
+            ->where('role', UserRole::Employee)
+            ->count();
+
+        $participantIds = $managedTeams
+            ->flatMap(fn (Team $team) => $team->participantUserIds())
+            ->unique()
+            ->values()
+            ->all();
+
+        $totalTeamHoursMonth = $participantIds === []
+            ? 0
+            : (int) TimeEntry::query()
+                ->countable()
+                ->where('organization_id', $orgId)
+                ->whereIn('user_id', $participantIds)
+                ->whereBetween('start_time', [$monthStart, $monthEnd])
+                ->sum('duration');
+
+        return [
+            'teams_managed' => $managedTeams->count(),
+            'projects_managed' => $managedProjects->count(),
+            'active_employees' => $activeEmployees,
+            'total_team_hours_month_seconds' => $totalTeamHoursMonth,
+            'managed_teams' => $managedTeams->map(fn (Team $team) => [
+                'id' => $team->id,
+                'name' => $team->name,
+                'members_count' => $team->members->count(),
+                'active_projects' => $this->projectAccess->activeProjectsForTeam($team)->count(),
+            ])->values()->all(),
+            'managed_projects' => $managedProjects->map(fn ($project) => [
+                'id' => $project->id,
+                'name' => $project->name,
+                'status' => $project->status->value,
+            ])->values()->all(),
         ];
     }
 }

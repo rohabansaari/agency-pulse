@@ -31,7 +31,7 @@ class LeaveTimeEntryController extends Controller
             UserRole::Manager => response()->json(
                 $this->leaveTime->contextForManager($request->user())
             ),
-            UserRole::Admin => response()->json(
+            UserRole::Admin, UserRole::SubAdmin => response()->json(
                 $this->leaveTime->contextForAdmin()
             ),
             default => abort(403),
@@ -72,7 +72,7 @@ class LeaveTimeEntryController extends Controller
             ], 201);
         }
 
-        if ($role !== UserRole::Admin) {
+        if (! $role?->isOperationalAdmin()) {
             abort(403);
         }
 
@@ -99,7 +99,7 @@ class LeaveTimeEntryController extends Controller
         $entries = match ($role) {
             UserRole::Employee => $this->leaveTime->listForEmployee($request->user()),
             UserRole::Manager => $this->leaveTime->listForManager($request->user()),
-            UserRole::Admin => $this->leaveTime->listForAdmin(),
+            UserRole::Admin, UserRole::SubAdmin => $this->leaveTime->listForAdmin(),
             default => abort(403),
         };
 
@@ -111,7 +111,7 @@ class LeaveTimeEntryController extends Controller
         $role = $request->user()->currentRole();
 
         $entries = match ($role) {
-            UserRole::Admin => $this->leaveTime->pendingForAdmin(),
+            UserRole::Admin, UserRole::SubAdmin => $this->leaveTime->pendingForAdmin(),
             UserRole::Manager => $this->leaveTime->pendingForManager($request->user()),
             default => abort(403),
         };
@@ -141,7 +141,7 @@ class LeaveTimeEntryController extends Controller
 
     public function update(Request $request, TimeEntry $entry): JsonResponse
     {
-        if ($request->user()->currentRole() !== UserRole::Admin) {
+        if (! $request->user()->currentRole()?->isOperationalAdmin()) {
             abort(403);
         }
 

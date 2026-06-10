@@ -31,7 +31,7 @@ class ManualTimeEntryController extends Controller
             UserRole::Manager => response()->json(
                 $this->manualTime->contextForManager($request->user())
             ),
-            UserRole::Admin => abort(403, 'Administrators cannot submit manual time entries.'),
+            UserRole::Admin, UserRole::SubAdmin => abort(403, 'Administrators cannot submit manual time entries.'),
             default => abort(403),
         };
     }
@@ -111,7 +111,7 @@ class ManualTimeEntryController extends Controller
             ], 201);
         }
 
-        if ($role === UserRole::Admin) {
+        if ($role?->isOperationalAdmin()) {
             abort(403, 'Administrators cannot submit manual time entries.');
         }
 
@@ -136,7 +136,7 @@ class ManualTimeEntryController extends Controller
         $role = $request->user()->currentRole();
 
         $entries = match ($role) {
-            UserRole::Admin => $this->manualTime->pendingForAdmin(),
+            UserRole::Admin, UserRole::SubAdmin => $this->manualTime->pendingForAdmin(),
             UserRole::Manager => $this->manualTime->pendingForManager($request->user()),
             default => abort(403),
         };

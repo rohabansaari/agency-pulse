@@ -2,7 +2,7 @@
 
 import { AppShell, useAppUser } from "@/components/dashboard/AppShell";
 import { WorkTeamsManager } from "@/components/teams/WorkTeamsManager";
-import { isAdmin } from "@/lib/navigation";
+import { canManageWorkTeams } from "@/lib/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -11,12 +11,12 @@ function TeamsContent() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAdmin(user.role)) {
+    if (!canManageWorkTeams(user.role)) {
       router.replace(user.role === "manager" ? "/my-teams" : "/dashboard");
     }
   }, [user.role, router]);
 
-  if (!isAdmin(user.role)) {
+  if (!canManageWorkTeams(user.role)) {
     return null;
   }
 

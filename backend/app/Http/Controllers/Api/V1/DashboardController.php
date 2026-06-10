@@ -34,7 +34,9 @@ class DashboardController extends Controller
         [$rangeStart, $rangeEnd] = ReportDateRange::fromRequest($request);
 
         return match ($role) {
-            UserRole::Admin => response()->json($this->adminDashboard($rangeStart, $rangeEnd)),
+            UserRole::Admin, UserRole::SubAdmin => response()->json(
+                $this->adminDashboard($rangeStart, $rangeEnd, $role)
+            ),
             UserRole::Manager => response()->json($this->managerDashboard($request, $rangeStart, $rangeEnd)),
             default => response()->json($this->employeeDashboard($request, $rangeStart, $rangeEnd)),
         };
@@ -126,8 +128,11 @@ class DashboardController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function adminDashboard(\Illuminate\Support\Carbon $rangeStart, \Illuminate\Support\Carbon $rangeEnd): array
-    {
+    private function adminDashboard(
+        \Illuminate\Support\Carbon $rangeStart,
+        \Illuminate\Support\Carbon $rangeEnd,
+        UserRole $role = UserRole::Admin
+    ): array {
         $orgId = TenantContext::id();
         $report = $this->reporting->organizationReport($rangeStart, $rangeEnd);
 
@@ -152,7 +157,7 @@ class DashboardController extends Controller
             ->count();
 
         return [
-            'role' => UserRole::Admin->value,
+            'role' => $role->value,
             'date_range' => $report['date_range'],
             'team_count' => $teams->count(),
             'employee_count' => $workforceMemberCount,

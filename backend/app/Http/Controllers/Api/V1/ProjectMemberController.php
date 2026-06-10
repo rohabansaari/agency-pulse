@@ -87,7 +87,7 @@ class ProjectMemberController extends Controller
 
         $role = $request->user()?->currentRole();
 
-        if (! in_array($role, [UserRole::Admin, UserRole::Manager], true)) {
+        if (! in_array($role, [UserRole::Admin, UserRole::SubAdmin, UserRole::Manager], true)) {
             throw ValidationException::withMessages([
                 'authorization' => ['You are not allowed to manage project members.'],
             ]);

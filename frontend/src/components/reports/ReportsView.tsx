@@ -387,7 +387,7 @@ export function ReportsView({ user }: { user: User }) {
     setLoading(true);
     setError("");
     try {
-      if (user.role === "admin") {
+      if (user.role === "admin" || user.role === "sub_admin") {
         setOrgReport(await fetchOrganizationReport(dateRange));
       } else if (user.role === "manager") {
         setManagerReport(await fetchManagerReport(dateRange));
@@ -435,7 +435,7 @@ export function ReportsView({ user }: { user: User }) {
     <ReportDateRangeFilter value={dateRange} onChange={setDateRange} disabled={loading} />
   );
 
-  if (user.role === "admin" && orgReport) {
+  if ((user.role === "admin" || user.role === "sub_admin") && orgReport) {
     return <AdminReports report={orgReport} filter={dateFilter} />;
   }
 

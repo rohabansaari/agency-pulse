@@ -23,12 +23,12 @@ class EmployeeDirectoryTest extends TestCase
         return ['X-Organization-Id' => (string) $user->organization_id];
     }
 
-    public function test_admin_can_list_enriched_employee_directory(): void
+    public function test_operational_admin_can_list_enriched_employee_directory(): void
     {
-        $admin = User::factory()->admin()->create();
-        Sanctum::actingAs($admin);
+        $subAdmin = User::factory()->subAdmin()->create();
+        Sanctum::actingAs($subAdmin);
 
-        $this->withHeaders($this->headers($admin))
+        $this->withHeaders($this->headers($subAdmin))
             ->getJson('/api/v1/team')
             ->assertOk()
             ->assertJsonStructure([

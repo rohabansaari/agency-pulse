@@ -41,6 +41,17 @@ class RolePermissionSeeder extends Seeder
 
         $rolePermissions = [
             UserRole::Admin->value => $this->permissions,
+            UserRole::SubAdmin->value => [
+                'org.view',
+                'departments.view', 'departments.create', 'departments.update', 'departments.delete',
+                'employees.view', 'employees.view_all', 'employees.update',
+                'clients.view', 'clients.create', 'clients.update', 'clients.delete',
+                'projects.view', 'projects.create', 'projects.update', 'projects.delete', 'projects.manage_members', 'projects.view_hours',
+                'timesheets.view', 'timesheets.view_all', 'timesheets.approve',
+                'leave.view', 'leave.view_all', 'leave.apply', 'leave.approve', 'leave.manage_types',
+                'reports.view', 'reports.export',
+                'dashboard.admin',
+            ],
             UserRole::Manager->value => [
                 'org.view',
                 'departments.view',

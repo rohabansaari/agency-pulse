@@ -8,11 +8,9 @@ use Illuminate\Support\Facades\Route;
 
 
 
-Route::middleware('rbac:admin,manager')->get('/', [TeamsController::class, 'index']);
+Route::middleware('rbac:admin,sub_admin,manager')->get('/', [TeamsController::class, 'index']);
 
-
-
-Route::middleware('rbac:admin')->group(function () {
+Route::middleware('rbac:admin,sub_admin')->group(function () {
 
     Route::post('/', [TeamsController::class, 'store']);
 

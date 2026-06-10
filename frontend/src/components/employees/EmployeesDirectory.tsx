@@ -12,7 +12,7 @@ import {
   updateTeamMember,
 } from "@/lib/api";
 import { formatDuration } from "@/lib/time";
-import { isAdmin } from "@/lib/navigation";
+import { canEditEmployeeStatus, canManageOrgEmployees } from "@/lib/navigation";
 import type { MemberStatus, PayrollVaultStatus, TeamMember, User, UserRole } from "@/lib/types";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -29,7 +29,8 @@ function formatDate(value: string | null | undefined): string {
 }
 
 export function EmployeesDirectory({ user }: { user: User }) {
-  const admin = isAdmin(user.role);
+  const canCreate = canManageOrgEmployees(user.role);
+  const canEditStatus = canEditEmployeeStatus(user.role);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -64,9 +65,9 @@ export function EmployeesDirectory({ user }: { user: User }) {
   }, [load]);
 
   useEffect(() => {
-    if (!showCreate || !admin) return;
+    if (!showCreate || !canCreate) return;
     void fetchPayrollVaultStatus().then(setVaultStatus).catch(() => setVaultStatus(null));
-  }, [showCreate, admin]);
+  }, [showCreate, canCreate]);
 
   const exportRows = useMemo(
     () =>
@@ -150,7 +151,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
             ]}
             rows={exportRows}
           />
-          {admin ? (
+          {canCreate ? (
             <button
               type="button"
               onClick={() => setShowCreate(true)}
@@ -228,9 +229,30 @@ export function EmployeesDirectory({ user }: { user: User }) {
                 <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.team_name ?? "—"}</td>
                 <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.manager_name ?? "—"}</td>
                 <td className="px-3 py-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${STATUS_STYLES[member.status]}`}>
-                    {member.status}
-                  </span>
+                  {canEditStatus && member.role !== "admin" && member.role !== "sub_admin" ? (
+                    <select
+                      value={member.status}
+                      onChange={async (event) => {
+                        try {
+                          await updateTeamMember(member.id, {
+                            status: event.target.value as MemberStatus,
+                          });
+                          await load();
+                        } catch (err) {
+                          setError(err instanceof ApiError ? err.message : "Status update failed.");
+                        }
+                      }}
+                      className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-xs capitalize dark:border-zinc-600 dark:bg-zinc-900"
+                    >
+                      <option value="active">active</option>
+                      <option value="invited">invited</option>
+                      <option value="suspended">suspended</option>
+                    </select>
+                  ) : (
+                    <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${STATUS_STYLES[member.status]}`}>
+                      {member.status}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-zinc-600">{formatDate(member.joined_at)}</td>
                 <td className="px-3 py-3 whitespace-nowrap text-zinc-600">{formatDate(member.last_activity_at)}</td>
@@ -244,7 +266,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
                     <Link href={`/employees/${member.user_id}`} className="rounded border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-600">
                       Profile
                     </Link>
-                    {admin && member.role === "employee" ? (
+                    {canCreate && member.role === "employee" ? (
                       <button type="button" onClick={() => setResetTarget(member)} className="rounded border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-600">
                         Reset pwd
                       </button>

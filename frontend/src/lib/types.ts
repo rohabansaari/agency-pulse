@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "manager" | "employee";
+export type UserRole = "admin" | "sub_admin" | "manager" | "employee";
 
 export interface OrganizationMembership {
   id: number;
@@ -136,6 +136,25 @@ export interface EmployeeProfile {
   };
   has_active_timer: boolean;
   last_activity_at: string | null;
+  manager_metrics?: ManagerProfileMetrics | null;
+}
+
+export interface ManagerProfileMetrics {
+  teams_managed: number;
+  projects_managed: number;
+  active_employees: number;
+  total_team_hours_month_seconds: number;
+  managed_teams: {
+    id: number;
+    name: string;
+    members_count: number;
+    active_projects: number;
+  }[];
+  managed_projects: {
+    id: number;
+    name: string;
+    status: string;
+  }[];
 }
 
 export interface TimeEntry {
@@ -404,7 +423,7 @@ export interface ManagerDashboard {
 }
 
 export interface AdminDashboard {
-  role: "admin";
+  role: "admin" | "sub_admin";
   date_range?: ReportDateRange;
   team_count: number;
   employee_count: number;

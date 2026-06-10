@@ -7,7 +7,7 @@ import { leaveHomeForRole } from "@/lib/navigation";
 
 function AdminLeavePageContent() {
   const user = useAppUser();
-  const allowed = useRoleRedirect(user.role, ["admin"], leaveHomeForRole(user.role));
+  const allowed = useRoleRedirect(user.role, ["admin", "sub_admin"], leaveHomeForRole(user.role));
 
   if (!allowed) {
     return null;
