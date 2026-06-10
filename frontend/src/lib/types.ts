@@ -471,8 +471,9 @@ export interface PlatformOrganization {
   id: number;
   name: string;
   slug: string;
-  status: string;
+  status: "active" | "suspended" | "trial";
   employee_count: number;
+  admin_user_id?: number | null;
   admin_name?: string | null;
   admin_email?: string | null;
   created_at?: string | null;

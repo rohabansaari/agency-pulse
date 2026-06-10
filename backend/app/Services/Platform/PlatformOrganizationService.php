@@ -78,26 +78,95 @@ class PlatformOrganizationService
     }
 
     /**
+     * @param  array<string, mixed>  $validated
      * @return array<string, mixed>
      */
-    private function formatOrganization(Organization $organization): array
+    public function updateOrganization(Organization $organization, array $validated): array
+    {
+        return DB::transaction(function () use ($organization, $validated) {
+            if (array_key_exists('admin_email', $validated)) {
+                $admin = $this->resolvePrimaryAdmin($organization);
+
+                if (! $admin) {
+                    throw ValidationException::withMessages([
+                        'admin_email' => ['This organization has no admin account to update.'],
+                    ]);
+                }
+
+                $admin->update(['email' => $validated['admin_email']]);
+            }
+
+            if (array_key_exists('status', $validated)) {
+                $organization->update([
+                    'status' => OrganizationStatus::from($validated['status']),
+                ]);
+            }
+
+            $organization->refresh();
+            $organization->loadCount([
+                'members as employee_count' => function ($query) {
+                    $query->where('status', OrganizationMemberStatus::Active);
+                },
+            ]);
+
+            return $this->formatOrganization($organization);
+        });
+    }
+
+    public function deleteOrganization(Organization $organization): void
+    {
+        if ($organization->status !== OrganizationStatus::Suspended) {
+            throw ValidationException::withMessages([
+                'organization' => ['Only suspended (inactive) organizations can be deleted. Suspend the organization first.'],
+            ]);
+        }
+
+        DB::transaction(function () use ($organization) {
+            $organization->delete();
+        });
+    }
+
+    public function resolvePrimaryAdmin(Organization $organization): ?User
     {
         $adminMembership = OrganizationMember::query()
-            ->with('user:id,name,email')
+            ->with('user')
             ->where('organization_id', $organization->id)
             ->where('role', UserRole::Admin)
             ->orderBy('id')
             ->first();
+
+        return $adminMembership?->user;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function formatOrganization(Organization $organization): array
+    {
+        $admin = $this->resolvePrimaryAdmin($organization);
 
         return [
             'id' => $organization->id,
             'name' => $organization->name,
             'slug' => $organization->slug,
             'status' => $organization->status->value,
-            'employee_count' => (int) ($organization->employee_count ?? 0),
-            'admin_name' => $adminMembership?->user?->name,
-            'admin_email' => $adminMembership?->user?->email,
+            'employee_count' => $this->activeMemberCount($organization),
+            'admin_user_id' => $admin?->id,
+            'admin_name' => $admin?->name,
+            'admin_email' => $admin?->email,
             'created_at' => $organization->created_at?->toIso8601String(),
         ];
+    }
+
+    private function activeMemberCount(Organization $organization): int
+    {
+        if (isset($organization->employee_count)) {
+            return (int) $organization->employee_count;
+        }
+
+        return OrganizationMember::query()
+            ->where('organization_id', $organization->id)
+            ->where('status', OrganizationMemberStatus::Active)
+            ->count();
     }
 }

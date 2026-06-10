@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Organization;
 use App\Services\Platform\PlatformOrganizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class PlatformOrganizationController extends Controller
@@ -34,16 +36,39 @@ class PlatformOrganizationController extends Controller
 
         return response()->json([
             'message' => 'Organization and admin account created.',
-            'organization' => [
-                'id' => $result['organization']->id,
-                'name' => $result['organization']->name,
-                'slug' => $result['organization']->slug,
-                'status' => $result['organization']->status->value,
-                'employee_count' => 1,
-                'admin_name' => $result['admin']->name,
-                'admin_email' => $result['admin']->email,
-                'created_at' => $result['organization']->created_at?->toIso8601String(),
-            ],
+            'organization' => $this->platformOrganizations->formatOrganization($result['organization']),
         ], 201);
+    }
+
+    public function update(Request $request, Organization $organization): JsonResponse
+    {
+        $admin = $this->platformOrganizations->resolvePrimaryAdmin($organization);
+
+        $validated = $request->validate([
+            'admin_email' => [
+                'sometimes',
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($admin?->id),
+            ],
+            'status' => ['sometimes', 'required', Rule::in(['active', 'suspended', 'trial'])],
+        ]);
+
+        $updated = $this->platformOrganizations->updateOrganization($organization, $validated);
+
+        return response()->json([
+            'message' => 'Organization updated.',
+            'organization' => $updated,
+        ]);
+    }
+
+    public function destroy(Organization $organization): JsonResponse
+    {
+        $this->platformOrganizations->deleteOrganization($organization);
+
+        return response()->json([
+            'message' => 'Organization deleted.',
+        ]);
     }
 }

@@ -1,12 +1,15 @@
 "use client";
 
 import { AppShell } from "@/components/dashboard/AppShell";
+import { Modal } from "@/components/ui/Modal";
 import {
   ApiError,
   createPlatformOrganization,
+  deletePlatformOrganization,
   fetchPlatformDashboard,
   fetchPlatformOrganizations,
   formatApiErrors,
+  updatePlatformOrganization,
   updateSuperAdminPassword,
 } from "@/lib/api";
 import type { PlatformDashboard, PlatformOrganization } from "@/lib/types";
@@ -31,6 +34,12 @@ export default function PlatformPage() {
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<PlatformOrganization | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [editError, setEditError] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [rowActionId, setRowActionId] = useState<number | null>(null);
+  const [rowMessage, setRowMessage] = useState("");
 
   const load = useCallback(async () => {
     setError("");
@@ -108,6 +117,104 @@ export default function PlatformPage() {
     }
   }
 
+  function openEditEmail(organization: PlatformOrganization) {
+    setEditingOrg(organization);
+    setEditEmail(organization.admin_email ?? "");
+    setEditError("");
+  }
+
+  async function handleEditEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingOrg) return;
+
+    setEditError("");
+    setSavingEdit(true);
+    try {
+      await updatePlatformOrganization(editingOrg.id, { admin_email: editEmail.trim() });
+      setEditingOrg(null);
+      setRowMessage("Admin email updated.");
+      await load();
+    } catch (err) {
+      setEditError(
+        err instanceof ApiError
+          ? formatApiErrors(err.errors) || err.message
+          : "Failed to update admin email.",
+      );
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleSuspend(organization: PlatformOrganization) {
+    if (
+      !window.confirm(
+        `Suspend "${organization.name}"? The organization will become inactive and can then be deleted.`,
+      )
+    ) {
+      return;
+    }
+
+    setRowActionId(organization.id);
+    setRowMessage("");
+    try {
+      await updatePlatformOrganization(organization.id, { status: "suspended" });
+      setRowMessage(`"${organization.name}" suspended.`);
+      await load();
+    } catch (err) {
+      setRowMessage(
+        err instanceof ApiError
+          ? formatApiErrors(err.errors) || err.message
+          : "Failed to suspend organization.",
+      );
+    } finally {
+      setRowActionId(null);
+    }
+  }
+
+  async function handleReactivate(organization: PlatformOrganization) {
+    setRowActionId(organization.id);
+    setRowMessage("");
+    try {
+      await updatePlatformOrganization(organization.id, { status: "active" });
+      setRowMessage(`"${organization.name}" reactivated.`);
+      await load();
+    } catch (err) {
+      setRowMessage(
+        err instanceof ApiError
+          ? formatApiErrors(err.errors) || err.message
+          : "Failed to reactivate organization.",
+      );
+    } finally {
+      setRowActionId(null);
+    }
+  }
+
+  async function handleDelete(organization: PlatformOrganization) {
+    if (
+      !window.confirm(
+        `Permanently delete "${organization.name}" and all tenant data? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setRowActionId(organization.id);
+    setRowMessage("");
+    try {
+      await deletePlatformOrganization(organization.id);
+      setRowMessage(`"${organization.name}" deleted.`);
+      await load();
+    } catch (err) {
+      setRowMessage(
+        err instanceof ApiError
+          ? formatApiErrors(err.errors) || err.message
+          : "Failed to delete organization.",
+      );
+    } finally {
+      setRowActionId(null);
+    }
+  }
+
   return (
     <AppShell>
       <div className="space-y-6">
@@ -117,8 +224,8 @@ export default function PlatformPage() {
               Platform overview
             </h1>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Create organizations, assign their admin, and monitor tenant counts. No organization HR
-              data is accessible from this account.
+              Create organizations, manage admin accounts, suspend inactive tenants, and monitor
+              counts. No organization HR data is accessible from this account.
             </p>
           </div>
           <button
@@ -137,6 +244,12 @@ export default function PlatformPage() {
         {error ? (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
             {error}
+          </p>
+        ) : null}
+
+        {rowMessage ? (
+          <p className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200">
+            {rowMessage}
           </p>
         ) : null}
 
@@ -187,7 +300,7 @@ export default function PlatformPage() {
                 onChange={(event) => setAdminPassword(event.target.value)}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
               />
-              <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
                 <button
                   type="submit"
                   disabled={savingOrg}
@@ -217,34 +330,27 @@ export default function PlatformPage() {
                 <th className="px-4 py-2 font-medium">Employees</th>
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">Created</th>
+                <th className="px-4 py-2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {organizations.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
                     No organizations yet. Create the first one above.
                   </td>
                 </tr>
               ) : (
                 organizations.map((organization) => (
-                  <tr key={organization.id}>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-50">{organization.name}</p>
-                      <p className="text-xs text-zinc-500">{organization.slug}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p>{organization.admin_name ?? "—"}</p>
-                      <p className="text-xs text-zinc-500">{organization.admin_email ?? "—"}</p>
-                    </td>
-                    <td className="px-4 py-3">{organization.employee_count}</td>
-                    <td className="px-4 py-3 capitalize">{organization.status}</td>
-                    <td className="px-4 py-3 text-zinc-500">
-                      {organization.created_at
-                        ? new Date(organization.created_at).toLocaleDateString()
-                        : "—"}
-                    </td>
-                  </tr>
+                  <OrganizationRow
+                    key={organization.id}
+                    organization={organization}
+                    busy={rowActionId === organization.id}
+                    onEditEmail={() => openEditEmail(organization)}
+                    onSuspend={() => void handleSuspend(organization)}
+                    onReactivate={() => void handleReactivate(organization)}
+                    onDelete={() => void handleDelete(organization)}
+                  />
                 ))
               )}
             </tbody>
@@ -293,7 +399,139 @@ export default function PlatformPage() {
           </form>
         </section>
       </div>
+
+      {editingOrg ? (
+        <Modal title={`Edit admin email — ${editingOrg.name}`} onClose={() => setEditingOrg(null)}>
+          <form className="space-y-4" onSubmit={handleEditEmail}>
+            <p className="text-sm text-zinc-500">
+              Current admin: {editingOrg.admin_name ?? "Unknown"}
+            </p>
+            <input
+              required
+              type="email"
+              value={editEmail}
+              onChange={(event) => setEditEmail(event.target.value)}
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950"
+            />
+            {editError ? <p className="text-sm text-red-600">{editError}</p> : null}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingOrg(null)}
+                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingEdit}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              >
+                {savingEdit ? "Saving…" : "Save email"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
     </AppShell>
+  );
+}
+
+function OrganizationRow({
+  organization,
+  busy,
+  onEditEmail,
+  onSuspend,
+  onReactivate,
+  onDelete,
+}: {
+  organization: PlatformOrganization;
+  busy: boolean;
+  onEditEmail: () => void;
+  onSuspend: () => void;
+  onReactivate: () => void;
+  onDelete: () => void;
+}) {
+  const isSuspended = organization.status === "suspended";
+
+  return (
+    <tr>
+      <td className="px-4 py-3" data-label="Organization">
+        <p className="font-medium text-zinc-900 dark:text-zinc-50">{organization.name}</p>
+        <p className="text-xs text-zinc-500">{organization.slug}</p>
+      </td>
+      <td className="px-4 py-3" data-label="Admin">
+        <p>{organization.admin_name ?? "—"}</p>
+        <p className="text-xs text-zinc-500">{organization.admin_email ?? "—"}</p>
+      </td>
+      <td className="px-4 py-3" data-label="Employees">
+        {organization.employee_count}
+      </td>
+      <td className="px-4 py-3 capitalize" data-label="Status">
+        <StatusBadge status={organization.status} />
+      </td>
+      <td className="px-4 py-3 text-zinc-500" data-label="Created">
+        {organization.created_at
+          ? new Date(organization.created_at).toLocaleDateString()
+          : "—"}
+      </td>
+      <td className="px-4 py-3" data-label="Actions">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={busy || !organization.admin_email}
+            onClick={onEditEmail}
+            className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+          >
+            Edit email
+          </button>
+          {isSuspended ? (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onReactivate}
+                className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300"
+              >
+                Reactivate
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onDelete}
+                className="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300"
+              >
+                Delete
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onSuspend}
+              className="rounded-md border border-amber-300 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-800 dark:text-amber-300"
+            >
+              Suspend
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function StatusBadge({ status }: { status: PlatformOrganization["status"] }) {
+  const styles =
+    status === "active"
+      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+      : status === "suspended"
+        ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+        : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300";
+
+  return (
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${styles}`}>
+      {status}
+    </span>
   );
 }
 

@@ -429,6 +429,32 @@ export async function createPlatformOrganization(data: {
   );
 }
 
+export async function updatePlatformOrganization(
+  organizationId: number,
+  data: {
+    admin_email?: string;
+    status?: PlatformOrganization["status"];
+  },
+): Promise<{ message: string; organization: PlatformOrganization }> {
+  return apiFetch<{ message: string; organization: PlatformOrganization }>(
+    `/platform/organizations/${organizationId}`,
+    {
+      method: "PATCH",
+      tenant: false,
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+export async function deletePlatformOrganization(
+  organizationId: number,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/platform/organizations/${organizationId}`, {
+    method: "DELETE",
+    tenant: false,
+  });
+}
+
 export async function updateSuperAdminPassword(data: {
   current_password: string;
   password: string;

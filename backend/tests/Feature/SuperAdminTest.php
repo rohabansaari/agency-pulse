@@ -184,4 +184,59 @@ class SuperAdminTest extends TestCase
 
         $this->getJson('/api/v1/platform/organizations')->assertForbidden();
     }
+
+    public function test_super_admin_can_update_organization_admin_email(): void
+    {
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+        $tenantAdmin = User::factory()->admin()->create(['email' => 'tenant-admin@example.com']);
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->patchJson('/api/v1/platform/organizations/'.$tenantAdmin->organization_id, [
+            'admin_email' => 'new-admin@example.com',
+        ])
+            ->assertOk()
+            ->assertJsonPath('organization.admin_email', 'new-admin@example.com');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $tenantAdmin->id,
+            'email' => 'new-admin@example.com',
+        ]);
+    }
+
+    public function test_super_admin_cannot_delete_active_organization(): void
+    {
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+        $tenantAdmin = User::factory()->admin()->create();
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->deleteJson('/api/v1/platform/organizations/'.$tenantAdmin->organization_id)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['organization']);
+
+        $this->assertDatabaseHas('organizations', ['id' => $tenantAdmin->organization_id]);
+    }
+
+    public function test_super_admin_can_delete_suspended_organization(): void
+    {
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+        $tenantAdmin = User::factory()->admin()->create();
+        $organizationId = $tenantAdmin->organization_id;
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->patchJson('/api/v1/platform/organizations/'.$organizationId, [
+            'status' => 'suspended',
+        ])->assertOk();
+
+        $this->deleteJson('/api/v1/platform/organizations/'.$organizationId)
+            ->assertOk();
+
+        $this->assertDatabaseMissing('organizations', ['id' => $organizationId]);
+        $this->assertDatabaseMissing('users', ['id' => $tenantAdmin->id]);
+    }
 }
