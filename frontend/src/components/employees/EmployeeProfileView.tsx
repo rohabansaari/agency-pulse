@@ -199,7 +199,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Leave history</h2>
-          <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto text-sm">
+          <ul className="mt-3 space-y-2 text-sm">
             {profile.leave_history.map((entry) => (
               <li key={entry.id} className="rounded border border-zinc-100 p-2 dark:border-zinc-800">
                 <div className="flex justify-between"><span>{entry.start_date}</span><span className="capitalize text-zinc-500">{entry.status}</span></div>
@@ -211,7 +211,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
 
         <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Overtime history</h2>
-          <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto text-sm">
+          <ul className="mt-3 space-y-2 text-sm">
             {profile.overtime_history.map((entry) => (
               <li key={entry.id} className="rounded border border-zinc-100 p-2 dark:border-zinc-800">
                 <div className="flex justify-between"><span>{entry.work_date}</span><span className="capitalize text-zinc-500">{entry.status}</span></div>

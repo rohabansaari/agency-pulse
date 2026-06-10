@@ -33,7 +33,7 @@ function OrgTeamUtilizationTable({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="ui-table-wrap">
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
           <tr>
@@ -87,7 +87,7 @@ function ManagerTeamReportCard({ team }: { team: ManagerTeamReport }) {
       {team.member_breakdown.length === 0 ? (
         <p className="text-sm text-zinc-500">No team members yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="ui-table-wrap">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
               <tr>
@@ -132,7 +132,7 @@ function OrgEmployeeBreakdownTable({ rows }: { rows: EmployeeReportBreakdown[] }
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="ui-table-wrap">
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
           <tr>
@@ -241,7 +241,7 @@ function AdminReports({
           <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
             Overtime breakdown
           </h2>
-          <div className="overflow-x-auto">
+          <div className="ui-table-wrap">
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
                 <tr>

@@ -202,7 +202,7 @@ export default function PlatformPage() {
           </section>
         ) : null}
 
-        <section className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        <section className="ui-table-wrap rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
             <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Registered organizations</h2>
             <p className="text-xs text-zinc-500">

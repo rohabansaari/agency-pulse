@@ -412,7 +412,7 @@ export function AdminPayrollPage() {
         ) : runs.length === 0 ? (
           <p className="mt-4 text-sm text-zinc-500">No payroll runs yet.</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
+          <div className="ui-table-wrap mt-4">
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-700">
                 <tr>
