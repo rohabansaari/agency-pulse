@@ -3,6 +3,7 @@
 import { ProjectAssignPanel } from "@/components/projects/ProjectAssignPanel";
 import { ProjectReportPanel } from "@/components/projects/ProjectReportPanel";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
+import { PROJECTS_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { Modal } from "@/components/ui/Modal";
 import {
   ApiError,
@@ -213,10 +214,14 @@ export function ProjectsManager({ user }: { user: User }) {
   const exportRows = useMemo(
     () =>
       filtered.map((project) => ({
-        name: project.name,
+        project_name: project.name,
         client: project.client_name,
         status: project.status,
-        description: project.description ?? "",
+        assigned_team: "—",
+        members_count: project.members_count ?? 0,
+        created_date: project.created_at
+          ? new Date(project.created_at).toLocaleDateString()
+          : "—",
       })),
     [filtered],
   );
@@ -318,12 +323,7 @@ export function ProjectsManager({ user }: { user: User }) {
         <div className="flex flex-wrap items-center gap-2">
           <ExportDropdown
             filename="projects"
-            columns={[
-              { key: "name", label: "Project" },
-              { key: "client", label: "Client" },
-              { key: "status", label: "Status" },
-              { key: "description", label: "Description" },
-            ]}
+            columns={PROJECTS_EXPORT_COLUMNS}
             rows={exportRows}
           />
           {canManage ? (

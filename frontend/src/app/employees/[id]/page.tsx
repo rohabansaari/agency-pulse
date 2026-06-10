@@ -15,7 +15,7 @@ function EmployeeProfilePageContent() {
     return null;
   }
 
-  return <EmployeeProfileView userId={userId} />;
+  return <EmployeeProfileView userId={userId} viewer={user} />;
 }
 
 export default function EmployeeProfilePage() {

@@ -1,6 +1,7 @@
 "use client";
 
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
+import { OVERTIME_EXPORT_COLUMNS } from "@/lib/export-columns";
 import {
   ApiError,
   fetchOvertimeRequests,
@@ -37,8 +38,9 @@ export function OvertimeRequestList() {
   const exportRows = useMemo(
     () =>
       requests.map((request) => ({
+        employee_name: request.user_name ?? "—",
         date: request.work_date,
-        project: request.project_name ?? "",
+        project_name: request.project_name ?? "",
         duration: formatDuration(request.duration_seconds),
         status: request.status,
       })),
@@ -55,12 +57,7 @@ export function OvertimeRequestList() {
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">My overtime requests</h2>
         <ExportDropdown
           filename="overtime-requests"
-          columns={[
-            { key: "date", label: "Date" },
-            { key: "project", label: "Project" },
-            { key: "duration", label: "Duration" },
-            { key: "status", label: "Status" },
-          ]}
+          columns={OVERTIME_EXPORT_COLUMNS}
           rows={exportRows}
         />
       </div>

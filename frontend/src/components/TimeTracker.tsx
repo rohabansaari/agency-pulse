@@ -14,6 +14,7 @@ import { ManualTimeEntryForm } from "@/components/time/ManualTimeEntryForm";
 import { OvertimeRequestForm } from "@/components/time/OvertimeRequestForm";
 import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
+import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
 import type { Project, TimeEntry, User } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -260,15 +261,16 @@ export function TimeTracker({ user }: { user?: User }) {
   const timeExportRows = useMemo(
     () =>
       sortedEntries.map((entry) => ({
-        project: entry.project_name ?? "General time",
-        start: formatTime(entry.start_time),
-        end: entry.end_time ? formatTime(entry.end_time) : "",
-        duration: formatDuration(
+        employee_name: user?.name ?? "—",
+        project_name: entry.project_name ?? "General time",
+        date: new Date(entry.start_time).toLocaleDateString(),
+        hours_worked: formatDuration(
           entry.status === "running" ? liveElapsed : (entry.duration ?? 0),
         ),
+        entry_type: "Auto",
         status: entry.status,
       })),
-    [sortedEntries, liveElapsed],
+    [sortedEntries, liveElapsed, user?.name],
   );
 
   async function handleStart() {
@@ -460,7 +462,7 @@ export function TimeTracker({ user }: { user?: User }) {
               onSubmitted={() => setManualRefreshKey((value) => value + 1)}
             />
           </section>
-          <ManualTimeEntries refreshKey={manualRefreshKey} />
+          <ManualTimeEntries refreshKey={manualRefreshKey} employeeName={user.name} />
         </div>
       ) : null}
 
@@ -628,13 +630,7 @@ export function TimeTracker({ user }: { user?: User }) {
           <div className="flex items-center gap-2">
             <ExportDropdown
               filename="time-tracking-today"
-              columns={[
-                { key: "project", label: "Project" },
-                { key: "start", label: "Start" },
-                { key: "end", label: "End" },
-                { key: "duration", label: "Duration" },
-                { key: "status", label: "Status" },
-              ]}
+              columns={TIME_TRACKING_EXPORT_COLUMNS}
               rows={timeExportRows}
               formats={["csv", "xlsx", "pdf"]}
             />
@@ -665,7 +661,7 @@ export function TimeTracker({ user }: { user?: User }) {
               onSubmitted={() => setManualRefreshKey((value) => value + 1)}
             />
           </section>
-          <ManualTimeEntries refreshKey={manualRefreshKey} />
+          <ManualTimeEntries refreshKey={manualRefreshKey} employeeName={user.name} />
           <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="mb-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
               Record manual time for team

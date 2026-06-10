@@ -1,6 +1,7 @@
 "use client";
 
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
+import { MANUAL_TIME_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { ApiError, fetchManualTimeEntries, formatApiErrors } from "@/lib/api";
 import { formatDuration } from "@/lib/time";
 import type { TimeEntry, TimeEntryStatus } from "@/lib/types";
@@ -24,7 +25,13 @@ function StatusBadge({ status }: { status: TimeEntryStatus }) {
   );
 }
 
-export function ManualTimeEntries({ refreshKey = 0 }: { refreshKey?: number }) {
+export function ManualTimeEntries({
+  refreshKey = 0,
+  employeeName = "—",
+}: {
+  refreshKey?: number;
+  employeeName?: string;
+}) {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,12 +58,14 @@ export function ManualTimeEntries({ refreshKey = 0 }: { refreshKey?: number }) {
   const exportRows = useMemo(
     () =>
       entries.map((entry) => ({
+        employee_name: employeeName,
+        project_name: entry.project_name ?? "General time",
         date: new Date(entry.start_time).toLocaleDateString(),
-        project: entry.project_name ?? "General time",
-        duration: formatDuration(entry.duration ?? 0),
+        hours_worked: formatDuration(entry.duration ?? 0),
+        entry_type: "Manual",
         status: entry.status,
       })),
-    [entries],
+    [entries, employeeName],
   );
 
   return (
@@ -72,12 +81,7 @@ export function ManualTimeEntries({ refreshKey = 0 }: { refreshKey?: number }) {
         </div>
         <ExportDropdown
           filename="manual-time-entries"
-          columns={[
-            { key: "date", label: "Date" },
-            { key: "project", label: "Project" },
-            { key: "duration", label: "Duration" },
-            { key: "status", label: "Status" },
-          ]}
+          columns={MANUAL_TIME_EXPORT_COLUMNS}
           rows={exportRows}
           formats={["csv", "xlsx", "pdf"]}
         />

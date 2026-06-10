@@ -334,6 +334,7 @@ export async function createEmployee(data: {
   name: string;
   email: string;
   password: string;
+  role?: UserRole;
   payroll_pin?: string;
   payroll_pin_confirmation?: string;
 }): Promise<TeamMember> {
@@ -368,7 +369,7 @@ export async function inviteTeamMember(data: {
 
 export async function updateTeamMember(
   memberId: number,
-  data: Partial<{ role: UserRole; status: MemberStatus }>,
+  data: Partial<{ role: UserRole; status: MemberStatus; name: string }>,
 ): Promise<TeamMember> {
   const response = await apiFetch<{ member: TeamMember }>(
     `/team/${memberId}`,

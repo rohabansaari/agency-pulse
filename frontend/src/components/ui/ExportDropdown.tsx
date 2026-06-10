@@ -1,6 +1,6 @@
 "use client";
 
-import { exportTableData, type ExportFormat } from "@/lib/export";
+import { exportTableData, type ExportFormat, type ExportSheet } from "@/lib/export";
 import { useState } from "react";
 
 type Column = { key: string; label: string };
@@ -12,6 +12,7 @@ type ExportDropdownProps = {
   rows: Row[];
   formats?: ExportFormat[];
   disabled?: boolean;
+  extraSheets?: ExportSheet[];
 };
 
 export function ExportDropdown({
@@ -20,6 +21,7 @@ export function ExportDropdown({
   rows,
   formats = ["csv", "xlsx"],
   disabled = false,
+  extraSheets = [],
 }: ExportDropdownProps) {
   const [open, setOpen] = useState(false);
 
@@ -28,7 +30,7 @@ export function ExportDropdown({
   }
 
   function handleExport(format: ExportFormat) {
-    exportTableData(filename, columns, rows, format);
+    exportTableData(filename, columns, rows, format, extraSheets);
     setOpen(false);
   }
 

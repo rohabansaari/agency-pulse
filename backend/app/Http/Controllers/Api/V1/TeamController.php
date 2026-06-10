@@ -75,9 +75,16 @@ class TeamController extends Controller
                 'regex:/^\d{4,8}$/',
                 'confirmed',
             ],
+            'role' => ['sometimes', Rule::enum(UserRole::class)],
         ]);
 
-        $membership = DB::transaction(function () use ($validated, $request) {
+        if (isset($validated['role'])) {
+            $this->ensureCanAssignPrivilegedRole($request, $validated['role']);
+        }
+
+        $assignedRole = UserRole::tryFrom($validated['role'] ?? UserRole::Employee->value) ?? UserRole::Employee;
+
+        $membership = DB::transaction(function () use ($validated, $request, $assignedRole) {
             if (OrganizationMember::query()
                 ->where('organization_id', TenantContext::id())
                 ->whereHas('user', fn ($q) => $q->where('email', $validated['email']))
@@ -92,13 +99,13 @@ class TeamController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => $validated['password'],
-                'role' => UserRole::Employee,
+                'role' => $assignedRole,
             ]);
 
             $membership = OrganizationMember::create([
                 'organization_id' => TenantContext::id(),
                 'user_id' => $user->id,
-                'role' => UserRole::Employee,
+                'role' => $assignedRole,
                 'status' => OrganizationMemberStatus::Active,
                 'joined_at' => now(),
             ]);
@@ -240,6 +247,12 @@ class TeamController extends Controller
             if (isset($validated['role'])) {
                 $this->ensureCanAssignPrivilegedRole($request, $validated['role']);
             }
+        }
+
+        if (isset($validated['role']) && $request->user()->id === $member->user_id) {
+            throw ValidationException::withMessages([
+                'role' => ['You cannot change your own role.'],
+            ]);
         }
 
         if (isset($validated['status']) && $request->user()->id === $member->user_id) {

@@ -17,6 +17,7 @@ class EmployeeProfileResource extends JsonResource
         $membership = $this->resource['membership'];
 
         return [
+            'membership_id' => $membership->id,
             'user_id' => $membership->user_id,
             'name' => $membership->user?->name,
             'email' => $membership->user?->email,

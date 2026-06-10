@@ -1,6 +1,7 @@
 "use client";
 
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
+import { OVERTIME_EXPORT_COLUMNS } from "@/lib/export-columns";
 import {
   ApiError,
   approveOvertimeRequest,
@@ -40,9 +41,9 @@ export function OvertimeApprovalQueue({ title = "My Overtime Approval Queue" }: 
   const exportRows = useMemo(
     () =>
       requests.map((request) => ({
-        employee: request.user_name ?? "",
+        employee_name: request.user_name ?? "—",
         date: request.work_date,
-        project: request.project_name ?? "",
+        project_name: request.project_name ?? "",
         duration: formatDuration(request.duration_seconds),
         status: request.status,
       })),
@@ -83,13 +84,7 @@ export function OvertimeApprovalQueue({ title = "My Overtime Approval Queue" }: 
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
         <ExportDropdown
           filename="overtime-approval-queue"
-          columns={[
-            { key: "employee", label: "Employee" },
-            { key: "date", label: "Date" },
-            { key: "project", label: "Project" },
-            { key: "duration", label: "Duration" },
-            { key: "status", label: "Status" },
-          ]}
+          columns={OVERTIME_EXPORT_COLUMNS}
           rows={exportRows}
         />
       </div>

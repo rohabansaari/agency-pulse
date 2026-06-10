@@ -107,6 +107,10 @@ export function canEditEmployeeStatus(role: UserRole): boolean {
   return role === "admin" || role === "sub_admin";
 }
 
+export function canChangeEmployeeRoles(role: UserRole): boolean {
+  return role === "admin";
+}
+
 export function isAdmin(role: UserRole): boolean {
   return role === "admin";
 }

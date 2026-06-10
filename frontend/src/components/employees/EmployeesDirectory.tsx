@@ -1,18 +1,18 @@
 "use client";
 
+import { EmployeeActionsMenu } from "@/components/employees/EmployeeActionsMenu";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
-import { Modal } from "@/components/ui/Modal";
 import {
   ApiError,
   createEmployee,
   fetchPayrollVaultStatus,
   fetchTeam,
   formatApiErrors,
-  resetEmployeePassword,
   updateTeamMember,
 } from "@/lib/api";
+import { EMPLOYEES_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { formatDuration } from "@/lib/time";
-import { canEditEmployeeStatus, canManageOrgEmployees } from "@/lib/navigation";
+import { canChangeEmployeeRoles, canEditEmployeeStatus, canManageOrgEmployees, ROLE_LABELS } from "@/lib/navigation";
 import type { MemberStatus, PayrollVaultStatus, TeamMember, User, UserRole } from "@/lib/types";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -28,6 +28,8 @@ function formatDate(value: string | null | undefined): string {
   return new Date(value).toLocaleDateString();
 }
 
+const ASSIGNABLE_ROLES: UserRole[] = ["employee", "manager", "sub_admin", "admin"];
+
 export function EmployeesDirectory({ user }: { user: User }) {
   const canCreate = canManageOrgEmployees(user.role);
   const canEditStatus = canEditEmployeeStatus(user.role);
@@ -38,12 +40,11 @@ export function EmployeesDirectory({ user }: { user: User }) {
   const [createName, setCreateName] = useState("");
   const [createEmail, setCreateEmail] = useState("");
   const [createPassword, setCreatePassword] = useState("");
+  const [createRole, setCreateRole] = useState<UserRole>("employee");
   const [createPayrollPin, setCreatePayrollPin] = useState("");
   const [createPayrollPinConfirmation, setCreatePayrollPinConfirmation] = useState("");
   const [vaultStatus, setVaultStatus] = useState<PayrollVaultStatus | null>(null);
   const [saving, setSaving] = useState(false);
-  const [resetTarget, setResetTarget] = useState<TeamMember | null>(null);
-  const [newPassword, setNewPassword] = useState("");
 
   const load = useCallback(async () => {
     setError("");
@@ -74,17 +75,12 @@ export function EmployeesDirectory({ user }: { user: User }) {
       members.map((m) => ({
         name: m.name,
         email: m.email,
-        role: m.role,
+        role: m.role.replace("_", " "),
         team: m.team_name ?? "—",
         manager: m.manager_name ?? "—",
         status: m.status,
-        joined_at: formatDate(m.joined_at),
+        join_date: formatDate(m.joined_at),
         last_activity: formatDate(m.last_activity_at),
-        active_timer: m.has_active_timer ? "Running" : "Idle",
-        projects: m.assigned_projects_count ?? 0,
-        leave_hours: formatDuration(m.approved_leave_seconds ?? 0),
-        overtime_requests: m.overtime_requests_count ?? 0,
-        month_hours: formatDuration(m.time_tracked_month_seconds ?? 0),
       })),
     [members],
   );
@@ -98,6 +94,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
         name: createName,
         email: createEmail,
         password: createPassword,
+        role: createRole,
         payroll_pin: vaultStatus?.requires_pin_on_employee_create ? createPayrollPin : undefined,
         payroll_pin_confirmation: vaultStatus?.requires_pin_on_employee_create
           ? createPayrollPinConfirmation
@@ -107,6 +104,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
       setCreateName("");
       setCreateEmail("");
       setCreatePassword("");
+      setCreateRole("employee");
       setCreatePayrollPin("");
       setCreatePayrollPinConfirmation("");
       await load();
@@ -139,16 +137,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
         <div className="flex flex-wrap items-center gap-2">
           <ExportDropdown
             filename="employees"
-            columns={[
-              { key: "name", label: "Name" },
-              { key: "email", label: "Email" },
-              { key: "role", label: "Role" },
-              { key: "team", label: "Team" },
-              { key: "manager", label: "Manager" },
-              { key: "status", label: "Status" },
-              { key: "joined_at", label: "Join Date" },
-              { key: "month_hours", label: "Time This Month" },
-            ]}
+            columns={EMPLOYEES_EXPORT_COLUMNS}
             rows={exportRows}
           />
           {canCreate ? (
@@ -179,6 +168,19 @@ export function EmployeesDirectory({ user }: { user: User }) {
             <input required placeholder="Full name" value={createName} onChange={(e) => setCreateName(e.target.value)} className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900" />
             <input required type="email" placeholder="Email" value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900" />
             <input required type="password" minLength={8} placeholder="Password" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900" />
+            {canChangeEmployeeRoles(user.role) ? (
+              <select
+                value={createRole}
+                onChange={(e) => setCreateRole(e.target.value as UserRole)}
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              >
+                {ASSIGNABLE_ROLES.map((role) => (
+                  <option key={role} value={role}>
+                    {ROLE_LABELS[role]}
+                  </option>
+                ))}
+              </select>
+            ) : null}
           </div>
           {vaultStatus?.requires_pin_on_employee_create ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -262,49 +264,13 @@ export function EmployeesDirectory({ user }: { user: User }) {
                 <td className="px-3 py-3 font-mono text-xs">{formatDuration(member.approved_leave_seconds ?? 0)}</td>
                 <td className="px-3 py-3">{member.overtime_requests_count ?? 0}</td>
                 <td className="px-3 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    <Link href={`/employees/${member.user_id}`} className="rounded border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-600">
-                      Profile
-                    </Link>
-                    {canCreate && member.role === "employee" ? (
-                      <button type="button" onClick={() => setResetTarget(member)} className="rounded border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-600">
-                        Reset pwd
-                      </button>
-                    ) : null}
-                  </div>
+                  <EmployeeActionsMenu viewer={user} member={member} onUpdated={load} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      {resetTarget ? (
-        <Modal onClose={() => setResetTarget(null)} title="Reset password">
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setSaving(true);
-              try {
-                await resetEmployeePassword(resetTarget.user_id, newPassword);
-                setResetTarget(null);
-                setNewPassword("");
-              } catch (err) {
-                setError(err instanceof ApiError ? err.message : "Password reset failed.");
-              } finally {
-                setSaving(false);
-              }
-            }}
-            className="space-y-3"
-          >
-            <p className="text-sm text-zinc-600">Reset password for {resetTarget.name}</p>
-            <input required type="password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900" />
-            <button type="submit" disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white">
-              Update password
-            </button>
-          </form>
-        </Modal>
-      ) : null}
     </div>
   );
 }

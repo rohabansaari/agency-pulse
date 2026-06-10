@@ -11,6 +11,7 @@ import {
   removeTeamMember,
 } from "@/lib/api";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
+import { TEAMS_EXPORT_COLUMNS } from "@/lib/export-columns";
 import type { TeamMember, WorkTeam } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -53,26 +54,16 @@ export function WorkTeamsManager() {
 
   const exportRows = useMemo(
     () =>
-      teams.flatMap((team) => {
+      teams.map((team) => {
         const managerName =
-          orgMembers.find((m) => m.user_id === team.manager_id)?.name ?? "";
-        const members = team.members ?? [];
-        if (members.length === 0) {
-          return [
-            {
-              team: team.name,
-              manager: managerName,
-              member: "",
-              email: "",
-            },
-          ];
-        }
-        return members.map((member) => ({
-          team: team.name,
-          manager: managerName,
-          member: member.name,
-          email: member.email ?? "",
-        }));
+          orgMembers.find((m) => m.user_id === team.manager_id)?.name ?? "Unassigned";
+        return {
+          team_name: team.name,
+          manager_name: managerName,
+          total_members: team.members?.length ?? team.members_count ?? 0,
+          total_projects: team.active_projects_count ?? 0,
+          active_status: (team.members?.length ?? 0) > 0 ? "Active" : "Empty",
+        };
       }),
     [teams, orgMembers],
   );
@@ -138,12 +129,7 @@ export function WorkTeamsManager() {
         </div>
         <ExportDropdown
           filename="teams"
-          columns={[
-            { key: "team", label: "Team" },
-            { key: "manager", label: "Manager" },
-            { key: "member", label: "Member" },
-            { key: "email", label: "Email" },
-          ]}
+          columns={TEAMS_EXPORT_COLUMNS}
           rows={exportRows}
         />
       </div>

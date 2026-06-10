@@ -2,6 +2,7 @@
 
 import type { LeaveStatusFilter } from "@/components/leave/LeaveStatusFilter";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
+import { LEAVE_EXPORT_COLUMNS } from "@/lib/export-columns";
 import {
   ApiError,
   fetchLeaveEntries,
@@ -77,7 +78,7 @@ export function LeaveHistory({
   const exportRows = useMemo(
     () =>
       filteredEntries.map((entry) => ({
-        employee: entry.user_name ?? "",
+        employee_name: entry.user_name ?? "",
         date: displayLeaveDate(entry.start_time),
         duration: formatDuration(entry.duration ?? 0),
         status: entry.status,
@@ -115,14 +116,7 @@ export function LeaveHistory({
       <div className="mb-3 flex justify-end">
         <ExportDropdown
           filename="leave-entries"
-          columns={[
-            ...(showEmployee ? [{ key: "employee", label: "Employee" }] : []),
-            { key: "date", label: "Date" },
-            { key: "duration", label: "Duration" },
-            { key: "status", label: "Status" },
-            { key: "team", label: "Team" },
-            { key: "source", label: "Source" },
-          ]}
+          columns={LEAVE_EXPORT_COLUMNS}
           rows={exportRows}
         />
       </div>

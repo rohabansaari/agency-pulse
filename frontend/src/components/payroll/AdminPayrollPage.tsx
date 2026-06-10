@@ -20,6 +20,10 @@ import { usePayrollVault } from "@/components/payroll/PayrollVaultProvider";
 import { PayrollSettingsPanel } from "@/components/payroll/PayrollSettingsPanel";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import {
+  PAYROLL_RUNS_EXPORT_COLUMNS,
+  PAYROLL_SUMMARY_EXPORT_COLUMNS,
+} from "@/lib/export-columns";
+import {
   presetDateRange,
   ReportDateRangeFilter,
   type ReportDateRange,
@@ -140,17 +144,69 @@ export function AdminPayrollPage() {
     );
   }
 
-  const exportRows = useMemo(
-    () =>
-      runs.map((run) => ({
-        period: `${run.period_start} – ${run.period_end}`,
-        status: run.status,
-        hours: formatDuration(run.total_hours_snapshot),
-        created_by: run.created_by_name ?? `User #${run.created_by}`,
-        created_at: run.created_at ?? "—",
-      })),
-    [runs],
-  );
+  const { payrollExportRows, payrollSummaryRows } = useMemo(() => {
+    const rows: Record<string, string>[] = [];
+    let totalNet = 0;
+    let totalHoursSeconds = 0;
+    let totalOvertimePay = 0;
+    let employeeCount = 0;
+
+    for (const run of runs) {
+      const detail = runDetails[run.id];
+      const records = detail?.employee_records ?? [];
+      const period = `${run.period_start} – ${run.period_end}`;
+
+      if (records.length === 0) {
+        rows.push({
+          employee_name: "—",
+          period,
+          total_hours: formatDuration(run.total_hours_snapshot),
+          overtime_hours: "—",
+          deductions: "—",
+          gross_pay: "—",
+          net_pay: "—",
+          payroll_status: run.status,
+        });
+        totalHoursSeconds += run.total_hours_snapshot ?? 0;
+        continue;
+      }
+
+      for (const record of records) {
+        const masked = record.financial_data_masked || !financialUnlocked;
+        const gross = masked ? 0 : Number(record.gross_salary_snapshot ?? 0);
+        const net = masked ? 0 : Number(record.net_salary_snapshot ?? 0);
+        const overtimePay = masked ? 0 : Number(record.overtime_pay_snapshot ?? 0);
+        const deductions = masked ? "—" : (gross - net).toFixed(2);
+
+        rows.push({
+          employee_name: record.user_name ?? `User #${record.user_id}`,
+          period,
+          total_hours: formatDuration(record.payable_hours_seconds),
+          overtime_hours: formatDuration(record.overtime_hours_seconds ?? 0),
+          deductions: String(deductions),
+          gross_pay: masked ? "—" : (record.gross_salary_snapshot ?? "—"),
+          net_pay: masked ? "—" : (record.net_salary_snapshot ?? "—"),
+          payroll_status: run.status,
+        });
+
+        if (!masked) {
+          totalNet += net;
+          totalOvertimePay += overtimePay;
+        }
+        totalHoursSeconds += record.payable_hours_seconds ?? 0;
+        employeeCount += 1;
+      }
+    }
+
+    const summary = [
+      { metric: "Total Payroll Cost", value: financialUnlocked ? totalNet.toFixed(2) : "—" },
+      { metric: "Total Employees", value: String(employeeCount) },
+      { metric: "Total Hours", value: formatDuration(totalHoursSeconds) },
+      { metric: "Total Overtime Cost", value: financialUnlocked ? totalOvertimePay.toFixed(2) : "—" },
+    ];
+
+    return { payrollExportRows: rows, payrollSummaryRows: summary };
+  }, [runs, runDetails, financialUnlocked]);
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
@@ -282,14 +338,15 @@ export function AdminPayrollPage() {
         <ExportDropdown
           filename="payroll-runs"
           formats={["csv", "xlsx", "pdf"]}
-          columns={[
-            { key: "period", label: "Period" },
-            { key: "status", label: "Status" },
-            { key: "hours", label: "Total Hours" },
-            { key: "created_by", label: "Created By" },
-            { key: "created_at", label: "Generated" },
+          columns={PAYROLL_RUNS_EXPORT_COLUMNS}
+          rows={payrollExportRows}
+          extraSheets={[
+            {
+              name: "Summary",
+              columns: PAYROLL_SUMMARY_EXPORT_COLUMNS,
+              rows: payrollSummaryRows,
+            },
           ]}
-          rows={exportRows}
         />
       </div>
 
