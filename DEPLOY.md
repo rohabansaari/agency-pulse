@@ -133,12 +133,39 @@ Replace with **your** API URL from Part 2, including `/api/v1`.
 
 ---
 
+## Part 3b — Screenshots (no Chrome extension required)
+
+Employees and managers **do not need to install a Chrome extension** on Render.
+
+When they click **Start Timer** on `/time`, Chrome shows a one-time **“Share this tab”** permission dialog. After they click **Share**, screenshots upload every **5 minutes** automatically until they stop the timer.
+
+**API checklist (Render → API service → Environment):**
+
+| Key | Value |
+|-----|--------|
+| `SCREENSHOT_DISK` | `public` *(default — files on API disk; fine for MVP)* |
+| `FRONTEND_URL` | `https://agencypulse-web.onrender.com` |
+
+After deploying API code with the screenshots migration, open **Shell** on the API service (or redeploy with migrate in start script) and run:
+
+```bash
+php artisan migrate --force
+php artisan storage:link
+```
+
+Optional later: set `SCREENSHOT_DISK=s3` and Cloudflare R2 / AWS keys for scalable image storage.
+
+The optional `chrome-extension/` folder is **not required** for Render. IT may still force-install it via Chrome Enterprise if you want extension-based capture instead of tab sharing.
+
+---
+
 ## Part 4 — Verify
 
 | Check | URL |
 |-------|-----|
 | API health | `https://agencypulse-api.onrender.com/api/v1/health` |
 | Login / Dashboard | `https://agencypulse-web.onrender.com/dashboard` |
+| Time tracking + screenshots | `https://agencypulse-web.onrender.com/time` |
 | Payroll | `https://agencypulse-web.onrender.com/admin/payroll` |
 
 Use the **frontend** URL for the app — not the API URL.

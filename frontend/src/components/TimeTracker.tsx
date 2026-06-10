@@ -16,10 +16,11 @@ import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
 import {
-  pingScreenshotExtension,
+  resumeExtensionTrackingForTimer,
   startScreenshotTrackingForTimer,
-  stopScreenshotTrackingForTimer,
-} from "@/lib/screenshot-bridge";
+  stopScreenshotTracking,
+} from "@/lib/screenshot-tracking";
+import { pingScreenshotExtension } from "@/lib/screenshot-bridge";
 import type { Project, TimeEntry, User } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -181,7 +182,6 @@ export function TimeTracker({ user }: { user?: User }) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [projectsNotice, setProjectsNotice] = useState("");
-  const [extensionInstalled, setExtensionInstalled] = useState<boolean | null>(null);
   const tracksTime = isEmployee || isManager;
 
   const loadToday = useCallback(async () => {
@@ -231,19 +231,11 @@ export function TimeTracker({ user }: { user?: User }) {
   }, [loadToday]);
 
   useEffect(() => {
-    if (!tracksTime) {
-      return;
-    }
-
-    void pingScreenshotExtension().then(setExtensionInstalled);
-  }, [tracksTime]);
-
-  useEffect(() => {
     if (!tracksTime || loading || !activeTimer) {
       return;
     }
 
-    void startScreenshotTrackingForTimer({
+    void resumeExtensionTrackingForTimer({
       timeEntryId: activeTimer.id,
       projectId: activeTimer.project_id,
     });
@@ -310,11 +302,38 @@ export function TimeTracker({ user }: { user?: User }) {
         : Number(selectedProjectId);
 
     try {
+      const hasExtension = await pingScreenshotExtension();
+      let captureMode: "extension" | "browser" | "none" = "none";
+
+      if (!hasExtension) {
+        const capture = await startScreenshotTrackingForTimer({ projectId });
+        if (!capture.ok) {
+          setError(
+            capture.error ??
+              "Allow tab sharing when prompted so work screenshots can be captured.",
+          );
+          return;
+        }
+        captureMode = capture.mode;
+      }
+
       const response = await startTimer(projectId);
-      void startScreenshotTrackingForTimer({
-        timeEntryId: response.entry.id,
-        projectId: response.entry.project_id,
-      });
+
+      if (hasExtension) {
+        const capture = await startScreenshotTrackingForTimer({
+          timeEntryId: response.entry.id,
+          projectId: response.entry.project_id,
+        });
+        if (!capture.ok) {
+          setError(
+            capture.error ??
+              "Timer started, but screenshot tracking could not start in the extension.",
+          );
+        } else {
+          captureMode = capture.mode;
+        }
+      }
+
       try {
         await loadToday();
       } catch (refreshErr) {
@@ -327,8 +346,13 @@ export function TimeTracker({ user }: { user?: User }) {
         }
         return;
       }
-      setSuccessMessage("Timer started");
+      setSuccessMessage(
+        captureMode === "browser"
+          ? "Timer started — tab sharing active for screenshots every 5 minutes"
+          : "Timer started",
+      );
     } catch (err) {
+      await stopScreenshotTracking();
       if (err instanceof ApiError) {
         setError(formatApiErrors(err.errors) || err.message);
       } else {
@@ -346,7 +370,7 @@ export function TimeTracker({ user }: { user?: User }) {
 
     try {
       await stopTimer();
-      void stopScreenshotTrackingForTimer();
+      await stopScreenshotTracking();
       try {
         await loadToday();
       } catch (refreshErr) {
@@ -413,9 +437,9 @@ export function TimeTracker({ user }: { user?: User }) {
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           {isEmployee
-            ? "Live timer and manual time submissions"
+            ? "Start your timer — Chrome will ask once to share your tab for screenshots every 5 minutes"
             : isManager
-              ? "Track your hours and record manual time for your team"
+              ? "Track your hours, record manual time for your team, and share your tab when the timer starts"
               : "Track your work hours across projects"}
         </p>
         {(isEmployee || isManager) ? (
@@ -458,17 +482,6 @@ export function TimeTracker({ user }: { user?: User }) {
           </div>
         ) : null}
       </div>
-
-      {tracksTime && extensionInstalled === false ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
-          <p className="font-medium">Install the AgencyPulse Chrome extension once</p>
-          <p className="mt-1 text-amber-800 dark:text-amber-200/90">
-            Screenshots start automatically when you start your timer. Ask IT to deploy the extension
-            org-wide, or load the <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/50">chrome-extension</code>{" "}
-            folder from this repo in Chrome → Extensions → Load unpacked.
-          </p>
-        </div>
-      ) : null}
 
       {isEmployee && tab === "overtime" ? (
         <div className="space-y-8">
