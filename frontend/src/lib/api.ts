@@ -32,6 +32,7 @@ import type {
   OvertimeRequest,
   EmployeeProfile,
   PlatformDashboard,
+  PlatformOrganization,
 } from "./types";
 
 const API_BASE =
@@ -401,6 +402,30 @@ function dateRangeQuery(range?: ReportDateRange): string {
 
 export async function fetchPlatformDashboard(): Promise<PlatformDashboard> {
   return apiFetch<PlatformDashboard>("/platform/dashboard", { tenant: false });
+}
+
+export async function fetchPlatformOrganizations(): Promise<PlatformOrganization[]> {
+  const response = await apiFetch<{ organizations: PlatformOrganization[] }>(
+    "/platform/organizations",
+    { tenant: false },
+  );
+  return response.organizations;
+}
+
+export async function createPlatformOrganization(data: {
+  organization_name: string;
+  admin_name: string;
+  admin_email: string;
+  admin_password: string;
+}): Promise<{ message: string; organization: PlatformOrganization }> {
+  return apiFetch<{ message: string; organization: PlatformOrganization }>(
+    "/platform/organizations",
+    {
+      method: "POST",
+      tenant: false,
+      body: JSON.stringify(data),
+    },
+  );
 }
 
 export async function updateSuperAdminPassword(data: {

@@ -132,4 +132,56 @@ class SuperAdminTest extends TestCase
             'role' => UserRole::SuperAdmin->value,
         ]);
     }
+
+    public function test_super_admin_can_list_organizations_with_employee_counts(): void
+    {
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+        $admin = User::factory()->admin()->create();
+        User::factory()->count(2)->create(['organization_id' => $admin->organization_id]);
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->getJson('/api/v1/platform/organizations')
+            ->assertOk()
+            ->assertJsonStructure([
+                'organizations' => [
+                    ['id', 'name', 'status', 'employee_count', 'admin_name', 'admin_email'],
+                ],
+            ])
+            ->assertJsonPath('organizations.0.employee_count', 3);
+    }
+
+    public function test_super_admin_can_create_organization_with_admin(): void
+    {
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->postJson('/api/v1/platform/organizations', [
+            'organization_name' => 'Acme Agency',
+            'admin_name' => 'Acme Admin',
+            'admin_email' => 'acme-admin@example.com',
+            'admin_password' => 'Password1!',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('organization.name', 'Acme Agency')
+            ->assertJsonPath('organization.admin_email', 'acme-admin@example.com')
+            ->assertJsonPath('organization.employee_count', 1);
+
+        $this->assertDatabaseHas('organizations', ['name' => 'Acme Agency']);
+        $this->assertDatabaseHas('users', [
+            'email' => 'acme-admin@example.com',
+            'role' => UserRole::Admin->value,
+        ]);
+    }
+
+    public function test_tenant_admin_cannot_access_platform_organizations(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/v1/platform/organizations')->assertForbidden();
+    }
 }

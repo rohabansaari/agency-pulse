@@ -452,6 +452,17 @@ export interface PlatformDashboard {
   tenant_users_total: number;
 }
 
+export interface PlatformOrganization {
+  id: number;
+  name: string;
+  slug: string;
+  status: string;
+  employee_count: number;
+  admin_name?: string | null;
+  admin_email?: string | null;
+  created_at?: string | null;
+}
+
 export type DashboardData = EmployeeDashboard | ManagerDashboard | AdminDashboard;
 
 export type SalaryType = "hourly" | "monthly";
