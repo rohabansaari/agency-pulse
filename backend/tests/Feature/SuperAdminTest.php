@@ -23,6 +23,8 @@ class SuperAdminTest extends TestCase
 
     public function test_super_admin_is_created_only_once(): void
     {
+        $this->assertTrue(SuperAdminBootstrap::organizationIdAllowsNull());
+
         SuperAdminBootstrap::ensureExists();
         SuperAdminBootstrap::ensureExists();
 

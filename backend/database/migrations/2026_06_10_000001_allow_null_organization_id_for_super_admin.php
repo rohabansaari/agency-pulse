@@ -13,13 +13,30 @@ return new class extends Migration
             return;
         }
 
-        if (Schema::getConnection()->getDriverName() === 'mysql') {
-            DB::statement('ALTER TABLE users MODIFY organization_id BIGINT UNSIGNED NULL');
-        } else {
-            Schema::table('users', function (Blueprint $table) {
-                $table->unsignedBigInteger('organization_id')->nullable()->change();
-            });
+        if ($this->organizationIdIsNullable()) {
+            return;
         }
+
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropForeign(['organization_id']);
+            });
+
+            DB::statement('ALTER TABLE users MODIFY organization_id BIGINT UNSIGNED NULL');
+
+            Schema::table('users', function (Blueprint $table) {
+                $table->foreign('organization_id')
+                    ->references('id')
+                    ->on('organizations')
+                    ->nullOnDelete();
+            });
+
+            return;
+        }
+
+        Schema::table('users', function (Blueprint $table) {
+            $table->unsignedBigInteger('organization_id')->nullable()->change();
+        });
     }
 
     public function down(): void
@@ -33,11 +50,41 @@ return new class extends Migration
         }
 
         if (Schema::getConnection()->getDriverName() === 'mysql') {
-            DB::statement('ALTER TABLE users MODIFY organization_id BIGINT UNSIGNED NOT NULL');
-        } else {
             Schema::table('users', function (Blueprint $table) {
-                $table->unsignedBigInteger('organization_id')->nullable(false)->change();
+                $table->dropForeign(['organization_id']);
             });
+
+            DB::statement('ALTER TABLE users MODIFY organization_id BIGINT UNSIGNED NOT NULL');
+
+            Schema::table('users', function (Blueprint $table) {
+                $table->foreign('organization_id')
+                    ->references('id')
+                    ->on('organizations')
+                    ->cascadeOnDelete();
+            });
+
+            return;
         }
+
+        Schema::table('users', function (Blueprint $table) {
+            $table->unsignedBigInteger('organization_id')->nullable(false)->change();
+        });
+    }
+
+    private function organizationIdIsNullable(): bool
+    {
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return false;
+        }
+
+        $result = DB::selectOne("
+            SELECT IS_NULLABLE
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'users'
+              AND COLUMN_NAME = 'organization_id'
+        ");
+
+        return ($result->IS_NULLABLE ?? 'NO') === 'YES';
     }
 };

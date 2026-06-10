@@ -18,5 +18,8 @@ php artisan route:cache
 echo "Running migrations..."
 php artisan migrate --force --no-interaction
 
+echo "Ensuring platform super admin exists..."
+php artisan super-admin:ensure --no-interaction
+
 echo "Starting API on port ${PORT:-10000}..."
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"
