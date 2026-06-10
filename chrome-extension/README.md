@@ -15,7 +15,7 @@ Browser-only screenshot monitor for the active Chrome tab.
 2. Copy your Bearer token from browser devtools (`localStorage.agencypulse_token`)
 3. Copy organization ID (`localStorage.agencypulse_organization_id`)
 4. Paste both into the extension popup
-5. Choose capture interval and click **Start Tracking**
+5. Click **Start Tracking** (captures every 5 minutes — fixed, not configurable)
 
 ## API contract
 
@@ -38,6 +38,7 @@ Headers:
 ## Behavior
 
 - Captures only the **active tab** in the current window
+- Fixed **5-minute** capture interval (not user-configurable)
 - Runs in the MV3 service worker (continues when popup is closed)
 - Stops when Chrome is closed
 - Skips `chrome://` and extension pages

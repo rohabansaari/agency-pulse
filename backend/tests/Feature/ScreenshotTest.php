@@ -97,6 +97,30 @@ class ScreenshotTest extends TestCase
             ->assertJsonPath('data.0.user_id', $employee->id);
     }
 
+    public function test_employee_can_list_own_screenshots(): void
+    {
+        $employee = User::factory()->create();
+
+        Screenshot::query()->create([
+            'organization_id' => $employee->organization_id,
+            'user_id' => $employee->id,
+            'session_id' => Str::uuid()->toString(),
+            'storage_disk' => 'public',
+            'image_path' => 'org/1/screenshots/mine.jpg',
+            'file_size_bytes' => 100,
+            'captured_at' => now(),
+        ]);
+
+        Sanctum::actingAs($employee);
+
+        $response = $this->withHeaders($this->tenantHeaders($employee))
+            ->getJson('/api/v1/screenshots');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.user_id', $employee->id);
+    }
+
     public function test_employee_cannot_list_other_users_screenshots(): void
     {
         $employee = User::factory()->create();

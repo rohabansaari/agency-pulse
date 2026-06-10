@@ -65,6 +65,19 @@ header h1 {
   padding: 8px 10px;
 }
 
+.interval-note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #1e293b;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.interval-note strong {
+  color: #e2e8f0;
+}
+
 .actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -3,7 +3,6 @@ const fields = {
   authToken: document.getElementById("authToken"),
   organizationId: document.getElementById("organizationId"),
   projectId: document.getElementById("projectId"),
-  intervalMinutes: document.getElementById("intervalMinutes"),
 };
 
 const startBtn = document.getElementById("startBtn");
@@ -32,7 +31,7 @@ function renderStatus(settings) {
   startBtn.disabled = active;
   stopBtn.disabled = !active;
 
-  const parts = [];
+  const parts = ["Interval: every 5 minutes"];
   if (settings.lastCaptureAt) {
     parts.push(`Last capture: ${new Date(settings.lastCaptureAt).toLocaleString()}`);
   }
@@ -54,7 +53,6 @@ async function loadSettings() {
   fields.authToken.value = settings.authToken || "";
   fields.organizationId.value = settings.organizationId || "";
   fields.projectId.value = settings.projectId || "";
-  fields.intervalMinutes.value = String(settings.intervalMinutes || 5);
 
   renderStatus(settings);
 }
@@ -77,10 +75,7 @@ startBtn.addEventListener("click", async () => {
     return;
   }
 
-  const response = await chrome.runtime.sendMessage({
-    type: "startTracking",
-    intervalMinutes: Number(fields.intervalMinutes.value),
-  });
+  const response = await chrome.runtime.sendMessage({ type: "startTracking" });
 
   if (!response?.ok) {
     showMessage("Unable to start tracking.");
@@ -96,13 +91,7 @@ stopBtn.addEventListener("click", async () => {
   await loadSettings();
 });
 
-[
-  fields.apiBaseUrl,
-  fields.authToken,
-  fields.organizationId,
-  fields.projectId,
-  fields.intervalMinutes,
-].forEach((field) => {
+[fields.apiBaseUrl, fields.authToken, fields.organizationId, fields.projectId].forEach((field) => {
   field.addEventListener("change", () => {
     void persistAuthSettings();
   });

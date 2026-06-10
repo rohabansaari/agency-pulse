@@ -14,20 +14,20 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Projects", href: "/projects", roles: ["admin", "sub_admin", "manager"] },
   { label: "My Projects", href: "/projects", roles: ["employee"] },
   { label: "Time Tracking", href: "/time", roles: ["manager", "employee"] },
+  { label: "Screenshots", href: "/screenshots", roles: ["admin", "sub_admin", "manager", "employee"] },
   { label: "Leave", href: "/leave", roles: ["employee"] },
   { label: "Leave", href: "/leave/approvals", roles: ["manager"] },
   { label: "Leave Management", href: "/admin/leave", roles: ["admin", "sub_admin"] },
   { label: "Overtime Management", href: "/admin/overtime", roles: ["admin", "sub_admin"] },
   { label: "Payroll", href: "/admin/payroll", roles: ["admin"] },
   { label: "Reports", href: "/reports", roles: ["admin", "sub_admin", "manager"] },
-  { label: "Screenshots", href: "/screenshots", roles: ["admin", "sub_admin", "manager"] },
   { label: "Employees", href: "/employees", roles: ["admin", "sub_admin"] },
   { label: "Settings", href: "/settings", roles: ["admin"] },
 ];
 
 const ROLE_NAV: Record<UserRole, string[]> = {
   super_admin: ["Platform"],
-  employee: ["Dashboard", "Time Tracking", "My Projects", "Leave"],
+  employee: ["Dashboard", "Time Tracking", "My Projects", "Screenshots", "Leave"],
   manager: ["Dashboard", "Time Tracking", "My Teams", "Projects", "Leave", "Reports", "Screenshots"],
   sub_admin: [
     "Dashboard",

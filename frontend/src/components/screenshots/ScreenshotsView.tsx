@@ -30,6 +30,13 @@ export function ScreenshotsView({ user }: { user: User }) {
 
   const canFilterUsers = user.role === "admin" || user.role === "sub_admin" || user.role === "manager";
 
+  const pageDescription =
+    user.role === "employee"
+      ? "View screenshots captured from your active Chrome tab while tracking is enabled."
+      : user.role === "manager"
+        ? "Review screenshots from employees on your teams."
+        : "Review browser activity captures uploaded by the Chrome extension.";
+
   useEffect(() => {
     if (!canFilterUsers) {
       return;
@@ -78,10 +85,10 @@ export function ScreenshotsView({ user }: { user: User }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Screenshots</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Review browser activity captures uploaded by the Chrome extension.
-        </p>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+          {user.role === "employee" ? "My Screenshots" : "Screenshots"}
+        </h1>
+        <p className="mt-1 text-sm text-zinc-500">{pageDescription}</p>
       </div>
 
       <div className="flex flex-wrap items-end gap-4">
