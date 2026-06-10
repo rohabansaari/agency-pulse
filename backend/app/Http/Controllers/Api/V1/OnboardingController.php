@@ -42,7 +42,6 @@ class OnboardingController extends Controller
         ]);
 
         $organization = $this->onboarding->updateOrganization(TenantContext::get(), $validated);
-        $organization = $this->onboarding->tryMarkComplete($organization);
 
         return response()->json([
             'message' => 'Organization profile saved.',
@@ -81,12 +80,11 @@ class OnboardingController extends Controller
         ]);
 
         $result = $this->onboardingEmployees->createEmployee($validated, $request->user());
-        $organization = $this->onboarding->updateStep(TenantContext::get(), 4);
 
         return response()->json([
             'message' => $result['message'],
             'member' => new TeamMemberResource($result['member']),
-            'status' => $this->onboarding->status($request->user(), $organization),
+            'status' => $this->onboarding->status($request->user(), TenantContext::get()),
         ], 201);
     }
 
@@ -100,13 +98,12 @@ class OnboardingController extends Controller
 
         $csvContent = (string) file_get_contents($validated['file']->getRealPath());
         $result = $this->onboardingEmployees->importCsv($csvContent, $request->user());
-        $organization = $this->onboarding->updateStep(TenantContext::get(), 4);
 
         return response()->json([
             'message' => $result['message'],
             'created' => $result['created'],
             'failed' => $result['failed'],
-            'status' => $this->onboarding->status($request->user(), $organization),
+            'status' => $this->onboarding->status($request->user(), TenantContext::get()),
         ]);
     }
 

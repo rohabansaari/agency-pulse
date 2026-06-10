@@ -109,6 +109,59 @@ class OnboardingTest extends TestCase
             ->assertOk();
     }
 
+    public function test_admin_can_continue_optional_steps_after_required_completion(): void
+    {
+        $admin = $this->adminNeedingOnboarding();
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson('/api/v1/onboarding/organization', ['name' => 'Bright Agency'])
+            ->assertOk();
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/payroll/vault/initialize', [
+                'payroll_pin' => '4321',
+                'payroll_pin_confirmation' => '4321',
+            ])
+            ->assertCreated();
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/onboarding/status')
+            ->assertOk()
+            ->assertJsonPath('requirements_met', true)
+            ->assertJsonPath('onboarding_step', 3);
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/onboarding/employees', [
+                'name' => 'Optional Hire',
+                'email' => 'optional@example.com',
+                'salary' => 4500,
+                'salary_type' => 'monthly',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('status.onboarding_step', 3);
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/teams', ['name' => 'Delivery'])
+            ->assertCreated();
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/projects', [
+                'name' => 'Client Site',
+                'client_name' => 'Acme Corp',
+            ])
+            ->assertCreated();
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson('/api/v1/onboarding/step', ['step' => 6])
+            ->assertOk();
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/onboarding/complete')
+            ->assertOk()
+            ->assertJsonPath('status.onboarding_completed', true);
+    }
+
     public function test_onboarding_employee_creation_without_password(): void
     {
         $admin = $this->adminNeedingOnboarding();

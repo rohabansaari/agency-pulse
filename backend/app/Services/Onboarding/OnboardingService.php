@@ -91,7 +91,6 @@ class OnboardingService
 
         $organization->update([
             'onboarding_completed' => true,
-            'onboarding_step' => 6,
         ]);
 
         return $organization->fresh();

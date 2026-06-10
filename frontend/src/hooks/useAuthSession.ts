@@ -41,18 +41,6 @@ export function useAuthSession() {
           }
         }
 
-        if (response.user.role === "admin" && pathname === "/onboarding") {
-          try {
-            const onboarding = await fetchOnboardingStatus();
-            if (!onboarding.requires_onboarding) {
-              router.replace("/dashboard");
-              return;
-            }
-          } catch {
-            // Keep onboarding page if status check fails.
-          }
-        }
-
         setUser(response.user);
         setSession({
           memberships: response.memberships,

@@ -98,11 +98,7 @@ export function OnboardingWizard() {
     setLogoUrl(next.organization.logo_url ?? "");
     setWebsite(next.organization.website ?? "");
     setStep(next.onboarding_step || 1);
-
-    if (!next.requires_onboarding) {
-      router.replace("/dashboard");
-    }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     const token = getToken();
