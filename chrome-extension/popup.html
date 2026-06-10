@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AgencyPulse</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <header>
+        <h1>AgencyPulse</h1>
+        <p class="subtitle">Active tab screenshot monitor</p>
+      </header>
+
+      <section class="status-row">
+        <span id="status-dot" class="dot inactive"></span>
+        <span id="status-label">Inactive</span>
+      </section>
+
+      <section class="field">
+        <label for="apiBaseUrl">API URL</label>
+        <input id="apiBaseUrl" type="url" placeholder="http://localhost:8080/api/v1" />
+      </section>
+
+      <section class="field">
+        <label for="authToken">Bearer token</label>
+        <input id="authToken" type="password" placeholder="Paste login token" />
+      </section>
+
+      <section class="field">
+        <label for="organizationId">Organization ID</label>
+        <input id="organizationId" type="number" placeholder="Organization ID" />
+      </section>
+
+      <section class="field">
+        <label for="projectId">Project ID (optional)</label>
+        <input id="projectId" type="number" placeholder="Optional project ID" />
+      </section>
+
+      <section class="field">
+        <label for="intervalMinutes">Capture interval</label>
+        <select id="intervalMinutes">
+          <option value="1">Every 1 minute</option>
+          <option value="5" selected>Every 5 minutes</option>
+          <option value="10">Every 10 minutes</option>
+          <option value="15">Every 15 minutes</option>
+        </select>
+      </section>
+
+      <div class="actions">
+        <button id="startBtn" class="primary">Start Tracking</button>
+        <button id="stopBtn" class="secondary" disabled>Stop Tracking</button>
+      </div>
+
+      <p id="message" class="message" hidden></p>
+      <p id="meta" class="meta"></p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

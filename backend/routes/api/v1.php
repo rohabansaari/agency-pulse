@@ -42,5 +42,6 @@ Route::middleware(['auth:sanctum', 'block.super.admin', 'tenant', 'idempotency']
         Route::prefix('teams')->group(base_path('routes/api/v1/teams.php'));
         Route::prefix('payroll-runs')->group(base_path('routes/api/v1/payroll.php'));
         Route::prefix('payroll')->group(base_path('routes/api/v1/payroll-salary.php'));
+        Route::prefix('screenshots')->group(base_path('routes/api/v1/screenshots.php'));
     });
 });

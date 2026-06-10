@@ -78,3 +78,4 @@ Artisan::command('idempotency:purge', function () {
 })->purpose('Remove expired idempotency records');
 
 Schedule::command('idempotency:purge')->daily();
+Schedule::command('screenshots:purge-expired')->daily();

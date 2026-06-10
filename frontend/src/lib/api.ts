@@ -35,6 +35,8 @@ import type {
   PlatformOrganization,
   CsvImportResult,
   OnboardingStatus,
+  PaginatedResponse,
+  ScreenshotRecord,
 } from "./types";
 
 const API_BASE =
@@ -975,4 +977,25 @@ export function formatApiErrors(errors?: Record<string, string[]>): string {
   }
 
   return Object.values(errors).flat().join(" ");
+}
+
+export async function fetchScreenshots(params: {
+  user_id?: number;
+  session_id?: string;
+  range?: ReportDateRange;
+  page?: number;
+  per_page?: number;
+} = {}): Promise<PaginatedResponse<ScreenshotRecord>> {
+  const search = new URLSearchParams();
+  if (params.user_id) search.set("user_id", String(params.user_id));
+  if (params.session_id) search.set("session_id", params.session_id);
+  if (params.range?.start_date) search.set("start_date", params.range.start_date);
+  if (params.range?.end_date) search.set("end_date", params.range.end_date);
+  if (params.page) search.set("page", String(params.page));
+  if (params.per_page) search.set("per_page", String(params.per_page));
+
+  const query = search.toString();
+  return apiFetch<PaginatedResponse<ScreenshotRecord>>(
+    `/screenshots${query ? `?${query}` : ""}`,
+  );
 }

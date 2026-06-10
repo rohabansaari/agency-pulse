@@ -650,3 +650,27 @@ export interface PayrollRun {
   entry_count?: number;
   employee_record_count?: number;
 }
+
+export interface ScreenshotRecord {
+  id: number;
+  user_id: number;
+  user_name?: string;
+  organization_id: number;
+  project_id?: number | null;
+  project_name?: string | null;
+  session_id: string;
+  image_url: string | null;
+  file_size_bytes: number;
+  captured_at: string;
+  created_at?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}

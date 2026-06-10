@@ -20,6 +20,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Overtime Management", href: "/admin/overtime", roles: ["admin", "sub_admin"] },
   { label: "Payroll", href: "/admin/payroll", roles: ["admin"] },
   { label: "Reports", href: "/reports", roles: ["admin", "sub_admin", "manager"] },
+  { label: "Screenshots", href: "/screenshots", roles: ["admin", "sub_admin", "manager"] },
   { label: "Employees", href: "/employees", roles: ["admin", "sub_admin"] },
   { label: "Settings", href: "/settings", roles: ["admin"] },
 ];
@@ -27,13 +28,14 @@ export const NAV_ITEMS: NavItem[] = [
 const ROLE_NAV: Record<UserRole, string[]> = {
   super_admin: ["Platform"],
   employee: ["Dashboard", "Time Tracking", "My Projects", "Leave"],
-  manager: ["Dashboard", "Time Tracking", "My Teams", "Projects", "Leave", "Reports"],
+  manager: ["Dashboard", "Time Tracking", "My Teams", "Projects", "Leave", "Reports", "Screenshots"],
   sub_admin: [
     "Dashboard",
     "Teams",
     "Projects",
     "Employees",
     "Reports",
+    "Screenshots",
     "Leave Management",
     "Overtime Management",
   ],
@@ -45,6 +47,7 @@ const ROLE_NAV: Record<UserRole, string[]> = {
     "Overtime Management",
     "Payroll",
     "Reports",
+    "Screenshots",
     "Employees",
     "Settings",
   ],

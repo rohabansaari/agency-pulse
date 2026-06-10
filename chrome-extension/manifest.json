@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "AgencyPulse Screenshot Monitor",
+  "version": "1.0.0",
+  "description": "Captures active Chrome tab screenshots at configurable intervals for AgencyPulse.",
+  "permissions": ["tabs", "activeTab", "storage", "alarms", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AgencyPulse Screenshots"
+  }
+}
