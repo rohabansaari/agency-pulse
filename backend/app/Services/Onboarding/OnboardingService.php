@@ -38,7 +38,7 @@ class OnboardingService
             'requires_onboarding' => $this->requiresOnboarding($user, $organization),
             'onboarding_completed' => (bool) $organization->onboarding_completed,
             'onboarding_step' => (int) ($organization->onboarding_step ?: 1),
-            'completion_percent' => $this->completionPercent($organization, $pinConfigured, $organizationComplete),
+            'completion_percent' => $this->completionPercent($organization),
             'organization' => [
                 'name' => $organization->name,
                 'timezone' => $organization->timezone,
@@ -97,28 +97,14 @@ class OnboardingService
         return $organization->fresh();
     }
 
-    private function completionPercent(
-        Organization $organization,
-        bool $pinConfigured,
-        bool $organizationComplete
-    ): int {
-        $percent = 0;
-
-        if ($organizationComplete) {
-            $percent += 34;
-        }
-
-        if ($pinConfigured) {
-            $percent += 34;
-        }
-
-        $step = max(1, (int) $organization->onboarding_step);
-        $percent += min(32, max(0, $step - 2) * 8);
-
+    private function completionPercent(Organization $organization): int
+    {
         if ($organization->onboarding_completed) {
             return 100;
         }
 
-        return min(99, $percent);
+        $step = max(1, min(6, (int) ($organization->onboarding_step ?: 1)));
+
+        return min(99, (int) round(($step / 6) * 100));
     }
 }

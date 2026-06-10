@@ -119,8 +119,21 @@ export function OnboardingWizard() {
   async function goToStep(nextStep: number) {
     setError("");
     setSuccess("");
-    await updateOnboardingStep(nextStep).catch(() => undefined);
     setStep(nextStep);
+    try {
+      const response = await updateOnboardingStep(nextStep);
+      setStatus(response.status);
+    } catch {
+      setStatus((prev) =>
+        prev
+          ? {
+              ...prev,
+              onboarding_step: nextStep,
+              completion_percent: Math.min(99, Math.round((nextStep / STEPS.length) * 100)),
+            }
+          : prev,
+      );
+    }
   }
 
   async function finishOnboarding() {
@@ -321,7 +334,9 @@ export function OnboardingWizard() {
     );
   }
 
-  const completionPercent = status?.completion_percent ?? 0;
+  const stepPercent = Math.round((step / STEPS.length) * 100);
+  const completionPercent = status?.completion_percent ?? stepPercent;
+  const displayPercent = Math.max(completionPercent, stepPercent);
   const current = STEPS.find((item) => item.id === step) ?? STEPS[0];
 
   return (
@@ -336,18 +351,16 @@ export function OnboardingWizard() {
               Set up your workspace
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden h-2 w-28 rounded-full bg-zinc-200 sm:block dark:bg-zinc-800">
-              <div
-                className="h-2 rounded-full bg-blue-600 transition-all duration-300 dark:bg-blue-500"
-                style={{ width: `${completionPercent}%` }}
-              />
-            </div>
-            <span className="text-sm font-semibold text-blue-600 tabular-nums dark:text-blue-400">
-              {completionPercent}%
-            </span>
-          </div>
+          <span className="text-sm font-semibold text-blue-600 tabular-nums dark:text-blue-400">
+            {displayPercent}%
+          </span>
         </header>
+
+        <OnboardingProgressTrack
+          steps={STEPS}
+          currentStep={step}
+          percent={displayPercent}
+        />
 
         <nav className="mb-4 flex shrink-0 flex-wrap gap-1.5 sm:gap-2" aria-label="Onboarding steps">
           {STEPS.map((item) => {
@@ -576,6 +589,58 @@ export function OnboardingWizard() {
             Sign out
           </button>
         </footer>
+      </div>
+    </div>
+  );
+}
+
+function OnboardingProgressTrack({
+  steps,
+  currentStep,
+  percent,
+}: {
+  steps: readonly { id: number; title: string; required: boolean }[];
+  currentStep: number;
+  percent: number;
+}) {
+  return (
+    <div className="mb-4 shrink-0">
+      <div className="mb-2 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+        <span>
+          Step {currentStep} of {steps.length}
+        </span>
+        <span className="tabular-nums">{percent}% complete</span>
+      </div>
+      <div
+        className="relative h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+        role="progressbar"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-blue-600 transition-all duration-300 ease-out dark:bg-blue-500"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <div className="mt-2 grid grid-cols-6 gap-1">
+        {steps.map((item) => {
+          const done = item.id < currentStep;
+          const active = item.id === currentStep;
+          return (
+            <div
+              key={item.id}
+              className={`h-1 rounded-full transition-colors ${
+                done
+                  ? "bg-emerald-500"
+                  : active
+                    ? "bg-blue-600 dark:bg-blue-500"
+                    : "bg-zinc-200 dark:bg-zinc-700"
+              }`}
+              title={item.title}
+            />
+          );
+        })}
       </div>
     </div>
   );

@@ -63,47 +63,45 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={session}>
-      <div className="app-layout bg-zinc-50 dark:bg-zinc-950">
-        <div className="flex w-full">
-          <aside className="app-sidebar hidden border-r border-zinc-200/80 bg-white md:block dark:border-zinc-800 dark:bg-zinc-900">
-            <DashboardSidebar
-              user={user}
-              onLogout={handleLogout}
-              loggingOut={loggingOut}
-            />
-          </aside>
+      <div className="app-layout min-h-screen bg-zinc-50 dark:bg-zinc-950">
+        <aside className="app-sidebar hidden border-r border-zinc-200/80 bg-white md:block dark:border-zinc-800 dark:bg-zinc-900">
+          <DashboardSidebar
+            user={user}
+            onLogout={handleLogout}
+            loggingOut={loggingOut}
+          />
+        </aside>
 
-          <div className="app-main flex min-w-0 flex-1 flex-col">
-            <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-zinc-200/80 bg-white/95 px-4 py-3 backdrop-blur md:px-6 dark:border-zinc-800 dark:bg-zinc-900/95">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setMobileNavOpen(true)}
-                  className="rounded-lg p-2 text-zinc-600 transition hover:bg-zinc-100 md:hidden dark:text-zinc-400 dark:hover:bg-zinc-800"
-                  aria-label="Open navigation"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-                    <path d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-                <span className="text-sm font-semibold text-zinc-900 md:hidden dark:text-zinc-50">
-                  AgencyPulse
-                </span>
-              </div>
+        <div className="app-main-with-sidebar flex min-h-screen flex-col">
+          <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-zinc-200/80 bg-white/95 px-4 py-3 backdrop-blur md:px-6 dark:border-zinc-800 dark:bg-zinc-900/95">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="text-xs font-medium text-zinc-500 hover:text-zinc-900 md:hidden dark:text-zinc-400"
+                onClick={() => setMobileNavOpen(true)}
+                className="rounded-lg p-2 text-zinc-600 transition hover:bg-zinc-100 md:hidden dark:text-zinc-400 dark:hover:bg-zinc-800"
+                aria-label="Open navigation"
               >
-                {loggingOut ? "..." : "Logout"}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
               </button>
-            </header>
+              <span className="text-sm font-semibold text-zinc-900 md:hidden dark:text-zinc-50">
+                AgencyPulse
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="text-xs font-medium text-zinc-500 hover:text-zinc-900 md:hidden dark:text-zinc-400"
+            >
+              {loggingOut ? "..." : "Logout"}
+            </button>
+          </header>
 
-            <main className="flex-1 p-4 sm:p-6 lg:p-8">
-              <div className="mx-auto w-full max-w-7xl">{children}</div>
-            </main>
-          </div>
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
+          </main>
         </div>
 
         {mobileNavOpen ? (

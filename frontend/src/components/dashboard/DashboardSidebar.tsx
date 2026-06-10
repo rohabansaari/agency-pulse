@@ -160,10 +160,13 @@ export function DashboardSidebar({
     setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
+  const homeHref = user.role === "super_admin" ? "/platform" : "/dashboard";
+  const productLabel = user.role === "super_admin" ? "Platform" : "Workforce";
+
   return (
-    <div className="flex w-full flex-col">
-      <div className="border-b border-zinc-200/80 px-4 py-4 dark:border-zinc-800">
-        <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onNavigate}>
+    <div className="flex h-full min-h-screen flex-col">
+      <div className="shrink-0 border-b border-zinc-200/80 px-4 py-4 dark:border-zinc-800">
+        <Link href={homeHref} className="flex items-center gap-2.5" onClick={onNavigate}>
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
             AP
           </span>
@@ -171,12 +174,12 @@ export function DashboardSidebar({
             <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
               AgencyPulse
             </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Workforce</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{productLabel}</p>
           </div>
         </Link>
       </div>
 
-      <nav className="space-y-3 px-3 py-3">
+      <nav className="flex-1 space-y-3 px-3 py-3">
         {groups.map((group) => {
           const isCollapsed = collapsed[group.id] ?? false;
           const showToggle = groups.length > 1 && group.id !== "overview";
@@ -231,7 +234,7 @@ export function DashboardSidebar({
         })}
       </nav>
 
-      <div className="mt-auto border-t border-zinc-200/80 p-3 dark:border-zinc-800">
+      <div className="shrink-0 border-t border-zinc-200/80 p-3 dark:border-zinc-800">
         <div className="mb-2 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
           <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
             {user.name}
