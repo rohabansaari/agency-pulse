@@ -15,6 +15,11 @@ import { OvertimeRequestForm } from "@/components/time/OvertimeRequestForm";
 import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
+import {
+  pingScreenshotExtension,
+  startScreenshotTrackingForTimer,
+  stopScreenshotTrackingForTimer,
+} from "@/lib/screenshot-bridge";
 import type { Project, TimeEntry, User } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -176,6 +181,8 @@ export function TimeTracker({ user }: { user?: User }) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [projectsNotice, setProjectsNotice] = useState("");
+  const [extensionInstalled, setExtensionInstalled] = useState<boolean | null>(null);
+  const tracksTime = isEmployee || isManager;
 
   const loadToday = useCallback(async () => {
     setError("");
@@ -222,6 +229,25 @@ export function TimeTracker({ user }: { user?: User }) {
 
     void init();
   }, [loadToday]);
+
+  useEffect(() => {
+    if (!tracksTime) {
+      return;
+    }
+
+    void pingScreenshotExtension().then(setExtensionInstalled);
+  }, [tracksTime]);
+
+  useEffect(() => {
+    if (!tracksTime || loading || !activeTimer) {
+      return;
+    }
+
+    void startScreenshotTrackingForTimer({
+      timeEntryId: activeTimer.id,
+      projectId: activeTimer.project_id,
+    });
+  }, [activeTimer?.id, loading, tracksTime]);
 
   useEffect(() => {
     if (!activeTimer) return;
@@ -284,7 +310,11 @@ export function TimeTracker({ user }: { user?: User }) {
         : Number(selectedProjectId);
 
     try {
-      await startTimer(projectId);
+      const response = await startTimer(projectId);
+      void startScreenshotTrackingForTimer({
+        timeEntryId: response.entry.id,
+        projectId: response.entry.project_id,
+      });
       try {
         await loadToday();
       } catch (refreshErr) {
@@ -316,6 +346,7 @@ export function TimeTracker({ user }: { user?: User }) {
 
     try {
       await stopTimer();
+      void stopScreenshotTrackingForTimer();
       try {
         await loadToday();
       } catch (refreshErr) {
@@ -427,6 +458,17 @@ export function TimeTracker({ user }: { user?: User }) {
           </div>
         ) : null}
       </div>
+
+      {tracksTime && extensionInstalled === false ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+          <p className="font-medium">Install the AgencyPulse Chrome extension once</p>
+          <p className="mt-1 text-amber-800 dark:text-amber-200/90">
+            Screenshots start automatically when you start your timer. Ask IT to deploy the extension
+            org-wide, or load the <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/50">chrome-extension</code>{" "}
+            folder from this repo in Chrome → Extensions → Load unpacked.
+          </p>
+        </div>
+      ) : null}
 
       {isEmployee && tab === "overtime" ? (
         <div className="space-y-8">

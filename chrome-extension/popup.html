@@ -10,7 +10,7 @@
     <main class="panel">
       <header>
         <h1>AgencyPulse</h1>
-        <p class="subtitle">Active tab screenshot monitor</p>
+        <p class="subtitle">Starts automatically with your time tracker</p>
       </header>
 
       <section class="status-row">
@@ -18,34 +18,42 @@
         <span id="status-label">Inactive</span>
       </section>
 
-      <section class="field">
-        <label for="apiBaseUrl">API URL</label>
-        <input id="apiBaseUrl" type="url" placeholder="http://localhost:8080/api/v1" />
-      </section>
-
-      <section class="field">
-        <label for="authToken">Bearer token</label>
-        <input id="authToken" type="password" placeholder="Paste login token" />
-      </section>
-
-      <section class="field">
-        <label for="organizationId">Organization ID</label>
-        <input id="organizationId" type="number" placeholder="Organization ID" />
-      </section>
-
-      <section class="field">
-        <label for="projectId">Project ID (optional)</label>
-        <input id="projectId" type="number" placeholder="Optional project ID" />
-      </section>
-
       <section class="interval-note">
+        <p>
+          Screenshots begin when you <strong>Start Timer</strong> on the Time Tracking page and stop
+          when you stop the timer.
+        </p>
         <p>Capture interval: <strong>every 5 minutes</strong> (fixed)</p>
       </section>
 
-      <div class="actions">
-        <button id="startBtn" class="primary">Start Tracking</button>
-        <button id="stopBtn" class="secondary" disabled>Stop Tracking</button>
-      </div>
+      <details class="manual-config">
+        <summary>Manual connection (fallback)</summary>
+
+        <section class="field">
+          <label for="apiBaseUrl">API URL</label>
+          <input id="apiBaseUrl" type="url" placeholder="http://localhost:8080/api/v1" />
+        </section>
+
+        <section class="field">
+          <label for="authToken">Bearer token</label>
+          <input id="authToken" type="password" placeholder="Paste login token" />
+        </section>
+
+        <section class="field">
+          <label for="organizationId">Organization ID</label>
+          <input id="organizationId" type="number" placeholder="Organization ID" />
+        </section>
+
+        <section class="field">
+          <label for="projectId">Project ID (optional)</label>
+          <input id="projectId" type="number" placeholder="Optional project ID" />
+        </section>
+
+        <div class="actions">
+          <button id="startBtn" class="primary">Start Tracking</button>
+          <button id="stopBtn" class="secondary" disabled>Stop Tracking</button>
+        </div>
+      </details>
 
       <p id="message" class="message" hidden></p>
       <p id="meta" class="meta"></p>

@@ -4,6 +4,7 @@ const CAPTURE_INTERVAL_MINUTES = 5;
 const DEFAULT_SETTINGS = {
   trackingActive: false,
   sessionId: null,
+  linkedTimeEntryId: null,
   apiBaseUrl: "http://localhost:8080/api/v1",
   authToken: "",
   organizationId: "",
@@ -19,7 +20,7 @@ async function saveSettings(partial) {
   await chrome.storage.local.set(partial);
 }
 
-function sessionId() {
+function createSessionId() {
   if (crypto.randomUUID) {
     return crypto.randomUUID();
   }
@@ -41,6 +42,52 @@ async function scheduleCapture() {
 
 async function stopCaptureSchedule() {
   await chrome.alarms.clear(ALARM_NAME);
+}
+
+async function startTracking(options = {}) {
+  const settings = await getSettings();
+  const timeEntryId = options.timeEntryId ?? null;
+
+  if (
+    settings.trackingActive &&
+    timeEntryId &&
+    settings.linkedTimeEntryId === timeEntryId
+  ) {
+    return { ok: true, sessionId: settings.sessionId, trackingActive: true };
+  }
+
+  const nextSessionId = createSessionId();
+  await saveSettings({
+    trackingActive: true,
+    sessionId: nextSessionId,
+    linkedTimeEntryId: timeEntryId,
+    apiBaseUrl: options.apiBaseUrl ?? settings.apiBaseUrl,
+    authToken: options.authToken ?? settings.authToken,
+    organizationId:
+      options.organizationId !== undefined && options.organizationId !== null
+        ? String(options.organizationId)
+        : settings.organizationId,
+    projectId:
+      options.projectId !== undefined && options.projectId !== null
+        ? String(options.projectId)
+        : "",
+    lastError: "",
+  });
+
+  await scheduleCapture();
+  await captureAndUpload();
+
+  return { ok: true, sessionId: nextSessionId, trackingActive: true };
+}
+
+async function stopTracking() {
+  await saveSettings({
+    trackingActive: false,
+    sessionId: null,
+    linkedTimeEntryId: null,
+  });
+  await stopCaptureSchedule();
+  return { ok: true, trackingActive: false };
 }
 
 async function compressDataUrl(dataUrl, maxWidth = 1600, quality = 0.65) {
@@ -148,29 +195,41 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === "startTracking") {
+  if (message.type === "appBridge") {
     void (async () => {
-      const nextSessionId = sessionId();
-      await saveSettings({
-        trackingActive: true,
-        sessionId: nextSessionId,
-        lastError: "",
-      });
-      await scheduleCapture();
-      await captureAndUpload();
-      sendResponse({ ok: true, sessionId: nextSessionId });
+      if (message.action === "ping") {
+        sendResponse({ ok: true, trackingActive: (await getSettings()).trackingActive });
+        return;
+      }
+
+      if (message.action === "start") {
+        const payload = message.payload ?? {};
+        const result = await startTracking({
+          apiBaseUrl: payload.apiBaseUrl,
+          authToken: payload.authToken,
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          timeEntryId: payload.timeEntryId ?? null,
+        });
+        sendResponse(result);
+        return;
+      }
+
+      if (message.action === "stop") {
+        sendResponse(await stopTracking());
+      }
     })();
 
     return true;
   }
 
-  if (message.type === "stopTracking") {
-    void (async () => {
-      await saveSettings({ trackingActive: false, sessionId: null });
-      await stopCaptureSchedule();
-      sendResponse({ ok: true });
-    })();
+  if (message.type === "startTracking") {
+    void startTracking().then(sendResponse);
+    return true;
+  }
 
+  if (message.type === "stopTracking") {
+    void stopTracking().then(sendResponse);
     return true;
   }
 
