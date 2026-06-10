@@ -229,6 +229,60 @@ class OvertimeRequestTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_manager_can_submit_overtime_for_team_accessible_project_without_direct_membership(): void
+    {
+        ['admin' => $admin, 'manager' => $manager, 'employee' => $employee] = $this->setupTeamFixture();
+
+        $project = Project::factory()->create(['organization_id' => $admin->organization_id]);
+        $project->members()->attach($employee->id, ['role_in_project' => 'worker']);
+
+        Sanctum::actingAs($manager);
+
+        $this->withHeaders($this->headers($manager))
+            ->getJson('/api/v1/time/overtime/context')
+            ->assertOk()
+            ->assertJsonPath('can_create_self', true);
+
+        $this->withHeaders($this->headers($manager))
+            ->postJson('/api/v1/time/overtime', [
+                'for_self' => true,
+                'date' => Carbon::today()->toDateString(),
+                'duration' => 3600,
+                'reason' => 'Weekend support for team project',
+                'project_id' => $project->id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('request.status', 'pending')
+            ->assertJsonPath('request.manager_id', null);
+    }
+
+    public function test_sub_admin_can_approve_manager_overtime(): void
+    {
+        ['manager' => $manager, 'project' => $project] = $this->setupTeamFixture();
+
+        $subAdmin = User::factory()->subAdmin()->create([
+            'organization_id' => $manager->organization_id,
+        ]);
+
+        $request = OvertimeRequest::create([
+            'organization_id' => $manager->organization_id,
+            'user_id' => $manager->id,
+            'project_id' => $project->id,
+            'manager_id' => null,
+            'work_date' => Carbon::today(),
+            'duration_seconds' => 3600,
+            'reason' => 'Manager overtime',
+            'status' => OvertimeRequestStatus::Pending,
+        ]);
+
+        Sanctum::actingAs($subAdmin);
+
+        $this->withHeaders($this->headers($subAdmin))
+            ->postJson("/api/v1/time/overtime/{$request->id}/approve")
+            ->assertOk()
+            ->assertJsonPath('request.status', 'approved');
+    }
+
     public function test_pending_overtime_excluded_from_organization_report_totals(): void
     {
         ['admin' => $admin, 'employee' => $employee, 'project' => $project, 'team' => $team] = $this->setupTeamFixture();

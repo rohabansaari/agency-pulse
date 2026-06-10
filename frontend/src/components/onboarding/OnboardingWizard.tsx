@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployeeCsvImport } from "@/components/onboarding/EmployeeCsvImport";
 import {
   ApiError,
   completeOnboarding,
@@ -8,14 +9,12 @@ import {
   createWorkTeam,
   fetchOnboardingStatus,
   formatApiErrors,
-  importOnboardingEmployees,
   initializePayrollPin,
-  onboardingSampleCsvUrl,
   updateOnboardingOrganization,
   updateOnboardingStep,
   updatePassword,
 } from "@/lib/api";
-import { clearToken, getOrganizationId, getToken } from "@/lib/auth";
+import { clearToken } from "@/lib/auth";
 import type { OnboardingStatus, UserRole } from "@/lib/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -76,8 +75,6 @@ export function OnboardingWizard() {
   const [employeeSalary, setEmployeeSalary] = useState("");
   const [employeeSalaryType, setEmployeeSalaryType] = useState<"monthly" | "hourly">("monthly");
   const [employeeRole, setEmployeeRole] = useState<UserRole>("employee");
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [importResult, setImportResult] = useState("");
 
   const [teamName, setTeamName] = useState("");
   const [teamsCreated, setTeamsCreated] = useState<string[]>([]);
@@ -197,45 +194,6 @@ export function OnboardingWizard() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  async function handleCsvImport() {
-    if (!csvFile) {
-      setError("Choose a CSV file to import.");
-      return;
-    }
-    setSubmitting(true);
-    setError("");
-    setImportResult("");
-    try {
-      const response = await importOnboardingEmployees(csvFile);
-      setStatus(response.status);
-      setImportResult(`${response.created} imported · ${response.failed.length} failed`);
-      setCsvFile(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? formatApiErrors(err.errors) || err.message : "CSV import failed.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function downloadSampleCsv() {
-    const token = getToken();
-    const organizationId = getOrganizationId();
-    const response = await fetch(onboardingSampleCsvUrl(), {
-      headers: {
-        Accept: "text/csv",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(organizationId ? { "X-Organization-Id": String(organizationId) } : {}),
-      },
-    });
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "employee-import-sample.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
   }
 
   async function handleTeamSubmit(event: FormEvent) {
@@ -490,16 +448,11 @@ export function OnboardingWizard() {
                       </div>
                     </form>
                   ) : (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <button type="button" onClick={downloadSampleCsv} className="text-left text-sm font-medium text-blue-600 hover:underline sm:col-span-2 dark:text-blue-400">
-                        Download sample CSV
-                      </button>
-                      <input type="file" accept=".csv,text/csv" onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)} className="text-sm sm:col-span-2" />
-                      <button type="button" disabled={submitting || !csvFile} onClick={handleCsvImport} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 sm:col-span-2 dark:bg-zinc-100 dark:text-zinc-900">
-                        Import CSV
-                      </button>
-                      {importResult ? <p className="text-sm text-zinc-600 sm:col-span-2 dark:text-zinc-400">{importResult}</p> : null}
-                    </div>
+                    <EmployeeCsvImport
+                      submitting={submitting}
+                      onSubmittingChange={setSubmitting}
+                      onStatusChange={setStatus}
+                    />
                   )}
                   <OptionalActions submitting={submitting} onBack={() => goToStep(2)} onSkip={handleSkipOptional} onContinue={() => goToStep(4)} />
                 </div>

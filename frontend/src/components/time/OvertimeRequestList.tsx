@@ -1,5 +1,6 @@
 "use client";
 
+import { OvertimeStatusBadge } from "@/components/time/OvertimeStatusBadge";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { OVERTIME_EXPORT_COLUMNS } from "@/lib/export-columns";
 import {
@@ -48,13 +49,16 @@ export function OvertimeRequestList() {
   );
 
   if (loading) {
-    return <div className="h-20 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />;
+    return <div className="ui-card h-24 animate-pulse bg-zinc-200/60 dark:bg-zinc-800/60" />;
   }
 
   return (
-    <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="ui-card p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">My overtime requests</h2>
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">My overtime requests</h2>
+          <p className="text-xs text-zinc-500">Track pending, approved, and rejected requests</p>
+        </div>
         <ExportDropdown
           filename="overtime-requests"
           columns={OVERTIME_EXPORT_COLUMNS}
@@ -69,17 +73,18 @@ export function OvertimeRequestList() {
           {requests.map((request) => (
             <li
               key={request.id}
-              className="flex items-center justify-between rounded-lg border border-zinc-100 px-3 py-2 text-sm dark:border-zinc-800"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-100 px-3 py-3 dark:border-zinc-800"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium text-zinc-900 dark:text-zinc-50">
                   {request.work_date} · {formatDuration(request.duration_seconds)}
                 </p>
                 <p className="text-xs text-zinc-500">{request.project_name ?? "Project"}</p>
+                {request.reason ? (
+                  <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">{request.reason}</p>
+                ) : null}
               </div>
-              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs capitalize dark:bg-zinc-800">
-                {request.status}
-              </span>
+              <OvertimeStatusBadge status={request.status} />
             </li>
           ))}
         </ul>

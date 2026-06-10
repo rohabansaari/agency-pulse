@@ -33,6 +33,7 @@ import type {
   EmployeeProfile,
   PlatformDashboard,
   PlatformOrganization,
+  CsvImportResult,
   OnboardingStatus,
 } from "./types";
 
@@ -834,7 +835,15 @@ export async function createOnboardingEmployee(data: {
 
 export async function importOnboardingEmployees(
   file: File,
-): Promise<{ message: string; created: number; failed: { row: number; errors: string[] }[]; status: OnboardingStatus }> {
+): Promise<{
+  message: string;
+  created: number;
+  failed_count: number;
+  total: number;
+  failed: { row: number; data: Record<string, string>; errors: string[] }[];
+  results: CsvImportResult[];
+  status: OnboardingStatus;
+}> {
   const formData = new FormData();
   formData.append("file", file);
 

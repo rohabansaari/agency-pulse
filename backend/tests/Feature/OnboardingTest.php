@@ -194,11 +194,107 @@ class OnboardingTest extends TestCase
         ]);
     }
 
-    public function test_onboarding_csv_import(): void
+    public function test_onboarding_csv_import_with_roles(): void
     {
         $admin = $this->adminNeedingOnboarding();
         Sanctum::actingAs($admin);
+        $this->prepareOnboardingForImport($admin);
 
+        $csv = <<<'CSV'
+name,email,salary,salary_type,role
+John Doe,john@example.com,100000,monthly,employee
+Jane Smith,jane@example.com,1200,hourly,manager
+Mark Wilson,mark@example.com,85000,monthly,sub_admin
+CSV;
+        $file = UploadedFile::fake()->createWithContent('employees.csv', $csv);
+
+        $this->withHeaders($this->headers($admin))
+            ->post('/api/v1/onboarding/employees/import', ['file' => $file])
+            ->assertOk()
+            ->assertJsonPath('created', 3)
+            ->assertJsonPath('failed_count', 0)
+            ->assertJsonPath('total', 3);
+
+        $this->assertDatabaseHas('users', ['email' => 'john@example.com', 'role' => 'employee']);
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com', 'role' => 'manager']);
+        $this->assertDatabaseHas('users', ['email' => 'mark@example.com', 'role' => 'sub_admin']);
+    }
+
+    public function test_onboarding_csv_import_ignores_extra_columns(): void
+    {
+        $admin = $this->adminNeedingOnboarding();
+        Sanctum::actingAs($admin);
+        $this->prepareOnboardingForImport($admin);
+
+        $csv = <<<'CSV'
+name,email,salary,salary_type,role,department,phone
+Alex Lee,alex@example.com,5000,monthly,employee,Engineering,555-0100
+CSV;
+        $file = UploadedFile::fake()->createWithContent('employees.csv', $csv);
+
+        $this->withHeaders($this->headers($admin))
+            ->post('/api/v1/onboarding/employees/import', ['file' => $file])
+            ->assertOk()
+            ->assertJsonPath('created', 1);
+
+        $this->assertDatabaseHas('users', ['email' => 'alex@example.com']);
+    }
+
+    public function test_onboarding_csv_import_partial_with_failed_rows(): void
+    {
+        $admin = $this->adminNeedingOnboarding();
+        Sanctum::actingAs($admin);
+        $this->prepareOnboardingForImport($admin);
+
+        $csv = <<<'CSV'
+name,email,salary,salary_type,role
+Valid User,valid@example.com,5000,monthly,employee
+Bad Role,badrole@example.com,5000,monthly,admin
+Missing Salary,missing@example.com,,monthly,employee
+Duplicate,dupe@example.com,5000,monthly,employee
+Duplicate,dupe@example.com,6000,monthly,manager
+CSV;
+        $file = UploadedFile::fake()->createWithContent('employees.csv', $csv);
+
+        $response = $this->withHeaders($this->headers($admin))
+            ->post('/api/v1/onboarding/employees/import', ['file' => $file])
+            ->assertOk()
+            ->assertJsonPath('created', 2)
+            ->assertJsonPath('failed_count', 3)
+            ->assertJsonPath('total', 5);
+
+        $response->assertJsonPath('results.0.status', 'imported');
+        $response->assertJsonPath('results.1.status', 'failed');
+        $this->assertStringContainsString(
+            'CSV import supports only employee, manager, and sub_admin roles.',
+            (string) $response->json('results.1.error')
+        );
+
+        $this->assertDatabaseHas('users', ['email' => 'valid@example.com']);
+        $this->assertDatabaseHas('users', ['email' => 'dupe@example.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'badrole@example.com']);
+    }
+
+    public function test_onboarding_csv_import_rejects_super_admin_role(): void
+    {
+        $admin = $this->adminNeedingOnboarding();
+        Sanctum::actingAs($admin);
+        $this->prepareOnboardingForImport($admin);
+
+        $csv = "name,email,salary,salary_type,role\nRoot User,root@example.com,5000,monthly,super_admin\n";
+        $file = UploadedFile::fake()->createWithContent('employees.csv', $csv);
+
+        $this->withHeaders($this->headers($admin))
+            ->post('/api/v1/onboarding/employees/import', ['file' => $file])
+            ->assertOk()
+            ->assertJsonPath('created', 0)
+            ->assertJsonPath('failed_count', 1);
+
+        $this->assertDatabaseMissing('users', ['email' => 'root@example.com']);
+    }
+
+    private function prepareOnboardingForImport(User $admin): void
+    {
         $this->withHeaders($this->headers($admin))
             ->patchJson('/api/v1/onboarding/organization', ['name' => 'Bright Agency'])
             ->assertOk();
@@ -209,18 +305,6 @@ class OnboardingTest extends TestCase
                 'payroll_pin_confirmation' => '1234',
             ])
             ->assertCreated();
-
-        $csv = "name,email,salary,salary_type\nJane Doe,jane@example.com,5000,monthly\n";
-        $file = UploadedFile::fake()->createWithContent('employees.csv', $csv);
-
-        $this->withHeaders($this->headers($admin))
-            ->post('/api/v1/onboarding/employees/import', [
-                'file' => $file,
-            ])
-            ->assertOk()
-            ->assertJsonPath('created', 1);
-
-        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
     }
 
     public function test_non_admin_cannot_access_onboarding_endpoints(): void

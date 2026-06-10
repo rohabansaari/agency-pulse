@@ -506,7 +506,7 @@ export function TeamManager({ user }: { user: User }) {
 
 
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="ui-table-wrap ui-card">
 
         <table className="min-w-full text-left text-sm">
 

@@ -277,7 +277,7 @@ class OvertimeRequestService
 
         $role = $actor->currentRole();
 
-        if ($role === UserRole::Admin) {
+        if (in_array($role, [UserRole::Admin, UserRole::SubAdmin], true)) {
             if ($request->manager_id !== null) {
                 throw ValidationException::withMessages([
                     'authorization' => ['Employee overtime requests are reviewed by the assigned manager.'],
@@ -335,11 +335,19 @@ class OvertimeRequestService
      */
     private function accessibleProjectsForUser(User $user): Collection
     {
-        return $this->projectAccess
+        $projects = $this->projectAccess
             ->accessibleProjectsQuery($user)
             ->where('status', ProjectStatus::Active)
             ->orderBy('name')
             ->get();
+
+        if ($user->currentRole() === UserRole::Employee) {
+            return $projects;
+        }
+
+        return $projects
+            ->filter(fn (Project $project) => $this->projectAccess->userCanAccessProject($user, $project))
+            ->values();
     }
 
     private function resolveAccessibleProject(User $user, int $projectId): Project

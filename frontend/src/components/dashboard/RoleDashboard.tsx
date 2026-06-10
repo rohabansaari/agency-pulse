@@ -415,7 +415,7 @@ function AdminView({
             description="Team utilization appears once teams track time."
           />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="ui-table-wrap ui-card">
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-zinc-100 bg-zinc-50/80 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/40">
                 <tr>

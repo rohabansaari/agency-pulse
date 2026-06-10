@@ -1,5 +1,6 @@
 "use client";
 
+import { OvertimeStatusBadge } from "@/components/time/OvertimeStatusBadge";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { OVERTIME_EXPORT_COLUMNS } from "@/lib/export-columns";
 import {
@@ -13,7 +14,7 @@ import { formatDuration } from "@/lib/time";
 import type { OvertimeRequest } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export function OvertimeApprovalQueue({ title = "My Overtime Approval Queue" }: { title?: string }) {
+export function OvertimeApprovalQueue({ title = "Overtime approval queue" }: { title?: string }) {
   const [requests, setRequests] = useState<OvertimeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -75,13 +76,16 @@ export function OvertimeApprovalQueue({ title = "My Overtime Approval Queue" }: 
   }
 
   if (loading) {
-    return <div className="h-24 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />;
+    return <div className="ui-card h-24 animate-pulse bg-zinc-200/60 dark:bg-zinc-800/60" />;
   }
 
   return (
-    <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="ui-card p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
+          <p className="text-xs text-zinc-500">{requests.length} pending request{requests.length === 1 ? "" : "s"}</p>
+        </div>
         <ExportDropdown
           filename="overtime-approval-queue"
           columns={OVERTIME_EXPORT_COLUMNS}
@@ -96,25 +100,28 @@ export function OvertimeApprovalQueue({ title = "My Overtime Approval Queue" }: 
           {requests.map((request) => (
             <li
               key={request.id}
-              className="rounded-lg border border-zinc-100 px-3 py-3 dark:border-zinc-800"
+              className="rounded-lg border border-zinc-100 px-4 py-3 dark:border-zinc-800"
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {request.user_name ?? `User #${request.user_id}`}
-                  </p>
-                  <p className="text-xs text-zinc-500">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                      {request.user_name ?? `User #${request.user_id}`}
+                    </p>
+                    <OvertimeStatusBadge status={request.status} />
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-500">
                     {request.work_date} · {request.project_name ?? "Project"} ·{" "}
                     {formatDuration(request.duration_seconds)}
                   </p>
-                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{request.reason}</p>
+                  <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{request.reason}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex shrink-0 gap-2">
                   <button
                     type="button"
                     disabled={actingId === request.id}
                     onClick={() => void handleApprove(request.id)}
-                    className="rounded-md bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
                     Approve
                   </button>
@@ -122,7 +129,7 @@ export function OvertimeApprovalQueue({ title = "My Overtime Approval Queue" }: 
                     type="button"
                     disabled={actingId === request.id}
                     onClick={() => void handleReject(request.id)}
-                    className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300"
+                    className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300"
                   >
                     Reject
                   </button>

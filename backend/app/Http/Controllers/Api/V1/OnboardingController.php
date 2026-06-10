@@ -102,7 +102,10 @@ class OnboardingController extends Controller
         return response()->json([
             'message' => $result['message'],
             'created' => $result['created'],
+            'failed_count' => $result['failed_count'],
+            'total' => $result['total'],
             'failed' => $result['failed'],
+            'results' => $result['results'],
             'status' => $this->onboarding->status($request->user(), TenantContext::get()),
         ]);
     }
@@ -111,10 +114,11 @@ class OnboardingController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $headers = ['name', 'email', 'salary', 'salary_type'];
+        $headers = ['name', 'email', 'salary', 'salary_type', 'role'];
         $rows = [
-            ['Jane Doe', 'jane@example.com', '5000', 'monthly'],
-            ['John Smith', 'john@example.com', '35', 'hourly'],
+            ['John Doe', 'john@example.com', '100000', 'monthly', 'employee'],
+            ['Jane Smith', 'jane@example.com', '1200', 'hourly', 'manager'],
+            ['Mark Wilson', 'mark@example.com', '85000', 'monthly', 'sub_admin'],
         ];
 
         return response()->streamDownload(function () use ($headers, $rows): void {

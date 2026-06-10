@@ -387,7 +387,7 @@ export function ProjectsManager({ user }: { user: User }) {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="ui-table-wrap ui-card">
           <div className="ui-table-wrap">
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-zinc-100 bg-zinc-50/80 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/40">

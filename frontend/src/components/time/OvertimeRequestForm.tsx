@@ -11,6 +11,14 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { ddMmYyyyToIso, todayDdMmYyyy } from "@/lib/dates";
 import { useCallback, useEffect, useState } from "react";
 
+const DURATION_PRESETS = [
+  { label: "30 min", hours: 0.5 },
+  { label: "1 hour", hours: 1 },
+  { label: "2 hours", hours: 2 },
+  { label: "4 hours", hours: 4 },
+  { label: "8 hours", hours: 8 },
+];
+
 function hoursToSeconds(hours: string): number {
   const value = Number.parseFloat(hours);
   if (Number.isNaN(value) || value <= 0) {
@@ -112,7 +120,7 @@ export function OvertimeRequestForm({
   }
 
   if (loading) {
-    return <div className="h-24 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />;
+    return <div className="ui-card h-28 animate-pulse bg-zinc-200/60 dark:bg-zinc-800/60" />;
   }
 
   const blockedReason =
@@ -124,7 +132,7 @@ export function OvertimeRequestForm({
 
   if (!canSubmit) {
     return (
-      <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="ui-card p-5">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Overtime request</h2>
         <p className="mt-2 text-sm text-zinc-500">{blockedReason ?? "Overtime requests are unavailable."}</p>
       </section>
@@ -132,18 +140,21 @@ export function OvertimeRequestForm({
   }
 
   return (
-    <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <section className="ui-card p-5">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Request overtime</h2>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-sm text-zinc-500">
             {role === "manager" && forSelf
-              ? "Submitted to admin for approval"
+              ? "Submitted to admin for approval — never auto-approved."
               : "Submitted to your manager for approval"}
           </p>
+          {role === "employee" && context?.manager?.name ? (
+            <p className="mt-1 text-xs text-zinc-400">Approver: {context.manager.name}</p>
+          ) : null}
         </div>
         {role === "manager" ? (
-          <label className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+          <label className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
             <input
               type="checkbox"
               checked={forSelf}
@@ -154,19 +165,19 @@ export function OvertimeRequestForm({
         ) : null}
       </div>
 
-      {error ? <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
-      {success ? <p className="mb-3 text-sm text-green-600 dark:text-green-400">{success}</p> : null}
+      {error ? <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">{error}</p> : null}
+      {success ? <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">{success}</p> : null}
 
-      <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
+      <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
         <DatePicker
           id="overtime-date"
-          label="Date"
+          label="Work date"
           value={date}
           onChange={setDate}
           required
         />
         <label className="block text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">Hours</span>
+          <span className="font-medium text-zinc-600 dark:text-zinc-400">Duration (hours)</span>
           <input
             type="number"
             required
@@ -174,40 +185,57 @@ export function OvertimeRequestForm({
             step={0.25}
             value={hours}
             onChange={(event) => setHours(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="mt-1.5 w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           />
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {DURATION_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => setHours(String(preset.hours))}
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  Number.parseFloat(hours) === preset.hours
+                    ? "bg-blue-600 text-white"
+                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </label>
         <label className="block text-sm sm:col-span-2">
-          <span className="text-zinc-600 dark:text-zinc-400">Project</span>
+          <span className="font-medium text-zinc-600 dark:text-zinc-400">Project</span>
           <select
             required
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="mt-1.5 w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
+                {project.client_name ? ` — ${project.client_name}` : ""}
               </option>
             ))}
           </select>
         </label>
         <label className="block text-sm sm:col-span-2">
-          <span className="text-zinc-600 dark:text-zinc-400">Reason</span>
+          <span className="font-medium text-zinc-600 dark:text-zinc-400">Reason</span>
           <textarea
             required
             rows={3}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-            placeholder="Describe why overtime was needed"
+            className="mt-1.5 w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            placeholder="Describe the work completed during overtime"
           />
         </label>
         <div className="sm:col-span-2">
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {submitting ? "Submitting…" : "Submit overtime request"}
           </button>

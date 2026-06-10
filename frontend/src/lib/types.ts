@@ -48,6 +48,13 @@ export interface OnboardingStatus {
   requirements_met: boolean;
 }
 
+export interface CsvImportResult {
+  row: number;
+  data: Record<string, string>;
+  status: "imported" | "failed";
+  error: string | null;
+}
+
 export interface ApiValidationError {
   message?: string;
   errors?: Record<string, string[]>;
