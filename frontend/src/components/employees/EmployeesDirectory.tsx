@@ -12,7 +12,7 @@ import {
 } from "@/lib/api";
 import { EMPLOYEES_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { formatDuration } from "@/lib/time";
-import { canChangeEmployeeRoles, canEditEmployeeStatus, canManageOrgEmployees, ROLE_LABELS } from "@/lib/navigation";
+import { canChangeEmployeeRoles, canEditEmployeeStatus, canManageOrgEmployees, CREATION_ROLES, isPrivilegedMember, ROLE_LABELS } from "@/lib/navigation";
 import type { MemberStatus, PayrollVaultStatus, TeamMember, User, UserRole } from "@/lib/types";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -28,7 +28,7 @@ function formatDate(value: string | null | undefined): string {
   return new Date(value).toLocaleDateString();
 }
 
-const ASSIGNABLE_ROLES: UserRole[] = ["employee", "manager", "sub_admin", "admin"];
+const ASSIGNABLE_ROLES: UserRole[] = CREATION_ROLES;
 
 export function EmployeesDirectory({ user }: { user: User }) {
   const canCreate = canManageOrgEmployees(user.role);
@@ -231,7 +231,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
                 <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.team_name ?? "—"}</td>
                 <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.manager_name ?? "—"}</td>
                 <td className="px-3 py-3">
-                  {canEditStatus && member.role !== "admin" && member.role !== "sub_admin" ? (
+                  {canEditStatus && !isPrivilegedMember(member.role) ? (
                     <select
                       value={member.status}
                       onChange={async (event) => {

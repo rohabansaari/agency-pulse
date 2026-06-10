@@ -72,6 +72,8 @@ class EmployeeManagementTest extends TestCase
 
                 'password' => 'password123',
 
+                'role' => UserRole::Employee->value,
+
                 'salary_type' => 'hourly',
 
                 'hourly_rate' => 50,

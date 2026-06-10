@@ -147,6 +147,7 @@ export function TeamManager({ user }: { user: User }) {
         name: createName,
         email: createEmail,
         password: createPassword,
+        role: "employee",
         payroll_pin: vaultStatus?.requires_pin_on_employee_create
           ? createPayrollPin
           : undefined,

@@ -53,6 +53,7 @@ class PayrollVaultTest extends TestCase
                 'name' => 'First Employee',
                 'email' => 'first@example.com',
                 'password' => 'password123',
+                'role' => 'employee',
                 'salary_type' => 'hourly',
                 'hourly_rate' => 50,
             ])
@@ -64,6 +65,7 @@ class PayrollVaultTest extends TestCase
                 'name' => 'First Employee',
                 'email' => 'first@example.com',
                 'password' => 'password123',
+                'role' => 'employee',
                 'salary_type' => 'hourly',
                 'hourly_rate' => 50,
                 'payroll_pin' => '5678',
@@ -91,6 +93,7 @@ class PayrollVaultTest extends TestCase
                 'name' => 'Employee',
                 'email' => 'employee@example.com',
                 'password' => 'password123',
+                'role' => 'employee',
                 'salary_type' => 'hourly',
                 'hourly_rate' => 80,
                 'payroll_pin' => '1234',

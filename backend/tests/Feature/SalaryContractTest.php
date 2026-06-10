@@ -35,6 +35,7 @@ class SalaryContractTest extends TestCase
             'name' => 'New Employee',
             'email' => 'employee@example.com',
             'password' => 'password123',
+            'role' => 'employee',
             'salary_type' => SalaryType::Hourly->value,
             'hourly_rate' => 75,
             'payroll_pin' => '1234',
@@ -52,6 +53,7 @@ class SalaryContractTest extends TestCase
                 'name' => 'No Salary',
                 'email' => 'nosalary@example.com',
                 'password' => 'password123',
+                'role' => 'employee',
                 'payroll_pin' => '1234',
                 'payroll_pin_confirmation' => '1234',
             ])

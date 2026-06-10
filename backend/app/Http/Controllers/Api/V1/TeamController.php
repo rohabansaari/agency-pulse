@@ -11,6 +11,7 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Http\Resources\EmployeeProfileResource;
 use App\Services\Auth\MembershipRoleSync;
+use App\Services\Auth\RoleMutationGuard;
 use App\Services\Employee\EmployeeDirectoryService;
 use App\Services\Payroll\AdminPayrollService;
 use App\Services\Payroll\PayrollVaultService;
@@ -75,14 +76,11 @@ class TeamController extends Controller
                 'regex:/^\d{4,8}$/',
                 'confirmed',
             ],
-            'role' => ['sometimes', Rule::enum(UserRole::class)],
+            'role' => ['required', Rule::enum(UserRole::class)],
         ]);
 
-        if (isset($validated['role'])) {
-            $this->ensureCanAssignPrivilegedRole($request, $validated['role']);
-        }
-
-        $assignedRole = UserRole::tryFrom($validated['role'] ?? UserRole::Employee->value) ?? UserRole::Employee;
+        $assignedRole = UserRole::from($validated['role']);
+        RoleMutationGuard::assertPrivilegedRoleAssignable($request->user(), $assignedRole);
 
         $membership = DB::transaction(function () use ($validated, $request, $assignedRole) {
             if (OrganizationMember::query()
@@ -159,7 +157,7 @@ class TeamController extends Controller
         ]);
 
         if (in_array($validated['role'], [UserRole::Admin->value, UserRole::SubAdmin->value], true)) {
-            $this->ensureCanAssignPrivilegedRole($request, $validated['role']);
+            RoleMutationGuard::assertPrivilegedRoleAssignable($request->user(), UserRole::from($validated['role']));
         }
 
         $membership = DB::transaction(function () use ($validated) {
@@ -222,15 +220,11 @@ class TeamController extends Controller
 
         if ($actorRole === UserRole::SubAdmin) {
             if ($request->has('role')) {
-                throw ValidationException::withMessages([
-                    'role' => ['Sub admins cannot change member roles.'],
-                ]);
+                abort(403, 'Sub admins cannot change member roles.');
             }
 
             if (in_array($member->role, [UserRole::Admin, UserRole::SubAdmin], true)) {
-                throw ValidationException::withMessages([
-                    'authorization' => ['Sub admins cannot modify admin accounts.'],
-                ]);
+                abort(403, 'Sub admins cannot modify admin accounts.');
             }
 
             $validated = $request->validate([
@@ -245,14 +239,12 @@ class TeamController extends Controller
             ]);
 
             if (isset($validated['role'])) {
-                $this->ensureCanAssignPrivilegedRole($request, $validated['role']);
+                RoleMutationGuard::assertRoleChangeAllowed(
+                    $request->user(),
+                    $member,
+                    UserRole::from($validated['role']),
+                );
             }
-        }
-
-        if (isset($validated['role']) && $request->user()->id === $member->user_id) {
-            throw ValidationException::withMessages([
-                'role' => ['You cannot change your own role.'],
-            ]);
         }
 
         if (isset($validated['status']) && $request->user()->id === $member->user_id) {
@@ -309,21 +301,6 @@ class TeamController extends Controller
         throw ValidationException::withMessages([
             'authorization' => ['You are not allowed to manage the team.'],
         ]);
-    }
-
-    private function ensureCanAssignPrivilegedRole(Request $request, ?string $role = null): void
-    {
-        $targetRole = $role ?? UserRole::Admin->value;
-
-        if (! in_array($targetRole, [UserRole::Admin->value, UserRole::SubAdmin->value], true)) {
-            return;
-        }
-
-        if ($request->user()?->currentRole() !== UserRole::Admin) {
-            throw ValidationException::withMessages([
-                'role' => ['Only organization admins can assign admin or sub admin roles.'],
-            ]);
-        }
     }
 
     private function ensureMemberInTenant(OrganizationMember $member): void

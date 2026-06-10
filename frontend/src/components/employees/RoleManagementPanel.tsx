@@ -2,11 +2,14 @@
 
 import { RoleBadge } from "@/components/dashboard/RoleBadge";
 import { ApiError, updateTeamMember, formatApiErrors } from "@/lib/api";
-import { canChangeEmployeeRoles } from "@/lib/navigation";
+import {
+  canChangeMemberRole,
+  canChangeEmployeeRoles,
+  MUTABLE_ROLES,
+  ROLE_LABELS,
+} from "@/lib/navigation";
 import type { User, UserRole } from "@/lib/types";
 import { useState } from "react";
-
-const ASSIGNABLE_ROLES: UserRole[] = ["employee", "manager", "sub_admin", "admin"];
 
 type RoleManagementPanelProps = {
   viewer: User;
@@ -25,15 +28,15 @@ export function RoleManagementPanel({
   memberName,
   onUpdated,
 }: RoleManagementPanelProps) {
-  const canChangeRole = canChangeEmployeeRoles(viewer.role);
   const isSelf = viewer.id === userId;
+  const canChangeRole = canChangeMemberRole(viewer.role, currentRole, isSelf);
   const [selectedRole, setSelectedRole] = useState<UserRole>(currentRole);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   async function handleSaveRole() {
-    if (!canChangeRole || isSelf) {
+    if (!canChangeRole) {
       return;
     }
     setSaving(true);
@@ -58,8 +61,8 @@ export function RoleManagementPanel({
     <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Role management</h2>
       <p className="mt-1 text-xs text-zinc-500">
-        {canChangeRole
-          ? "Promote or demote organization members. Only admins can change roles."
+        {canChangeEmployeeRoles(viewer.role)
+          ? "Employee and manager roles can be changed by admins. Admin and sub admin roles are fixed at creation."
           : "View-only. Role changes require an organization admin."}
       </p>
 
@@ -69,7 +72,7 @@ export function RoleManagementPanel({
           <RoleBadge role={currentRole} className="mt-1" />
         </div>
 
-        {canChangeRole && !isSelf ? (
+        {canChangeRole ? (
           <div className="flex flex-wrap items-end gap-2">
             <div>
               <label className="mb-1 block text-xs text-zinc-500">Change role</label>
@@ -78,9 +81,9 @@ export function RoleManagementPanel({
                 onChange={(event) => setSelectedRole(event.target.value as UserRole)}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
               >
-                {ASSIGNABLE_ROLES.map((role) => (
+                {MUTABLE_ROLES.map((role) => (
                   <option key={role} value={role}>
-                    {role.replace("_", " ")}
+                    {ROLE_LABELS[role]}
                   </option>
                 ))}
               </select>
@@ -101,13 +104,19 @@ export function RoleManagementPanel({
             You cannot change your own role.
           </p>
         ) : null}
+
+        {!canChangeRole && !isSelf && canChangeEmployeeRoles(viewer.role) ? (
+          <p className="text-xs text-zinc-500">
+            {ROLE_LABELS[currentRole]} roles cannot be changed after account creation.
+          </p>
+        ) : null}
       </div>
 
       {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       {success ? <p className="mt-3 text-sm text-green-600">{success}</p> : null}
-      {!canChangeRole ? (
+      {!canChangeEmployeeRoles(viewer.role) ? (
         <p className="mt-3 text-xs text-zinc-500">
-          {memberName} is assigned the {currentRole.replace("_", " ")} role.
+          {memberName} is assigned the {ROLE_LABELS[currentRole]} role.
         </p>
       ) : null}
     </section>

@@ -3,7 +3,7 @@
 import { RoleManagementPanel } from "@/components/employees/RoleManagementPanel";
 import { RoleBadge } from "@/components/dashboard/RoleBadge";
 import { ApiError, fetchEmployeeProfile, formatApiErrors, updateTeamMember } from "@/lib/api";
-import { canEditEmployeeStatus } from "@/lib/navigation";
+import { canEditEmployeeStatus, isPrivilegedMember } from "@/lib/navigation";
 import { formatDuration } from "@/lib/time";
 import type { EmployeeProfile, User } from "@/lib/types";
 import Link from "next/link";
@@ -22,7 +22,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
   const [savingName, setSavingName] = useState(false);
 
   const canEdit = canEditEmployeeStatus(viewer.role);
-  const protectedMember = profile?.role === "admin" || profile?.role === "sub_admin";
+  const protectedMember = profile ? isPrivilegedMember(profile.role) : false;
   const canEditThis = canEdit && (viewer.role === "admin" || !protectedMember);
 
   const load = useCallback(async () => {

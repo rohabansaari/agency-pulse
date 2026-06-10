@@ -3,16 +3,18 @@
 import { Modal } from "@/components/ui/Modal";
 import { ApiError, resetEmployeePassword, updateTeamMember, formatApiErrors } from "@/lib/api";
 import {
-  canChangeEmployeeRoles,
+  canChangeMemberRole,
   canEditEmployeeStatus,
   canManageOrgEmployees,
+  isPrivilegedMember,
+  MUTABLE_ROLES,
   ROLE_LABELS,
 } from "@/lib/navigation";
 import type { MemberStatus, TeamMember, User, UserRole } from "@/lib/types";
 import Link from "next/link";
 import { useState } from "react";
 
-const ASSIGNABLE_ROLES: UserRole[] = ["employee", "manager", "sub_admin", "admin"];
+const ASSIGNABLE_ROLES: UserRole[] = MUTABLE_ROLES;
 
 type EmployeeActionsMenuProps = {
   viewer: User;
@@ -32,12 +34,10 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
 
   const canResetPassword = canManageOrgEmployees(viewer.role) && member.role === "employee";
   const canEdit = canEditEmployeeStatus(viewer.role);
-  const canChangeRole = canChangeEmployeeRoles(viewer.role);
   const isSelf = viewer.id === member.user_id;
-  const isProtectedFromSubAdmin = member.role === "admin" || member.role === "sub_admin";
+  const isProtectedFromSubAdmin = isPrivilegedMember(member.role);
   const canEditThis = canEdit && (viewer.role === "admin" || !isProtectedFromSubAdmin);
-  const canChangeThisRole =
-    canChangeRole && !isSelf && (viewer.role === "admin" || !isProtectedFromSubAdmin);
+  const canChangeThisRole = canChangeMemberRole(viewer.role, member.role, isSelf);
 
   async function saveUpdate(payload: Partial<{ name: string; role: UserRole; status: MemberStatus }>) {
     setSaving(true);

@@ -334,7 +334,7 @@ export async function createEmployee(data: {
   name: string;
   email: string;
   password: string;
-  role?: UserRole;
+  role: UserRole;
   payroll_pin?: string;
   payroll_pin_confirmation?: string;
 }): Promise<TeamMember> {
