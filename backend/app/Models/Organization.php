@@ -17,6 +17,11 @@ class Organization extends Model
         'name',
         'slug',
         'status',
+        'onboarding_completed',
+        'onboarding_step',
+        'timezone',
+        'logo_url',
+        'website',
         'payroll_pin',
         'payroll_pin_created_at',
     ];
@@ -25,6 +30,8 @@ class Organization extends Model
     {
         return [
             'status' => OrganizationStatus::class,
+            'onboarding_completed' => 'boolean',
+            'onboarding_step' => 'integer',
             'payroll_pin' => 'encrypted',
             'payroll_pin_created_at' => 'datetime',
         ];

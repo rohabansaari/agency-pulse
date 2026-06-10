@@ -1,0 +1,182 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\UserRole;
+use App\Models\Organization;
+use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class OnboardingTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolePermissionSeeder::class);
+    }
+
+    private function headers(User $user): array
+    {
+        return ['X-Organization-Id' => (string) $user->organization_id];
+    }
+
+    private function adminNeedingOnboarding(): User
+    {
+        $organization = Organization::factory()->needsOnboarding()->create([
+            'name' => 'Acme Agency',
+        ]);
+
+        return User::factory()->admin()->create([
+            'organization_id' => $organization->id,
+        ]);
+    }
+
+    public function test_super_admin_never_requires_onboarding(): void
+    {
+        $superAdmin = User::factory()->create([
+            'organization_id' => null,
+            'role' => UserRole::SuperAdmin,
+        ]);
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->getJson('/api/v1/platform/dashboard')->assertOk();
+    }
+
+    public function test_admin_dashboard_blocked_until_onboarding_complete(): void
+    {
+        $admin = $this->adminNeedingOnboarding();
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/dashboard')
+            ->assertForbidden()
+            ->assertJsonPath('code', 'ONBOARDING_REQUIRED');
+    }
+
+    public function test_employee_never_requires_onboarding(): void
+    {
+        $organization = Organization::factory()->needsOnboarding()->create();
+        $employee = User::factory()->create([
+            'organization_id' => $organization->id,
+        ]);
+
+        Sanctum::actingAs($employee);
+
+        $this->withHeaders($this->headers($employee))
+            ->getJson('/api/v1/dashboard')
+            ->assertOk();
+    }
+
+    public function test_admin_can_complete_required_onboarding_steps(): void
+    {
+        $admin = $this->adminNeedingOnboarding();
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/onboarding/status')
+            ->assertOk()
+            ->assertJsonPath('requires_onboarding', true)
+            ->assertJsonPath('onboarding_step', 1);
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson('/api/v1/onboarding/organization', [
+                'name' => 'Bright Agency',
+                'timezone' => 'America/New_York',
+                'website' => 'https://bright.example',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status.organization.name', 'Bright Agency');
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/payroll/vault/initialize', [
+                'payroll_pin' => '4321',
+                'payroll_pin_confirmation' => '4321',
+            ])
+            ->assertCreated();
+
+        $organization = Organization::query()->find($admin->organization_id);
+        $this->assertTrue($organization?->onboarding_completed);
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/dashboard')
+            ->assertOk();
+    }
+
+    public function test_onboarding_employee_creation_without_password(): void
+    {
+        $admin = $this->adminNeedingOnboarding();
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson('/api/v1/onboarding/organization', ['name' => 'Bright Agency'])
+            ->assertOk();
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/payroll/vault/initialize', [
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
+            ])
+            ->assertCreated();
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/onboarding/employees', [
+                'name' => 'New Hire',
+                'email' => 'hire@example.com',
+                'salary' => 5000,
+                'salary_type' => 'monthly',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('member.email', 'hire@example.com');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'hire@example.com',
+            'organization_id' => $admin->organization_id,
+        ]);
+    }
+
+    public function test_onboarding_csv_import(): void
+    {
+        $admin = $this->adminNeedingOnboarding();
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson('/api/v1/onboarding/organization', ['name' => 'Bright Agency'])
+            ->assertOk();
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/payroll/vault/initialize', [
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
+            ])
+            ->assertCreated();
+
+        $csv = "name,email,salary,salary_type\nJane Doe,jane@example.com,5000,monthly\n";
+        $file = UploadedFile::fake()->createWithContent('employees.csv', $csv);
+
+        $this->withHeaders($this->headers($admin))
+            ->post('/api/v1/onboarding/employees/import', [
+                'file' => $file,
+            ])
+            ->assertOk()
+            ->assertJsonPath('created', 1);
+
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+    }
+
+    public function test_non_admin_cannot_access_onboarding_endpoints(): void
+    {
+        $manager = User::factory()->manager()->create();
+        Sanctum::actingAs($manager);
+
+        $this->withHeaders($this->headers($manager))
+            ->getJson('/api/v1/onboarding/status')
+            ->assertForbidden();
+    }
+}

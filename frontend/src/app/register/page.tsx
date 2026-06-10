@@ -1,7 +1,7 @@
 "use client";
 
 import { AuthCard } from "@/components/AuthCard";
-import { ApiError, formatApiErrors, register } from "@/lib/api";
+import { ApiError, formatApiErrors, register, resolvePostAuthPath } from "@/lib/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -20,8 +20,8 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register(name, email, password);
-      router.push("/dashboard");
+      const response = await register(name, email, password);
+      router.push(await resolvePostAuthPath(response.user.role));
     } catch (err) {
       if (err instanceof ApiError) {
         setError(formatApiErrors(err.errors) || err.message);

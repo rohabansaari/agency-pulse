@@ -33,6 +33,7 @@ import type {
   EmployeeProfile,
   PlatformDashboard,
   PlatformOrganization,
+  OnboardingStatus,
 } from "./types";
 
 const API_BASE =
@@ -767,6 +768,112 @@ export async function lockPayrollRun(
     `/payroll-runs/${id}/lock`,
     { method: "POST", body: JSON.stringify({}), payrollPin: true },
   );
+}
+
+export async function fetchOnboardingStatus(): Promise<OnboardingStatus> {
+  return apiFetch<OnboardingStatus>("/onboarding/status");
+}
+
+export async function updateOnboardingOrganization(data: {
+  name: string;
+  timezone?: string | null;
+  logo_url?: string | null;
+  website?: string | null;
+}): Promise<{ message: string; status: OnboardingStatus }> {
+  return apiFetch<{ message: string; status: OnboardingStatus }>("/onboarding/organization", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateOnboardingStep(step: number): Promise<{ status: OnboardingStatus }> {
+  return apiFetch<{ status: OnboardingStatus }>("/onboarding/step", {
+    method: "PATCH",
+    body: JSON.stringify({ step }),
+  });
+}
+
+export async function createOnboardingEmployee(data: {
+  name: string;
+  email: string;
+  salary: number;
+  salary_type: "monthly" | "hourly";
+  role?: UserRole;
+}): Promise<{ message: string; status: OnboardingStatus }> {
+  return apiFetch<{ message: string; status: OnboardingStatus }>("/onboarding/employees", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function importOnboardingEmployees(
+  file: File,
+): Promise<{ message: string; created: number; failed: { row: number; errors: string[] }[]; status: OnboardingStatus }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const token = getToken();
+  const organizationId = getOrganizationId();
+
+  const response = await fetch(`${API_BASE}/onboarding/employees/import`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(organizationId ? { "X-Organization-Id": String(organizationId) } : {}),
+    },
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ApiError(response.status, data);
+  }
+
+  return data;
+}
+
+export async function completeOnboarding(): Promise<{ message: string; status: OnboardingStatus }> {
+  return apiFetch<{ message: string; status: OnboardingStatus }>("/onboarding/complete", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function updatePassword(data: {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+}): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/auth/password", {
+    method: "PATCH",
+    tenant: false,
+    body: JSON.stringify(data),
+  });
+}
+
+export async function resolvePostAuthPath(role: UserRole): Promise<string> {
+  if (role === "super_admin") {
+    return "/platform";
+  }
+
+  if (role === "admin") {
+    try {
+      const status = await fetchOnboardingStatus();
+      if (status.requires_onboarding) {
+        return "/onboarding";
+      }
+    } catch {
+      return "/dashboard";
+    }
+  }
+
+  return "/dashboard";
+}
+
+export function onboardingSampleCsvUrl(): string {
+  return `${API_BASE}/onboarding/employees/sample.csv`;
 }
 
 export function formatApiErrors(errors?: Record<string, string[]>): string {

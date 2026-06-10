@@ -14,6 +14,16 @@ class OrganizationFactory extends Factory
     {
         return [
             'name' => fake()->company(),
+            'onboarding_completed' => true,
+            'onboarding_step' => 6,
         ];
+    }
+
+    public function needsOnboarding(): static
+    {
+        return $this->state(fn () => [
+            'onboarding_completed' => false,
+            'onboarding_step' => 1,
+        ]);
     }
 }

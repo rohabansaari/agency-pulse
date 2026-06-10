@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Services\Onboarding\OnboardingService;
 use App\Services\Payroll\PayrollVaultService;
+use App\Services\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+
 class PayrollVaultController extends Controller
 {
     public function __construct(
-        private readonly PayrollVaultService $payrollVault
+        private readonly PayrollVaultService $payrollVault,
+        private readonly OnboardingService $onboarding
     ) {}
 
     public function status(Request $request): JsonResponse
@@ -24,6 +28,10 @@ class PayrollVaultController extends Controller
         ]);
 
         $this->payrollVault->initializePin($request->user(), $validated['payroll_pin']);
+
+        $organization = TenantContext::get();
+        $this->onboarding->updateStep($organization, 3);
+        $this->onboarding->tryMarkComplete($organization);
 
         return response()->json([
             'message' => 'Organization payroll PIN configured.',

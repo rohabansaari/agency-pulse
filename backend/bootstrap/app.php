@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'payroll.vault' => AttachPayrollVaultState::class,
             'super.admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'block.super.admin' => \App\Http\Middleware\BlockSuperAdminFromTenant::class,
+            'onboarding.complete' => \App\Http\Middleware\EnsureOnboardingComplete::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,

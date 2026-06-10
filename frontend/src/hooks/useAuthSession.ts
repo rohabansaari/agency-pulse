@@ -1,6 +1,6 @@
 "use client";
 
-import { ApiError, fetchMe, logout } from "@/lib/api";
+import { ApiError, fetchMe, fetchOnboardingStatus, logout } from "@/lib/api";
 import { clearToken, getToken } from "@/lib/auth";
 import type { MeResponse, User } from "@/lib/types";
 import { useRouter, usePathname } from "next/navigation";
@@ -23,10 +23,34 @@ export function useAuthSession() {
     }
 
     fetchMe()
-      .then((response) => {
+      .then(async (response) => {
         if (response.user.role === "super_admin" && pathname !== "/platform") {
           router.replace("/platform");
           return;
+        }
+
+        if (response.user.role === "admin" && pathname !== "/onboarding") {
+          try {
+            const onboarding = await fetchOnboardingStatus();
+            if (onboarding.requires_onboarding) {
+              router.replace("/onboarding");
+              return;
+            }
+          } catch {
+            // Allow page load if onboarding status is temporarily unavailable.
+          }
+        }
+
+        if (response.user.role === "admin" && pathname === "/onboarding") {
+          try {
+            const onboarding = await fetchOnboardingStatus();
+            if (!onboarding.requires_onboarding) {
+              router.replace("/dashboard");
+              return;
+            }
+          } catch {
+            // Keep onboarding page if status check fails.
+          }
         }
 
         setUser(response.user);

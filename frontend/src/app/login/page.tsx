@@ -1,7 +1,7 @@
 "use client";
 
 import { AuthCard } from "@/components/AuthCard";
-import { ApiError, formatApiErrors, login } from "@/lib/api";
+import { ApiError, formatApiErrors, login, resolvePostAuthPath } from "@/lib/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -20,7 +20,7 @@ export default function LoginPage() {
 
     try {
       const response = await login(email, password);
-      router.push(response.user.role === "super_admin" ? "/platform" : "/dashboard");
+      router.push(await resolvePostAuthPath(response.user.role));
     } catch (err) {
       if (err instanceof ApiError) {
         setError(formatApiErrors(err.errors) || err.message);

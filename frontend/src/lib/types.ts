@@ -33,6 +33,21 @@ export interface MeResponse {
   current_organization_id: number | null;
 }
 
+export interface OnboardingStatus {
+  requires_onboarding: boolean;
+  onboarding_completed: boolean;
+  onboarding_step: number;
+  completion_percent: number;
+  organization: {
+    name: string;
+    timezone: string | null;
+    logo_url: string | null;
+    website: string | null;
+  };
+  pin_configured: boolean;
+  requirements_met: boolean;
+}
+
 export interface ApiValidationError {
   message?: string;
   errors?: Record<string, string[]>;
