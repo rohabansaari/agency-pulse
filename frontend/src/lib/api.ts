@@ -1,4 +1,5 @@
 import { clearToken, getOrganizationId, getToken, setOrganizationId, setToken } from "./auth";
+import { getPayrollPin } from "./payroll-pin";
 import type {
   ApiValidationError,
   AuthResponse,
@@ -29,6 +30,7 @@ import type {
   ReportDateRange,
   OvertimeContext,
   OvertimeRequest,
+  EmployeeProfile,
 } from "./types";
 
 const API_BASE =
@@ -51,13 +53,19 @@ type ApiFetchOptions = RequestInit & {
   token?: string | null;
   auth?: boolean;
   tenant?: boolean;
+  payrollPin?: boolean;
 };
+
+function payrollPinHeaders(): Record<string, string> {
+  const pin = getPayrollPin();
+  return pin ? { "X-Payroll-Pin": pin } : {};
+}
 
 async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<T> {
-  const { token, auth = true, tenant = true, headers, ...rest } = options;
+  const { token, auth = true, tenant = true, payrollPin = false, headers, ...rest } = options;
 
   const authToken =
     token !== undefined ? token : auth ? getToken() : null;
@@ -71,6 +79,7 @@ async function apiFetch<T>(
       Accept: "application/json",
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...(organizationId ? { "X-Organization-Id": String(organizationId) } : {}),
+      ...(payrollPin ? payrollPinHeaders() : {}),
       ...headers,
     },
   });
@@ -586,22 +595,15 @@ export async function initializePayrollPin(
 
 export async function unlockPayrollVault(
   payroll_pin: string,
-): Promise<{ message: string; status: PayrollVaultStatus; vault_unlocked: boolean; unlock_expires_at: string }> {
+): Promise<{ message: string; status: PayrollVaultStatus; vault_unlocked: boolean }> {
   return apiFetch("/payroll/vault/unlock", {
     method: "POST",
     body: JSON.stringify({ payroll_pin }),
   });
 }
 
-export async function lockPayrollVault(): Promise<{ message: string; status: PayrollVaultStatus }> {
-  return apiFetch("/payroll/vault/lock", {
-    method: "POST",
-    body: JSON.stringify({}),
-  });
-}
-
 export async function fetchPayrollSettings(): Promise<OrganizationPayrollSettings> {
-  return apiFetch<OrganizationPayrollSettings>("/payroll/settings");
+  return apiFetch<OrganizationPayrollSettings>("/payroll/settings", { payrollPin: true });
 }
 
 export async function updatePayrollSettings(data: {
@@ -619,13 +621,19 @@ export async function updatePayrollSettings(data: {
     {
       method: "PATCH",
       body: JSON.stringify(data),
+      payrollPin: true,
     },
   );
 }
 
-export async function fetchSalaryContracts(): Promise<SalaryContract[]> {
-  const response = await apiFetch<{ contracts: SalaryContract[] }>("/payroll/salary-contracts");
-  return response.contracts;
+export async function fetchEmployeeProfile(userId: number): Promise<EmployeeProfile> {
+  return apiFetch<EmployeeProfile>(`/team/${userId}/profile`);
+}
+
+export async function fetchSalaryContractStatus(
+  userId: number,
+): Promise<{ has_salary: boolean; salary_type: "hourly" | "monthly" | null }> {
+  return apiFetch(`/payroll/salary-contracts/${userId}/status`, { payrollPin: true });
 }
 
 export async function updateSalaryContract(
@@ -642,16 +650,17 @@ export async function updateSalaryContract(
     {
       method: "POST",
       body: JSON.stringify(data),
+      payrollPin: true,
     },
   );
 }
 
 export async function fetchPayrollRuns(range?: ReportDateRange): Promise<PayrollRun[]> {
-  return apiFetch<PayrollRun[]>(`/payroll-runs${dateRangeQuery(range)}`);
+  return apiFetch<PayrollRun[]>(`/payroll-runs${dateRangeQuery(range)}`, { payrollPin: true });
 }
 
 export async function fetchPayrollRun(id: number): Promise<PayrollRun> {
-  return apiFetch<PayrollRun>(`/payroll-runs/${id}`);
+  return apiFetch<PayrollRun>(`/payroll-runs/${id}`, { payrollPin: true });
 }
 
 export async function createPayrollRun(data: {
@@ -661,6 +670,7 @@ export async function createPayrollRun(data: {
   return apiFetch<{ message: string; payroll_run: PayrollRun }>("/payroll-runs", {
     method: "POST",
     body: JSON.stringify(data),
+    payrollPin: true,
   });
 }
 
@@ -669,7 +679,7 @@ export async function finalizePayrollRun(
 ): Promise<{ message: string; payroll_run: PayrollRun }> {
   return apiFetch<{ message: string; payroll_run: PayrollRun }>(
     `/payroll-runs/${id}/finalize`,
-    { method: "POST", body: JSON.stringify({}) },
+    { method: "POST", body: JSON.stringify({}), payrollPin: true },
   );
 }
 
@@ -682,6 +692,7 @@ export async function updatePayrollRun(
     {
       method: "PATCH",
       body: JSON.stringify(data),
+      payrollPin: true,
     },
   );
 }
@@ -689,6 +700,7 @@ export async function updatePayrollRun(
 export async function deletePayrollRun(id: number): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/payroll-runs/${id}`, {
     method: "DELETE",
+    payrollPin: true,
   });
 }
 
@@ -697,7 +709,7 @@ export async function recalculatePayrollRun(
 ): Promise<{ message: string; payroll_run: PayrollRun }> {
   return apiFetch<{ message: string; payroll_run: PayrollRun }>(
     `/payroll-runs/${id}/recalculate`,
-    { method: "POST", body: JSON.stringify({}) },
+    { method: "POST", body: JSON.stringify({}), payrollPin: true },
   );
 }
 
@@ -706,7 +718,7 @@ export async function lockPayrollRun(
 ): Promise<{ message: string; payroll_run: PayrollRun }> {
   return apiFetch<{ message: string; payroll_run: PayrollRun }>(
     `/payroll-runs/${id}/lock`,
-    { method: "POST", body: JSON.stringify({}) },
+    { method: "POST", body: JSON.stringify({}), payrollPin: true },
   );
 }
 

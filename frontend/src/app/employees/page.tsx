@@ -1,7 +1,7 @@
 "use client";
 
 import { AppShell, useAppUser } from "@/components/dashboard/AppShell";
-import { TeamManager } from "@/components/team/TeamManager";
+import { EmployeesDirectory } from "@/components/employees/EmployeesDirectory";
 import { isAdmin } from "@/lib/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -20,7 +20,7 @@ function EmployeesContent() {
     return null;
   }
 
-  return <TeamManager user={user} />;
+  return <EmployeesDirectory user={user} />;
 }
 
 export default function EmployeesPage() {

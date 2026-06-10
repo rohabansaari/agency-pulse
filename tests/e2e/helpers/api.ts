@@ -44,6 +44,16 @@ export function authHeaders(session: AuthSession): Record<string, string> {
   };
 }
 
+export function authHeadersWithPayroll(
+  session: AuthSession,
+  pin = "1234",
+): Record<string, string> {
+  return {
+    ...authHeaders(session),
+    "X-Payroll-Pin": pin,
+  };
+}
+
 export async function unlockPayrollVault(
   request: import("@playwright/test").APIRequestContext,
   session: AuthSession,

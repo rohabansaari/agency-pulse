@@ -7,6 +7,7 @@ use App\Enums\SalaryType;
 use App\Enums\UserRole;
 use App\Models\EmployeeSalaryContract;
 use App\Models\OrganizationMember;
+use App\Models\SalaryChangeAudit;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Tenant\TenantContext;
@@ -25,7 +26,7 @@ class AdminPayrollService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function createInitialContract(User $employee, array $data): EmployeeSalaryContract
+    public function createInitialContract(User $employee, array $data, ?User $changedBy = null): EmployeeSalaryContract
     {
         $this->validateContractPayload($data);
 
@@ -35,7 +36,7 @@ class AdminPayrollService
 
         $salaryType = $this->salaryTypeValue($data['salary_type']);
 
-        return EmployeeSalaryContract::create([
+        $contract = EmployeeSalaryContract::create([
             'organization_id' => TenantContext::id(),
             'user_id' => $employee->id,
             'salary_type' => $salaryType,
@@ -49,6 +50,24 @@ class AdminPayrollService
             'effective_to' => null,
             'is_active' => true,
         ]);
+
+        if ($changedBy !== null) {
+            $newSalary = $salaryType === SalaryType::Hourly->value
+                ? (string) $data['hourly_rate']
+                : (string) $data['monthly_salary'];
+
+            SalaryChangeAudit::create([
+                'organization_id' => TenantContext::id(),
+                'employee_id' => $employee->id,
+                'changed_by' => $changedBy->id,
+                'salary_type' => $salaryType,
+                'previous_salary_encrypted' => null,
+                'new_salary_encrypted' => $newSalary,
+                'effective_date' => $effectiveFrom,
+            ]);
+        }
+
+        return $contract;
     }
 
     /**
@@ -70,6 +89,14 @@ class AdminPayrollService
                 ->lockForUpdate()
                 ->get();
 
+            $previousActive = $active->first();
+            $previousSalary = null;
+            if ($previousActive) {
+                $previousSalary = $previousActive->salary_type === SalaryType::Hourly
+                    ? (string) ($this->decryptHourlyRate($previousActive) ?? '')
+                    : (string) ($this->decryptMonthlySalary($previousActive) ?? '');
+            }
+
             foreach ($active as $contract) {
                 $contract->update([
                     'is_active' => false,
@@ -78,6 +105,9 @@ class AdminPayrollService
             }
 
             $salaryType = $this->salaryTypeValue($data['salary_type']);
+            $newSalary = $salaryType === SalaryType::Hourly->value
+                ? (string) $data['hourly_rate']
+                : (string) $data['monthly_salary'];
 
             $contract = EmployeeSalaryContract::create([
                 'organization_id' => TenantContext::id(),
@@ -94,6 +124,16 @@ class AdminPayrollService
                 'is_active' => true,
             ]);
 
+            SalaryChangeAudit::create([
+                'organization_id' => TenantContext::id(),
+                'employee_id' => $employee->id,
+                'changed_by' => $admin->id,
+                'salary_type' => $salaryType,
+                'previous_salary_encrypted' => $previousSalary,
+                'new_salary_encrypted' => $newSalary,
+                'effective_date' => $effectiveFrom,
+            ]);
+
             $this->audit->log('salary_contract.versioned', $contract, $admin, [
                 'user_id' => $employee->id,
                 'salary_type' => $data['salary_type'],
@@ -102,6 +142,25 @@ class AdminPayrollService
 
             return $contract->fresh('user');
         });
+    }
+
+    /**
+     * @return array{has_salary: bool, salary_type: string|null}
+     */
+    public function contractStatusForUser(User $employee): array
+    {
+        $this->ensureEmployeeInOrg($employee);
+
+        $contract = EmployeeSalaryContract::query()
+            ->where('organization_id', TenantContext::id())
+            ->where('user_id', $employee->id)
+            ->where('is_active', true)
+            ->first();
+
+        return [
+            'has_salary' => $contract !== null,
+            'salary_type' => $contract?->salary_type->value,
+        ];
     }
 
     /**

@@ -2,6 +2,7 @@
 
 import { ProjectAssignPanel } from "@/components/projects/ProjectAssignPanel";
 import { ProjectReportPanel } from "@/components/projects/ProjectReportPanel";
+import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { Modal } from "@/components/ui/Modal";
 import {
   ApiError,
@@ -19,7 +20,7 @@ import {
   isAdmin,
 } from "@/lib/navigation";
 import type { Project, ProjectStatus, User } from "@/lib/types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STATUS_STYLES: Record<ProjectStatus, string> = {
   active: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
@@ -209,6 +210,17 @@ export function ProjectsManager({ user }: { user: User }) {
     statusFilter === "all" ? true : p.status === statusFilter,
   );
 
+  const exportRows = useMemo(
+    () =>
+      filtered.map((project) => ({
+        name: project.name,
+        client: project.client_name,
+        status: project.status,
+        description: project.description ?? "",
+      })),
+    [filtered],
+  );
+
   const statusFilters: ("all" | ProjectStatus)[] = showArchive
     ? ["all", "active", "inactive", "archived"]
     : ["all", "active", "inactive"];
@@ -303,18 +315,30 @@ export function ProjectsManager({ user }: { user: User }) {
               : "Assigned projects — read-only view"}
           </p>
         </div>
-        {canManage ? (
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            New project
-          </button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportDropdown
+            filename="projects"
+            columns={[
+              { key: "name", label: "Project" },
+              { key: "client", label: "Client" },
+              { key: "status", label: "Status" },
+              { key: "description", label: "Description" },
+            ]}
+            rows={exportRows}
+          />
+          {canManage ? (
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              New project
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {error ? (

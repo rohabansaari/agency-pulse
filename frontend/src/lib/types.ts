@@ -89,7 +89,53 @@ export interface TeamMember {
   status: MemberStatus;
   joined_at: string | null;
   created_at: string;
+  team_id?: number | null;
+  team_name?: string | null;
+  manager_id?: number | null;
+  manager_name?: string | null;
+  last_activity_at?: string | null;
+  has_active_timer?: boolean;
   assigned_projects_count?: number;
+  time_tracked_month_seconds?: number;
+  approved_leave_seconds?: number;
+  overtime_requests_count?: number;
+}
+
+export interface EmployeeProfile {
+  user_id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: MemberStatus;
+  joined_at: string | null;
+  team: {
+    id: number;
+    name: string;
+    manager: { id: number; name: string } | null;
+  } | null;
+  assigned_projects: { id: number; name: string; status: string }[];
+  leave_history: {
+    id: number;
+    start_date: string;
+    end_date: string;
+    duration_seconds: number;
+    status: string;
+    is_paid: boolean;
+    description: string | null;
+  }[];
+  overtime_history: {
+    id: number;
+    work_date: string;
+    duration_seconds: number;
+    status: string;
+    reason: string | null;
+  }[];
+  time_summary: {
+    month_seconds: number;
+    approved_leave_seconds: number;
+  };
+  has_active_timer: boolean;
+  last_activity_at: string | null;
 }
 
 export interface TimeEntry {
@@ -388,6 +434,7 @@ export interface PayrollVaultStatus {
   unlock_expires_at: string | null;
   requires_pin_on_employee_create: boolean;
   requires_pin_setup: boolean;
+  requires_pin_each_access?: boolean;
 }
 
 export interface SalaryContract {

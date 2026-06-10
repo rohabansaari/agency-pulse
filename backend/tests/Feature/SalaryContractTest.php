@@ -21,9 +21,12 @@ class SalaryContractTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    private function headers(User $user): array
+    private function headers(User $user, string $pin = '1234'): array
     {
-        return ['X-Organization-Id' => (string) $user->organization_id];
+        return [
+            'X-Organization-Id' => (string) $user->organization_id,
+            'X-Payroll-Pin' => $pin,
+        ];
     }
 
     private function employeePayload(array $overrides = []): array
@@ -130,13 +133,14 @@ class SalaryContractTest extends TestCase
         $this->assertSame(2, EmployeeSalaryContract::query()->where('user_id', $employee->id)->count());
     }
 
-    public function test_manager_cannot_access_salary_contracts(): void
+    public function test_manager_cannot_access_salary_contract_status(): void
     {
         $manager = User::factory()->manager()->create();
+        $employee = User::factory()->create(['organization_id' => $manager->organization_id]);
         Sanctum::actingAs($manager);
 
         $this->withHeaders($this->headers($manager))
-            ->getJson('/api/v1/payroll/salary-contracts')
+            ->getJson("/api/v1/payroll/salary-contracts/{$employee->id}/status")
             ->assertForbidden();
     }
 }

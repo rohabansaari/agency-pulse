@@ -1,9 +1,10 @@
 "use client";
 
+import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { ApiError, fetchManualTimeEntries, formatApiErrors } from "@/lib/api";
 import { formatDuration } from "@/lib/time";
 import type { TimeEntry, TimeEntryStatus } from "@/lib/types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STATUS_STYLES: Record<TimeEntryStatus, string> = {
   running: "bg-green-100 text-green-700",
@@ -47,14 +48,40 @@ export function ManualTimeEntries({ refreshKey = 0 }: { refreshKey?: number }) {
     void load();
   }, [load, refreshKey]);
 
+  const exportRows = useMemo(
+    () =>
+      entries.map((entry) => ({
+        date: new Date(entry.start_time).toLocaleDateString(),
+        project: entry.project_name ?? "General time",
+        duration: formatDuration(entry.duration ?? 0),
+        status: entry.status,
+      })),
+    [entries],
+  );
+
   return (
     <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="mb-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-        My manual entries
-      </h2>
-      <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-        Submitted entries appear here with approval status.
-      </p>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            My manual entries
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Submitted entries appear here with approval status.
+          </p>
+        </div>
+        <ExportDropdown
+          filename="manual-time-entries"
+          columns={[
+            { key: "date", label: "Date" },
+            { key: "project", label: "Project" },
+            { key: "duration", label: "Duration" },
+            { key: "status", label: "Status" },
+          ]}
+          rows={exportRows}
+          formats={["csv", "xlsx", "pdf"]}
+        />
+      </div>
       {loading ? (
         <div className="h-24 animate-pulse rounded-lg bg-zinc-200/60 dark:bg-zinc-800/60" />
       ) : null}

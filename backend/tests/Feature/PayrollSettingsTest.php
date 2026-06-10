@@ -19,9 +19,12 @@ class PayrollSettingsTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    private function headers(User $user): array
+    private function headers(User $user, string $pin = '1234'): array
     {
-        return ['X-Organization-Id' => (string) $user->organization_id];
+        return [
+            'X-Organization-Id' => (string) $user->organization_id,
+            'X-Payroll-Pin' => $pin,
+        ];
     }
 
     private function unlockVault(User $admin): void

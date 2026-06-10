@@ -13,6 +13,7 @@ import { ManualTimeEntries } from "@/components/time/ManualTimeEntries";
 import { ManualTimeEntryForm } from "@/components/time/ManualTimeEntryForm";
 import { OvertimeRequestForm } from "@/components/time/OvertimeRequestForm";
 import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
+import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import type { Project, TimeEntry, User } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -254,6 +255,20 @@ export function TimeTracker({ user }: { user?: User }) {
           new Date(b.start_time).getTime() - new Date(a.start_time).getTime(),
       ),
     [entries],
+  );
+
+  const timeExportRows = useMemo(
+    () =>
+      sortedEntries.map((entry) => ({
+        project: entry.project_name ?? "General time",
+        start: formatTime(entry.start_time),
+        end: entry.end_time ? formatTime(entry.end_time) : "",
+        duration: formatDuration(
+          entry.status === "running" ? liveElapsed : (entry.duration ?? 0),
+        ),
+        status: entry.status,
+      })),
+    [sortedEntries, liveElapsed],
   );
 
   async function handleStart() {
@@ -606,17 +621,31 @@ export function TimeTracker({ user }: { user?: User }) {
 
       {/* Activity timeline */}
       <div>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
             Today&apos;s activity
           </h2>
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            {new Date().toLocaleDateString(undefined, {
-              weekday: "long",
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
+          <div className="flex items-center gap-2">
+            <ExportDropdown
+              filename="time-tracking-today"
+              columns={[
+                { key: "project", label: "Project" },
+                { key: "start", label: "Start" },
+                { key: "end", label: "End" },
+                { key: "duration", label: "Duration" },
+                { key: "status", label: "Status" },
+              ]}
+              rows={timeExportRows}
+              formats={["csv", "xlsx", "pdf"]}
+            />
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {new Date().toLocaleDateString(undefined, {
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
+          </div>
         </div>
         <ActivityTimeline entries={sortedEntries} liveElapsed={liveElapsed} />
       </div>

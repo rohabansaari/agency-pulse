@@ -20,9 +20,15 @@ class PayrollVaultTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    private function headers(User $user): array
+    private function headers(User $user, ?string $payrollPin = null): array
     {
-        return ['X-Organization-Id' => (string) $user->organization_id];
+        $headers = ['X-Organization-Id' => (string) $user->organization_id];
+
+        if ($payrollPin !== null) {
+            $headers['X-Payroll-Pin'] = $payrollPin;
+        }
+
+        return $headers;
     }
 
     private function initializeVault(User $admin, string $pin = '1234'): void
@@ -35,15 +41,6 @@ class PayrollVaultTest extends TestCase
                 'payroll_pin_confirmation' => $pin,
             ])
             ->assertCreated();
-    }
-
-    private function unlockVault(User $admin, string $pin = '1234'): void
-    {
-        $this->withHeaders($this->headers($admin))
-            ->postJson('/api/v1/payroll/vault/unlock', [
-                'payroll_pin' => $pin,
-            ])
-            ->assertOk();
     }
 
     public function test_first_employee_creation_requires_payroll_pin(): void
@@ -84,7 +81,7 @@ class PayrollVaultTest extends TestCase
         $this->assertNotSame('5678', $raw);
     }
 
-    public function test_salary_contracts_never_expose_numeric_salary_values(): void
+    public function test_salary_status_never_exposes_numeric_salary_values(): void
     {
         $admin = User::factory()->admin()->create();
         Sanctum::actingAs($admin);
@@ -101,22 +98,15 @@ class PayrollVaultTest extends TestCase
             ])
             ->assertCreated();
 
-        $this->withHeaders($this->headers($admin))
-            ->getJson('/api/v1/payroll/salary-contracts')
-            ->assertOk()
-            ->assertJsonPath('contracts.0.hourly_rate', null)
-            ->assertJsonPath('contracts.0.monthly_salary', null)
-            ->assertJsonPath('contracts.0.has_salary', true)
-            ->assertJsonPath('contracts.0.salary_type', 'hourly');
-
-        $this->unlockVault($admin);
+        $employee = User::query()->where('email', 'employee@example.com')->first();
 
         $this->withHeaders($this->headers($admin))
-            ->getJson('/api/v1/payroll/salary-contracts')
+            ->getJson("/api/v1/payroll/salary-contracts/{$employee->id}/status")
             ->assertOk()
-            ->assertJsonPath('contracts.0.hourly_rate', null)
-            ->assertJsonPath('contracts.0.monthly_salary', null)
-            ->assertJsonPath('contracts.0.has_salary', true);
+            ->assertJsonPath('has_salary', true)
+            ->assertJsonPath('salary_type', 'hourly')
+            ->assertJsonMissingPath('hourly_rate')
+            ->assertJsonMissingPath('monthly_salary');
     }
 
     public function test_incorrect_pin_does_not_unlock_vault(): void
@@ -145,33 +135,25 @@ class PayrollVaultTest extends TestCase
             ->getJson('/api/v1/payroll/vault/status')
             ->assertOk()
             ->assertJsonPath('pin_configured', true)
-            ->assertJsonPath('vault_unlocked', false);
-
-        $this->unlockVault($admin);
-
-        $this->withHeaders($this->headers($admin))
-            ->getJson('/api/v1/payroll/vault/status')
-            ->assertOk()
-            ->assertJsonPath('vault_unlocked', true);
+            ->assertJsonPath('vault_unlocked', false)
+            ->assertJsonPath('requires_pin_each_access', true);
     }
 
-    public function test_admin_can_lock_payroll_vault(): void
+    public function test_payroll_pin_header_unlocks_financial_endpoints_per_request(): void
     {
         $admin = User::factory()->admin()->create();
         $this->initializeVault($admin);
-        $this->unlockVault($admin);
 
         Sanctum::actingAs($admin);
 
         $this->withHeaders($this->headers($admin))
-            ->postJson('/api/v1/payroll/vault/lock', [])
-            ->assertOk()
-            ->assertJsonPath('status.vault_unlocked', false);
+            ->getJson('/api/v1/payroll/settings')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['payroll_vault']);
 
-        $this->withHeaders($this->headers($admin))
-            ->getJson('/api/v1/payroll/vault/status')
-            ->assertOk()
-            ->assertJsonPath('vault_unlocked', false);
+        $this->withHeaders($this->headers($admin, '1234'))
+            ->getJson('/api/v1/payroll/settings')
+            ->assertOk();
     }
 
     public function test_admin_can_change_payroll_pin(): void
@@ -181,7 +163,7 @@ class PayrollVaultTest extends TestCase
 
         Sanctum::actingAs($admin);
 
-        $this->withHeaders($this->headers($admin))
+        $this->withHeaders($this->headers($admin, '1234'))
             ->postJson('/api/v1/payroll/vault/change-pin', [
                 'current_pin' => '1234',
                 'payroll_pin' => '4321',
@@ -189,7 +171,7 @@ class PayrollVaultTest extends TestCase
             ])
             ->assertOk();
 
-        $this->withHeaders($this->headers($admin))
+        $this->withHeaders($this->headers($admin, '4321'))
             ->postJson('/api/v1/payroll/vault/unlock', [
                 'payroll_pin' => '4321',
             ])

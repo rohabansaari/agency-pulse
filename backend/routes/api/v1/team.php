@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('rbac:admin')->group(function () {
 
     Route::get('/', [TeamController::class, 'index']);
+    Route::get('/{user}/profile', [TeamController::class, 'profile']);
 
     Route::post('/create-employee', [TeamController::class, 'createEmployee']);
 

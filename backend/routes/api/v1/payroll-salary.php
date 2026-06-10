@@ -15,7 +15,6 @@ Route::middleware(['rbac:admin', 'payroll.vault'])->group(function () {
     Route::get('/settings', [PayrollSettingsController::class, 'show']);
     Route::patch('/settings', [PayrollSettingsController::class, 'update']);
 
-    Route::get('/salary-contracts', [SalaryContractController::class, 'index']);
-    Route::get('/salary-contracts/{user}', [SalaryContractController::class, 'history']);
+    Route::get('/salary-contracts/{user}/status', [SalaryContractController::class, 'status']);
     Route::post('/salary-contracts/{user}', [SalaryContractController::class, 'store']);
 });

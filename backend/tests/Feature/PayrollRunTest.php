@@ -35,9 +35,15 @@ class PayrollRunTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    private function headers(User $user): array
+    private function headers(User $user, ?string $payrollPin = '1234'): array
     {
-        return ['X-Organization-Id' => (string) $user->organization_id];
+        $headers = ['X-Organization-Id' => (string) $user->organization_id];
+
+        if ($payrollPin !== null) {
+            $headers['X-Payroll-Pin'] = $payrollPin;
+        }
+
+        return $headers;
     }
 
     private function displayDate(Carbon $date): string
@@ -166,7 +172,7 @@ class PayrollRunTest extends TestCase
             ->assertJsonCount(3, 'entries');
     }
 
-    public function test_payroll_financial_data_masked_when_vault_locked(): void
+    public function test_payroll_financial_data_masked_without_pin_header(): void
     {
         ['admin' => $admin] = $this->setupPayrollFixture();
 
@@ -179,16 +185,10 @@ class PayrollRunTest extends TestCase
 
         $runId = $create->json('payroll_run.id');
 
-        $this->withHeaders($this->headers($admin))
-            ->postJson('/api/v1/payroll/vault/lock', [])
-            ->assertOk();
-
-        $this->withHeaders($this->headers($admin))
+        $this->withHeaders($this->headers($admin, null))
             ->getJson("/api/v1/payroll-runs/{$runId}")
-            ->assertOk()
-            ->assertJsonPath('financial_data_masked', true)
-            ->assertJsonPath('total_pay_snapshot', null)
-            ->assertJsonPath('employee_records.0.gross_salary_snapshot', null);
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['payroll_vault']);
     }
 
     public function test_admin_can_create_payroll_run_snapshot(): void

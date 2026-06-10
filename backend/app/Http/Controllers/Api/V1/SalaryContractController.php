@@ -19,18 +19,9 @@ class SalaryContractController extends Controller
         private readonly PayrollVaultService $payrollVault
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function status(User $user): JsonResponse
     {
-        return response()->json([
-            'contracts' => $this->adminPayroll->listActiveContracts()->values(),
-        ]);
-    }
-
-    public function history(Request $request, User $user): JsonResponse
-    {
-        return response()->json([
-            'contracts' => $this->adminPayroll->contractHistoryForUser($user)->values(),
-        ]);
+        return response()->json($this->adminPayroll->contractStatusForUser($user));
     }
 
     public function store(Request $request, User $user): JsonResponse
@@ -51,7 +42,7 @@ class SalaryContractController extends Controller
         $contract = $this->adminPayroll->versionContract($request->user(), $user, $validated);
 
         return response()->json([
-            'message' => 'Salary contract updated with a new version.',
+            'message' => 'Salary contract saved. Compensation values are encrypted and not displayed.',
             'contract' => $this->adminPayroll->publicContractPayload($contract),
         ], 201);
     }

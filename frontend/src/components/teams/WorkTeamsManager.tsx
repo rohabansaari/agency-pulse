@@ -10,8 +10,9 @@ import {
   formatApiErrors,
   removeTeamMember,
 } from "@/lib/api";
+import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import type { TeamMember, WorkTeam } from "@/lib/types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function WorkTeamsManager() {
   const [teams, setTeams] = useState<WorkTeam[]>([]);
@@ -49,6 +50,32 @@ export function WorkTeamsManager() {
     teams.flatMap((t) => t.members?.map((m) => m.id) ?? []),
   );
   const unassignedEmployees = employees.filter((e) => !assignedEmployeeIds.has(e.user_id));
+
+  const exportRows = useMemo(
+    () =>
+      teams.flatMap((team) => {
+        const managerName =
+          orgMembers.find((m) => m.user_id === team.manager_id)?.name ?? "";
+        const members = team.members ?? [];
+        if (members.length === 0) {
+          return [
+            {
+              team: team.name,
+              manager: managerName,
+              member: "",
+              email: "",
+            },
+          ];
+        }
+        return members.map((member) => ({
+          team: team.name,
+          manager: managerName,
+          member: member.name,
+          email: member.email ?? "",
+        }));
+      }),
+    [teams, orgMembers],
+  );
 
   async function handleCreateTeam(e: React.FormEvent) {
     e.preventDefault();
@@ -100,13 +127,25 @@ export function WorkTeamsManager() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Teams
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Create teams, assign managers, and place employees
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Teams
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Create teams, assign managers, and place employees
+          </p>
+        </div>
+        <ExportDropdown
+          filename="teams"
+          columns={[
+            { key: "team", label: "Team" },
+            { key: "manager", label: "Manager" },
+            { key: "member", label: "Member" },
+            { key: "email", label: "Email" },
+          ]}
+          rows={exportRows}
+        />
       </div>
 
       {error ? (

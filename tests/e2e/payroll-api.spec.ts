@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
   authHeaders,
+  authHeadersWithPayroll,
   registerAdmin,
   todayDdMmYyyy,
   unlockPayrollVault,
@@ -13,9 +14,8 @@ test.describe("Payroll API", () => {
 
   test("settings defaults and deduction snapshot on payroll run", async ({ request }) => {
     const session = await registerAdmin(request);
-    const headers = authHeaders(session);
-
     await unlockPayrollVault(request, session);
+    const headers = authHeadersWithPayroll(session);
 
     const settingsGet = await request.get(`${apiBase}/payroll/settings`, { headers });
     expect(settingsGet.ok()).toBeTruthy();

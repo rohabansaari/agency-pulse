@@ -1,6 +1,7 @@
 "use client";
 
 import type { LeaveStatusFilter } from "@/components/leave/LeaveStatusFilter";
+import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import {
   ApiError,
   fetchLeaveEntries,
@@ -73,6 +74,19 @@ export function LeaveHistory({
     return entries.filter((entry) => entry.status === statusFilter);
   }, [entries, statusFilter]);
 
+  const exportRows = useMemo(
+    () =>
+      filteredEntries.map((entry) => ({
+        employee: entry.user_name ?? "",
+        date: displayLeaveDate(entry.start_time),
+        duration: formatDuration(entry.duration ?? 0),
+        status: entry.status,
+        team: entry.team_name ?? "",
+        source: entry.source ?? "",
+      })),
+    [filteredEntries],
+  );
+
   async function handleStatusOverride(
     entry: TimeEntry,
     status: "pending" | "approved" | "rejected",
@@ -98,6 +112,20 @@ export function LeaveHistory({
 
   return (
     <div>
+      <div className="mb-3 flex justify-end">
+        <ExportDropdown
+          filename="leave-entries"
+          columns={[
+            ...(showEmployee ? [{ key: "employee", label: "Employee" }] : []),
+            { key: "date", label: "Date" },
+            { key: "duration", label: "Duration" },
+            { key: "status", label: "Status" },
+            { key: "team", label: "Team" },
+            { key: "source", label: "Source" },
+          ]}
+          rows={exportRows}
+        />
+      </div>
       {error ? (
         <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>
       ) : null}

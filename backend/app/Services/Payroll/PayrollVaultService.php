@@ -9,14 +9,10 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Tenant\TenantContext;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class PayrollVaultService
 {
-    public const UNLOCK_TTL_MINUTES = 15;
-
     public function __construct(
         private readonly AuditLogger $audit
     ) {}
@@ -52,15 +48,14 @@ class PayrollVaultService
     public function status(User $user): array
     {
         $organization = TenantContext::get();
-        $unlocked = $this->isUnlocked($user);
-        $expiresAt = $unlocked ? $this->unlockExpiresAt($user) : null;
 
         return [
             'pin_configured' => $this->hasPayrollPin($organization),
-            'vault_unlocked' => $unlocked,
-            'unlock_expires_at' => $expiresAt?->toIso8601String(),
+            'vault_unlocked' => false,
+            'unlock_expires_at' => null,
             'requires_pin_on_employee_create' => $this->requiresPinOnEmployeeCreate($organization),
             'requires_pin_setup' => ! $this->hasPayrollPin($organization),
+            'requires_pin_each_access' => true,
         ];
     }
 
@@ -97,39 +92,25 @@ class PayrollVaultService
     }
 
     /**
+     * Validates PIN for the current request. No server-side session is created.
+     *
      * @return array<string, mixed>
      */
     public function unlock(User $user, string $pin): array
     {
         $this->ensureAdmin($user);
-
-        $organization = TenantContext::get();
-
-        if (! $this->hasPayrollPin($organization)) {
-            throw ValidationException::withMessages([
-                'payroll_pin' => ['Organization payroll PIN has not been configured yet.'],
-            ]);
-        }
-
-        if (! $this->validatePin($organization, $pin)) {
-            throw ValidationException::withMessages([
-                'payroll_pin' => ['Incorrect payroll PIN.'],
-            ]);
-        }
-
-        $expiresAt = now()->addMinutes(self::UNLOCK_TTL_MINUTES);
-        Cache::put($this->cacheKey($organization->id, $user->id), $expiresAt->timestamp, $expiresAt);
+        $this->assertValidPin($pin);
 
         return [
             'vault_unlocked' => true,
-            'unlock_expires_at' => $expiresAt->toIso8601String(),
+            'unlock_expires_at' => null,
+            'requires_pin_each_access' => true,
         ];
     }
 
     public function lock(User $user): void
     {
         $this->ensureAdmin($user);
-        Cache::forget($this->cacheKey(TenantContext::id(), $user->id));
     }
 
     public function changePin(User $admin, string $currentPin, string $newPin): void
@@ -153,35 +134,28 @@ class PayrollVaultService
         $this->storePin($organization, $newPin);
 
         $this->audit->log('payroll_pin.changed', $organization, $admin);
-        $this->lock($admin);
     }
 
-    public function isUnlocked(User $user): bool
+    public function isUnlocked(User $user, ?string $pin = null): bool
     {
         if (! $this->hasPayrollPin()) {
             return false;
         }
 
-        $expiresAt = Cache::get($this->cacheKey(TenantContext::id(), $user->id));
-
-        if (! $expiresAt) {
+        if ($pin === null || $pin === '') {
             return false;
         }
 
-        if (now()->timestamp >= (int) $expiresAt) {
-            Cache::forget($this->cacheKey(TenantContext::id(), $user->id));
-
-            return false;
-        }
-
-        return true;
+        return $this->validatePin(TenantContext::get(), $pin);
     }
 
-    public function assertUnlocked(User $user): void
+    public function assertUnlocked(User $user, ?string $pin = null): void
     {
-        if (! $this->isUnlocked($user)) {
+        $pin ??= request()->header('X-Payroll-Pin');
+
+        if (! $this->isUnlocked($user, is_string($pin) ? $pin : null)) {
             throw ValidationException::withMessages([
-                'payroll_vault' => ['Payroll vault is locked. Enter the organization payroll PIN to continue.'],
+                'payroll_vault' => ['Payroll PIN is required. Enter your organization payroll PIN to continue.'],
             ]);
         }
     }
@@ -195,15 +169,21 @@ class PayrollVaultService
         return hash_equals((string) $organization->payroll_pin, $pin);
     }
 
-    public function unlockExpiresAt(User $user): ?Carbon
+    private function assertValidPin(string $pin): void
     {
-        $expiresAt = Cache::get($this->cacheKey(TenantContext::id(), $user->id));
+        $organization = TenantContext::get();
 
-        if (! $expiresAt) {
-            return null;
+        if (! $this->hasPayrollPin($organization)) {
+            throw ValidationException::withMessages([
+                'payroll_pin' => ['Organization payroll PIN has not been configured yet.'],
+            ]);
         }
 
-        return Carbon::createFromTimestamp((int) $expiresAt);
+        if (! $this->validatePin($organization, $pin)) {
+            throw ValidationException::withMessages([
+                'payroll_pin' => ['Incorrect payroll PIN.'],
+            ]);
+        }
     }
 
     private function storePin(Organization $organization, string $pin): void
@@ -226,11 +206,6 @@ class PayrollVaultService
                 'payroll_pin' => ['Payroll PIN must be 4 to 8 digits.'],
             ]);
         }
-    }
-
-    private function cacheKey(int $organizationId, int $userId): string
-    {
-        return "payroll_vault_unlocked:{$organizationId}:{$userId}";
     }
 
     private function ensureAdmin(User $user): void

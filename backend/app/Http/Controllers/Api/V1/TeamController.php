@@ -9,7 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\TeamMemberResource;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use App\Http\Resources\EmployeeProfileResource;
 use App\Services\Auth\MembershipRoleSync;
+use App\Services\Employee\EmployeeDirectoryService;
 use App\Services\Payroll\AdminPayrollService;
 use App\Services\Payroll\PayrollVaultService;
 use App\Services\Tenant\TenantContext;
@@ -28,7 +30,8 @@ class TeamController extends Controller
     public function __construct(
         private readonly MembershipRoleSync $membershipRoleSync,
         private readonly AdminPayrollService $adminPayroll,
-        private readonly PayrollVaultService $payrollVault
+        private readonly PayrollVaultService $payrollVault,
+        private readonly EmployeeDirectoryService $employeeDirectory
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -37,24 +40,18 @@ class TeamController extends Controller
             abort(403);
         }
 
-        $members = OrganizationMember::query()
-            ->with('user')
-            ->where('organization_id', TenantContext::id())
-            ->orderBy('created_at')
-            ->get();
+        return TeamMemberResource::collection(
+            $this->employeeDirectory->membersWithDirectoryMeta()
+        );
+    }
 
-        $projectCounts = DB::table('project_assignments')
-            ->join('projects', 'projects.id', '=', 'project_assignments.project_id')
-            ->where('projects.organization_id', TenantContext::id())
-            ->select('project_assignments.user_id', DB::raw('count(*) as assigned_projects_count'))
-            ->groupBy('project_assignments.user_id')
-            ->pluck('assigned_projects_count', 'user_id');
+    public function profile(User $user): EmployeeProfileResource
+    {
+        $this->ensureUserInTenant($user);
 
-        $members->each(function (OrganizationMember $member) use ($projectCounts): void {
-            $member->assigned_projects_count = (int) ($projectCounts[$member->user_id] ?? 0);
-        });
-
-        return TeamMemberResource::collection($members);
+        return new EmployeeProfileResource(
+            $this->employeeDirectory->profileForUser($user)
+        );
     }
 
     public function createEmployee(Request $request): JsonResponse
@@ -105,7 +102,7 @@ class TeamController extends Controller
             $this->membershipRoleSync->syncFromMembership($membership);
 
             if (! empty($validated['salary_type'])) {
-                $this->adminPayroll->createInitialContract($user, $validated);
+                $this->adminPayroll->createInitialContract($user, $validated, $request->user());
             }
 
             if (! empty($validated['payroll_pin'])) {

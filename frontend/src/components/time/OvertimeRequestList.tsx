@@ -1,5 +1,6 @@
 "use client";
 
+import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import {
   ApiError,
   fetchOvertimeRequests,
@@ -7,7 +8,7 @@ import {
 } from "@/lib/api";
 import { formatDuration } from "@/lib/time";
 import type { OvertimeRequest } from "@/lib/types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function OvertimeRequestList() {
   const [requests, setRequests] = useState<OvertimeRequest[]>([]);
@@ -33,13 +34,36 @@ export function OvertimeRequestList() {
     void load();
   }, [load]);
 
+  const exportRows = useMemo(
+    () =>
+      requests.map((request) => ({
+        date: request.work_date,
+        project: request.project_name ?? "",
+        duration: formatDuration(request.duration_seconds),
+        status: request.status,
+      })),
+    [requests],
+  );
+
   if (loading) {
     return <div className="h-20 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />;
   }
 
   return (
     <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">My overtime requests</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">My overtime requests</h2>
+        <ExportDropdown
+          filename="overtime-requests"
+          columns={[
+            { key: "date", label: "Date" },
+            { key: "project", label: "Project" },
+            { key: "duration", label: "Duration" },
+            { key: "status", label: "Status" },
+          ]}
+          rows={exportRows}
+        />
+      </div>
       {error ? <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
       {requests.length === 0 ? (
         <p className="text-sm text-zinc-500">No overtime requests yet.</p>
