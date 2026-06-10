@@ -192,6 +192,10 @@ class OnboardingTest extends TestCase
             'email' => 'hire@example.com',
             'organization_id' => $admin->organization_id,
         ]);
+
+        $this->assertDatabaseHas('organization_members', [
+            'status' => 'active',
+        ]);
     }
 
     public function test_onboarding_csv_import_with_roles(): void

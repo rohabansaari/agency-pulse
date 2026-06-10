@@ -73,7 +73,7 @@ class TeamTest extends TestCase
 
         $this->assertDatabaseHas('users', ['email' => 'hire@example.com']);
         $this->assertDatabaseHas('organization_members', [
-            'status' => OrganizationMemberStatus::Invited->value,
+            'status' => OrganizationMemberStatus::Active->value,
         ]);
     }
 

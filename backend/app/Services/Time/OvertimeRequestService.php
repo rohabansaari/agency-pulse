@@ -33,7 +33,13 @@ class OvertimeRequestService
      */
     public function contextForEmployee(User $employee): array
     {
-        $this->assertOvertimeEnabled();
+        if (! $this->isOvertimeEnabled()) {
+            return [
+                'can_create' => false,
+                'reason' => 'Overtime is not enabled for this organization. Ask your admin to enable it in Payroll Settings.',
+                'projects' => [],
+            ];
+        }
 
         $team = $this->resolveEmployeeTeam($employee);
 
@@ -69,7 +75,13 @@ class OvertimeRequestService
      */
     public function contextForManager(User $manager): array
     {
-        $this->assertOvertimeEnabled();
+        if (! $this->isOvertimeEnabled()) {
+            return [
+                'can_create_self' => false,
+                'reason_self' => 'Overtime is not enabled for this organization. Ask your admin to enable it in Payroll Settings.',
+                'self_projects' => [],
+            ];
+        }
 
         $selfProjects = $this->accessibleProjectsForUser($manager);
         $canCreateSelf = $selfProjects->isNotEmpty();
@@ -258,11 +270,14 @@ class OvertimeRequestService
             ->get();
     }
 
+    private function isOvertimeEnabled(): bool
+    {
+        return (bool) $this->payrollSettings->forOrganization()->overtime_enabled;
+    }
+
     private function assertOvertimeEnabled(): void
     {
-        $settings = $this->payrollSettings->forOrganization();
-
-        if (! $settings->overtime_enabled) {
+        if (! $this->isOvertimeEnabled()) {
             throw ValidationException::withMessages([
                 'overtime' => ['Overtime is not enabled for this organization.'],
             ]);

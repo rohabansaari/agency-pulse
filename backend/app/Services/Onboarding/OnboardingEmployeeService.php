@@ -65,8 +65,8 @@ class OnboardingEmployeeService
                 'organization_id' => TenantContext::id(),
                 'user_id' => $user->id,
                 'role' => $role,
-                'status' => OrganizationMemberStatus::Invited,
-                'invited_at' => now(),
+                'status' => OrganizationMemberStatus::Active,
+                'joined_at' => now(),
             ]);
 
             $this->membershipRoleSync->syncFromMembership($membership);
@@ -79,7 +79,7 @@ class OnboardingEmployeeService
 
         return [
             'member' => $membership,
-            'message' => 'Employee invited. They can set a password when they first sign in.',
+            'message' => 'Employee added. They can set a password when they first sign in.',
         ];
     }
 

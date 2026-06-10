@@ -229,6 +229,25 @@ class OvertimeRequestTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_overtime_context_returns_reason_when_disabled(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $employee = User::factory()->create(['organization_id' => $admin->organization_id]);
+
+        OrganizationPayrollSettings::query()->updateOrCreate(
+            ['organization_id' => $admin->organization_id],
+            ['overtime_enabled' => false]
+        );
+
+        Sanctum::actingAs($employee);
+
+        $this->withHeaders($this->headers($employee))
+            ->getJson('/api/v1/time/overtime/context')
+            ->assertOk()
+            ->assertJsonPath('can_create', false)
+            ->assertJsonPath('reason', 'Overtime is not enabled for this organization. Ask your admin to enable it in Payroll Settings.');
+    }
+
     public function test_manager_can_submit_overtime_for_team_accessible_project_without_direct_membership(): void
     {
         ['admin' => $admin, 'manager' => $manager, 'employee' => $employee] = $this->setupTeamFixture();

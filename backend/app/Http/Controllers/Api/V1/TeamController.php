@@ -186,8 +186,8 @@ class TeamController extends Controller
                 'organization_id' => TenantContext::id(),
                 'user_id' => $user->id,
                 'role' => $validated['role'],
-                'status' => OrganizationMemberStatus::Invited,
-                'invited_at' => now(),
+                'status' => OrganizationMemberStatus::Active,
+                'joined_at' => now(),
             ]);
 
             $user->forceFill([
@@ -201,7 +201,7 @@ class TeamController extends Controller
         });
 
         return response()->json([
-            'message' => 'Employee invited.',
+            'message' => 'Employee added.',
             'member' => new TeamMemberResource($membership),
         ], 201);
     }

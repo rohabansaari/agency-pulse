@@ -131,10 +131,19 @@ export function OvertimeRequestForm({
         : "Managers can only request overtime for themselves here.";
 
   if (!canSubmit) {
+    const message = blockedReason ?? error ?? "Overtime requests are unavailable.";
+
     return (
       <section className="ui-card p-5">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Overtime request</h2>
-        <p className="mt-2 text-sm text-zinc-500">{blockedReason ?? "Overtime requests are unavailable."}</p>
+        <p className={`mt-2 text-sm ${error && !blockedReason ? "text-red-600 dark:text-red-400" : "text-zinc-500"}`}>
+          {message}
+        </p>
+        {!blockedReason && !error ? (
+          <p className="mt-2 text-xs text-zinc-400">
+            Employees need overtime enabled, team membership with a manager, and at least one assigned project.
+          </p>
+        ) : null}
       </section>
     );
   }
