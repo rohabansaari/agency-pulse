@@ -2,7 +2,7 @@ const AGENT_WAKE_URL = "agencypulse://wake";
 
 /**
  * Ask the installed desktop agent to wake and begin screenshot capture.
- * Requires a one-time install: AgencyPulseAgent.exe --install
+ * Requires a one-time setup: double-click AgencyPulseAgent.exe and sign in.
  */
 export function wakeDesktopAgent(): void {
   if (typeof window === "undefined") {

@@ -1,22 +1,38 @@
-# AgencyPulse Desktop Screenshot Agent
+# AgencyPulse Desktop Agent
 
-Minimal Windows agent — **one-time setup**, then employees only start their web timer.
+Production desktop agent for screenshot capture while the web timer is running.
 
-## Employee flow (after one-time setup)
+## Employee flow (no terminal commands)
 
-1. Open AgencyPulse in the browser
-2. Click **Start Timer** on Time Tracking
-3. Screenshots capture automatically every 5 minutes
-
-No extra steps, no "Check connection", no `--install` command.
-
-## One-time setup (each PC)
-
-1. Download **AgencyPulseAgent.zip** from the website (not the raw `.exe` — browsers block exe downloads)
+1. Download **AgencyPulseAgent.zip** from the website
 2. Extract `AgencyPulseAgent.exe`
-3. Double-click it and sign in once
+3. Double-click it
+4. First-run setup runs automatically (protocol handler + Windows Startup)
+5. Sign in once when prompted
+6. Start your timer on the website — screenshots begin automatically
 
-The agent automatically registers with Windows, adds itself to Startup, and runs in the background.
+After setup, the agent runs in the background. No `--install`, no CLI, no manual registration.
+
+## Timing
+
+| Task | Interval |
+|------|----------|
+| Heartbeat | 30 seconds |
+| Timer sync | 15 seconds |
+| Screenshots | 5 minutes (only while timer is active) |
+
+First screenshot is taken immediately when the timer starts.
+
+## Config & logs
+
+| Path | Purpose |
+|------|---------|
+| `%USERPROFILE%\.agencypulse\agent-config.json` | Token, user/org IDs, device ID |
+| `%USERPROFILE%\.agencypulse\agent.log` | Agent activity log |
+
+## Re-login
+
+Delete `agent-config.json` and double-click the agent again.
 
 ## For IT / admin
 
@@ -27,29 +43,25 @@ cd desktop-agent
 build.bat
 ```
 
-This creates:
+Creates `dist\AgencyPulseAgent.zip` and copies it to `frontend/public/downloads/` when that folder exists.
 
-- `dist\AgencyPulseAgent.zip` — upload to `frontend/public/downloads/` for web download
-- `dist\AgencyPulseAgent.exe` — inside the zip
+### Admin install mode (optional)
 
-PowerShell scripts blocked? `build.bat` works without changing execution policy.
+Normal employees should **never** use CLI flags. For IT troubleshooting only:
 
-### Deploy download file
+- Set environment variable `AGENCYPULSE_ADMIN=1`, or
+- Place an empty `.agencypulse-admin` file next to the exe
 
-After `build.bat`:
+Then run:
 
 ```bat
-copy dist\AgencyPulseAgent.zip ..\frontend\public\downloads\AgencyPulseAgent.zip
+AgencyPulseAgent.exe --install
 ```
 
-Commit and redeploy the **frontend** so employees get the download link.
+Without admin mode, `--install` shows a restriction message and exits.
 
-Or host the zip on R2/CDN and set `NEXT_PUBLIC_AGENT_DOWNLOAD_URL` on Render.
+### Deploy download
 
-## Logs
+After building, commit `frontend/public/downloads/AgencyPulseAgent.zip` and redeploy the frontend.
 
-`%USERPROFILE%\.agencypulse\agent.log`
-
-## Re-login
-
-Delete `%USERPROFILE%\.agencypulse\agent-config.json` and run the agent again.
+Or host on CDN/R2 and set `NEXT_PUBLIC_AGENT_DOWNLOAD_URL` on Render.

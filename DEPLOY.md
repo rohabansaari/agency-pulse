@@ -137,8 +137,8 @@ Replace with **your** API URL from Part 2, including `/api/v1`.
 
 Screenshots are captured by the **AgencyPulse Desktop Agent** (`desktop-agent/`), not the browser.
 
-1. Employee runs **one-time install**: `AgencyPulseAgent.exe --install` (registers `agencypulse://` + Windows Startup).
-2. Employee signs in on first agent run (credentials saved locally).
+1. Employee downloads **AgencyPulseAgent.zip**, extracts it, and double-clicks **AgencyPulseAgent.exe** (first-run setup is automatic — no CLI).
+2. Employee signs in once when prompted (credentials saved locally).
 3. Employee starts the timer on **Time Tracking** (`/time`) — the web app wakes the agent automatically.
 4. Agent captures **full-desktop screenshots every 5 minutes** (first capture immediately).
 5. Employees and managers view captures on **Screenshots** (`/screenshots`) — **read-only**.
@@ -153,14 +153,13 @@ cd desktop-agent
 .\build.ps1
 ```
 
-Share `dist\AgencyPulseAgent.exe` with employees and managers. Each employee runs **once**:
+Share `dist\AgencyPulseAgent.zip` with employees and managers (place in `frontend/public/downloads/` or host on CDN). Each employee:
 
 ```powershell
-AgencyPulseAgent.exe --install
-AgencyPulseAgent.exe
+# Extract AgencyPulseAgent.exe from the zip, then double-click it and sign in once.
 ```
 
-Sign in on first run. After that, starting the web timer auto-wakes the agent. See `desktop-agent/README.md`.
+After that, starting the web timer auto-wakes the agent. See `desktop-agent/README.md`.
 
 ### API environment (Cloudflare R2 — recommended for production)
 

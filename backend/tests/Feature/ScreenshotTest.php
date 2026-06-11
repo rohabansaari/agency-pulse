@@ -122,6 +122,28 @@ class ScreenshotTest extends TestCase
             ->assertJsonPath('connected', true);
     }
 
+    public function test_agent_heartbeat_route_accepts_payload(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/agent/heartbeat', [
+                'user_id' => 999999,
+                'device_id' => Str::uuid()->toString(),
+                'timestamp' => now()->toIso8601String(),
+                'status' => 'active',
+            ]);
+
+        $response->assertOk();
+
+        $status = $this->withHeaders($this->tenantHeaders($user))
+            ->getJson('/api/v1/screenshots/agent-status');
+
+        $status->assertOk()
+            ->assertJsonPath('connected', true);
+    }
+
     public function test_unauthenticated_upload_is_rejected(): void
     {
         $response = $this->postJson('/api/v1/screenshots', [

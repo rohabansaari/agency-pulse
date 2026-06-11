@@ -124,6 +124,12 @@ class ScreenshotController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        $request->validate([
+            'device_id' => ['sometimes', 'uuid'],
+            'timestamp' => ['sometimes', 'date'],
+            'status' => ['sometimes', 'string', 'max:32'],
+        ]);
+
         $this->agent->recordHeartbeat($user);
 
         return response()->json([

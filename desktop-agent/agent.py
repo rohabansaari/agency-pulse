@@ -1,10 +1,8 @@
 """
-AgencyPulse Desktop Screenshot Agent (minimal)
+AgencyPulse Desktop Agent
 
-- Registers as agencypulse:// URL handler (one-time --register)
-- Wakes automatically when the web timer starts (agencypulse://wake)
-- Captures full-screen screenshots every 5 minutes while the timer is running
-- Uploads to POST /api/v1/screenshots
+Double-click to run — first-run setup, login, heartbeat, timer sync, and screenshots.
+No CLI required for employees.
 """
 
 from __future__ import annotations
@@ -12,21 +10,26 @@ from __future__ import annotations
 import base64
 import io
 import json
+import os
 import sys
 import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable, TypeVar
 
 import mss
 import requests
 from PIL import Image
 
+HEARTBEAT_INTERVAL_SECONDS = 30
+TIMER_POLL_INTERVAL_SECONDS = 15
 CAPTURE_INTERVAL_SECONDS = 300
-POLL_INTERVAL_SECONDS = 10
 MAX_IMAGE_WIDTH = 1600
 JPEG_QUALITY = 60
-MAX_UPLOAD_ATTEMPTS = 3
+MAX_RETRIES = 3
+RETRY_DELAYS_SECONDS = (2, 4, 8)
+DEFAULT_API_BASE_URL = "https://agency-pulse-api.onrender.com/api/v1"
 PROTOCOL = "agencypulse"
 
 CONFIG_DIR = Path.home() / ".agencypulse"
@@ -36,6 +39,7 @@ LOCK_PATH = CONFIG_DIR / "agent.lock"
 WAKE_PATH = CONFIG_DIR / "wake.signal"
 
 _lock_handle = None
+T = TypeVar("T")
 
 
 def log(message: str) -> None:
@@ -57,18 +61,29 @@ def notify_user(title: str, message: str) -> None:
             log(f"Unable to show notification dialog: {error}")
 
 
-def executable_command() -> str:
+def executable_path() -> Path:
     if getattr(sys, "frozen", False):
-        return f'"{Path(sys.executable).resolve()}" "%1"'
-
-    script = Path(__file__).resolve()
-    return f'"{Path(sys.executable).resolve()}" "{script}" "%1"'
+        return Path(sys.executable).resolve()
+    return Path(__file__).resolve()
 
 
-def register_protocol() -> int:
+def executable_command() -> str:
+    target = executable_path()
+    if getattr(sys, "frozen", False):
+        return f'"{target}" "%1"'
+    return f'"{Path(sys.executable).resolve()}" "{target}" "%1"'
+
+
+def is_admin_mode() -> bool:
+    if os.environ.get("AGENCYPULSE_ADMIN") == "1":
+        return True
+    return (executable_path().parent / ".agencypulse-admin").exists()
+
+
+def register_protocol() -> bool:
     if sys.platform != "win32":
-        print("Protocol registration is supported on Windows only.")
-        return 1
+        log("Protocol registration skipped (Windows only).")
+        return False
 
     import winreg
 
@@ -80,7 +95,7 @@ def register_protocol() -> int:
         winreg.SetValueEx(key, "URL Protocol", 0, winreg.REG_SZ, "")
 
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, f"{base}\\DefaultIcon") as key:
-        icon = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve()
+        icon = executable_path()
         winreg.SetValue(key, None, winreg.REG_SZ, f"{icon},0")
 
     with winreg.CreateKey(
@@ -89,19 +104,18 @@ def register_protocol() -> int:
     ) as key:
         winreg.SetValue(key, None, winreg.REG_SZ, command)
 
-    log(f"Registered {PROTOCOL}:// handler.")
-    print(f"Registered {PROTOCOL}:// — the web app can wake this agent when a timer starts.")
-    return 0
+    log(f"Registered {PROTOCOL}:// handler (current user).")
+    return True
 
 
-def add_startup_shortcut() -> int:
+def add_startup_shortcut() -> bool:
     if sys.platform != "win32":
-        print("Startup shortcut is supported on Windows only.")
-        return 1
+        log("Startup shortcut skipped (Windows only).")
+        return False
 
     import subprocess
 
-    target = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve()
+    target = executable_path()
     startup = (
         Path.home()
         / "AppData"
@@ -131,25 +145,32 @@ def add_startup_shortcut() -> int:
     )
 
     if result.returncode != 0:
-        print("Could not add Startup shortcut. Add AgencyPulseAgent.exe to Startup manually.")
+        log("Could not add Startup shortcut.")
         if result.stderr:
-            print(result.stderr.strip())
-        return 1
+            log(result.stderr.strip())
+        return False
 
     log(f"Added startup shortcut: {shortcut_path}")
-    print("Agent will start automatically when you sign in to Windows.")
-    return 0
+    return True
 
 
-def install_agent() -> int:
-    code = register_protocol()
-    if code != 0:
-        return code
+def run_first_run_setup(config: dict) -> dict:
+    if config.get("setup_complete") or config.get("desktop_installed"):
+        if config.get("desktop_installed") and not config.get("setup_complete"):
+            config["setup_complete"] = True
+            save_config(config)
+        return config
 
-    if add_startup_shortcut() != 0:
-        print("Protocol registered. Add AgencyPulseAgent.exe to Startup manually if needed.")
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    log("First-run setup: registering protocol and startup entry...")
+    register_protocol()
+    add_startup_shortcut()
 
-    return 0
+    config["setup_complete"] = True
+    config.setdefault("device_id", str(uuid.uuid4()))
+    save_config(config)
+    log("First-run setup complete.")
+    return config
 
 
 def acquire_lock() -> bool:
@@ -193,7 +214,7 @@ def sleep_until(seconds: float) -> None:
         if WAKE_PATH.exists():
             WAKE_PATH.unlink(missing_ok=True)
             return
-        time.sleep(0.25)
+        time.sleep(min(0.5, max(0.0, deadline - time.time())))
 
 
 def load_config() -> dict:
@@ -210,29 +231,121 @@ def save_config(config: dict) -> None:
     log(f"Saved config to {CONFIG_PATH}")
 
 
-def prompt_login_gui() -> dict:
+def clear_auth(config: dict) -> dict:
+    for key in ("token", "user_id", "organization_id"):
+        config.pop(key, None)
+    save_config(config)
+    return config
+
+
+def headers(config: dict) -> dict:
+    return {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {config['token']}",
+        "X-Organization-Id": str(config["organization_id"]),
+    }
+
+
+def parse_api_error(response: requests.Response) -> str:
+    try:
+        body = response.json()
+    except ValueError:
+        return response.text[:300] or f"Request failed ({response.status_code})."
+
+    message = body.get("message")
+    if message:
+        return str(message)
+
+    errors = body.get("errors")
+    if isinstance(errors, dict):
+        for field_errors in errors.values():
+            if isinstance(field_errors, list) and field_errors:
+                return str(field_errors[0])
+
+    return response.text[:300] or f"Request failed ({response.status_code})."
+
+
+def with_retries(action: Callable[[], T | None], label: str) -> T | None:
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            result = action()
+            if result is not None:
+                return result
+        except requests.RequestException as error:
+            log(f"{label} attempt {attempt}/{MAX_RETRIES} failed: {error}")
+        except RuntimeError as error:
+            log(f"{label} attempt {attempt}/{MAX_RETRIES} failed: {error}")
+            raise
+
+        if attempt < MAX_RETRIES:
+            delay = RETRY_DELAYS_SECONDS[attempt - 1]
+            log(f"{label} retrying in {delay}s...")
+            time.sleep(delay)
+
+    log(f"{label} failed after {MAX_RETRIES} attempts.")
+    return None
+
+
+def validate_session(config: dict) -> bool:
+    def attempt() -> bool | None:
+        response = requests.get(
+            f"{config['api_base_url']}/auth/me",
+            headers=headers(config),
+            timeout=30,
+        )
+
+        if response.status_code == 401:
+            return False
+
+        if response.status_code >= 400:
+            log(f"Session validation failed ({response.status_code}): {parse_api_error(response)}")
+            return None
+
+        payload = response.json()
+        user = payload.get("user") or {}
+        user_id = user.get("id")
+        organization_id = payload.get("current_organization_id")
+
+        if not user_id or not organization_id:
+            log("Session validation response missing user or organization.")
+            return False
+
+        config["user_id"] = int(user_id)
+        config["organization_id"] = int(organization_id)
+        save_config(config)
+        return True
+
+    try:
+        result = with_retries(attempt, "Session validation")
+    except RuntimeError:
+        return False
+
+    return result is True
+
+
+def prompt_login_gui(config: dict) -> dict:
     import tkinter as tk
     from tkinter import messagebox, ttk
 
     result: dict = {}
-    default_api = "https://agency-pulse-api.onrender.com/api/v1"
+    default_api = config.get("api_base_url") or DEFAULT_API_BASE_URL
 
     root = tk.Tk()
     root.title("AgencyPulse Desktop Agent")
     root.resizable(False, False)
-    root.geometry("420x260")
+    root.geometry("420x240")
 
     frame = ttk.Frame(root, padding=16)
     frame.pack(fill="both", expand=True)
 
-    ttk.Label(frame, text="Sign in to enable screenshot capture", font=("Segoe UI", 11, "bold")).pack(
+    ttk.Label(frame, text="Sign in to AgencyPulse", font=("Segoe UI", 11, "bold")).pack(
         anchor="w"
     )
-    ttk.Label(frame, text="Your credentials are saved locally on this PC.").pack(anchor="w", pady=(4, 12))
-
-    ttk.Label(frame, text="API URL").pack(anchor="w")
-    api_var = tk.StringVar(value=default_api)
-    ttk.Entry(frame, textvariable=api_var, width=52).pack(fill="x", pady=(0, 8))
+    ttk.Label(
+        frame,
+        text="Sign in once on this PC. The agent runs automatically after that.",
+    ).pack(anchor="w", pady=(4, 12))
 
     ttk.Label(frame, text="Email").pack(anchor="w")
     email_var = tk.StringVar()
@@ -243,7 +356,7 @@ def prompt_login_gui() -> dict:
     ttk.Entry(frame, textvariable=password_var, show="*", width=52).pack(fill="x", pady=(0, 12))
 
     def submit() -> None:
-        api_base_url = api_var.get().strip() or default_api
+        api_base_url = default_api.rstrip("/")
         email = email_var.get().strip()
         password = password_var.get().strip()
 
@@ -253,7 +366,7 @@ def prompt_login_gui() -> dict:
 
         try:
             response = requests.post(
-                f"{api_base_url.rstrip('/')}/auth/login",
+                f"{api_base_url}/auth/login",
                 json={"email": email, "password": password},
                 headers={"Accept": "application/json", "Content-Type": "application/json"},
                 timeout=60,
@@ -263,24 +376,46 @@ def prompt_login_gui() -> dict:
             return
 
         if response.status_code >= 400:
-            messagebox.showerror("AgencyPulse Agent", f"Login failed: {response.text[:300]}")
+            messagebox.showerror("AgencyPulse Agent", parse_api_error(response))
             return
 
         payload = response.json()
         token = payload.get("token")
         organization_id = payload.get("current_organization_id")
+        user = payload.get("user") or {}
+        user_id = user.get("id")
 
-        if not token or not organization_id:
-            messagebox.showerror("AgencyPulse Agent", "Login response missing token or organization.")
+        if not token or not organization_id or not user_id:
+            messagebox.showerror(
+                "AgencyPulse Agent",
+                "Login response missing token, organization, or user.",
+            )
             return
 
-        result.update(
-            {
-                "api_base_url": api_base_url.rstrip("/"),
-                "token": token,
-                "organization_id": int(organization_id),
-            }
-        )
+        candidate = {
+            **config,
+            "api_base_url": api_base_url,
+            "token": token,
+            "organization_id": int(organization_id),
+            "user_id": int(user_id),
+            "device_id": config.get("device_id") or str(uuid.uuid4()),
+        }
+
+        try:
+            me_response = requests.get(
+                f"{api_base_url}/auth/me",
+                headers=headers(candidate),
+                timeout=30,
+            )
+        except requests.RequestException as error:
+            messagebox.showerror("AgencyPulse Agent", f"Could not verify login: {error}")
+            return
+
+        if me_response.status_code >= 400:
+            messagebox.showerror("AgencyPulse Agent", parse_api_error(me_response))
+            return
+
+        result.update(candidate)
         root.destroy()
 
     ttk.Button(frame, text="Sign in", command=submit).pack(anchor="e")
@@ -293,83 +428,96 @@ def prompt_login_gui() -> dict:
     return result
 
 
-def ensure_installed(config: dict) -> dict:
-    if config.get("desktop_installed"):
-        return config
-
-    log("Running first-time desktop setup (protocol + startup)...")
-    install_agent()
-    config["desktop_installed"] = True
-    save_config(config)
-    notify_user(
-        "AgencyPulse Agent",
-        "Setup complete.\n\nStart your timer on the AgencyPulse website — screenshots will begin automatically.",
-    )
-    return config
-
-
 def ensure_config() -> dict:
     config = load_config()
-    if config.get("token") and config.get("organization_id"):
-        return ensure_installed(config)
+    config = run_first_run_setup(config)
 
-    launched_from_protocol = any(arg.lower().startswith(f"{PROTOCOL}://") for arg in sys.argv[1:])
+    if not config.get("device_id"):
+        config["device_id"] = str(uuid.uuid4())
+        save_config(config)
+
+    if config.get("token") and config.get("organization_id"):
+        if validate_session(config):
+            log("Agent connected with saved credentials.")
+            return config
+        log("Saved session expired — sign in again.")
+        config = clear_auth(config)
 
     try:
-        config = prompt_login_gui()
-        return ensure_installed(config)
-    except Exception as error:
-        message = (
-            "AgencyPulse Desktop Agent is not set up on this PC.\n\n"
+        return prompt_login_gui(config)
+    except RuntimeError as error:
+        notify_user(
+            "AgencyPulse Agent",
+            "Sign-in is required to run the desktop agent.\n\n"
             "Download AgencyPulseAgent.zip from the website, extract it, "
-            "and double-click AgencyPulseAgent.exe once to sign in."
+            "and double-click AgencyPulseAgent.exe.",
         )
-        notify_user("AgencyPulse Agent", message)
-        log(f"Unable to complete first-time sign-in: {error}")
-        if launched_from_protocol:
-            log("Agent launched from browser before setup completed.")
         raise RuntimeError("Agent is not configured.") from error
 
 
-def headers(config: dict) -> dict:
-    return {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {config['token']}",
-        "X-Organization-Id": str(config["organization_id"]),
+def send_heartbeat(config: dict, offline: bool) -> bool:
+    payload = {
+        "user_id": config.get("user_id"),
+        "device_id": config.get("device_id"),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "status": "active",
     }
 
-
-def send_heartbeat(config: dict) -> None:
-    try:
+    def attempt() -> bool | None:
         response = requests.post(
-            f"{config['api_base_url']}/screenshots/agent-heartbeat",
+            f"{config['api_base_url']}/agent/heartbeat",
             headers=headers(config),
+            json=payload,
             timeout=30,
         )
+
+        if response.status_code == 401:
+            raise RuntimeError("Session expired.")
+
         if response.status_code >= 400:
-            log(f"Heartbeat rejected ({response.status_code}): {response.text[:200]}")
-    except requests.RequestException as error:
-        log(f"Heartbeat error: {error}")
+            log(f"Heartbeat rejected ({response.status_code}): {parse_api_error(response)}")
+            return None
+
+        return True
+
+    for attempt_index in range(2):
+        try:
+            if attempt() is True:
+                if offline:
+                    log("Agent back online.")
+                return True
+        except RuntimeError:
+            raise
+        except requests.RequestException as error:
+            log(f"Heartbeat error: {error}")
+
+        if attempt_index == 0:
+            time.sleep(2)
+
+    log("Heartbeat failed — continuing in offline mode.")
+    return False
 
 
 def fetch_active_timer(config: dict) -> dict | None:
-    response = requests.get(
-        f"{config['api_base_url']}/time/today",
-        headers=headers(config),
-        timeout=60,
-    )
+    def attempt() -> dict | None:
+        response = requests.get(
+            f"{config['api_base_url']}/time/today",
+            headers=headers(config),
+            timeout=60,
+        )
 
-    if response.status_code == 401:
-        raise RuntimeError("Session expired. Delete agent-config.json and run again to log in.")
+        if response.status_code == 401:
+            raise RuntimeError("Session expired.")
 
-    if response.status_code >= 400:
-        log(f"Timer check failed ({response.status_code}): {response.text[:200]}")
-        return None
+        if response.status_code >= 400:
+            log(f"Timer check failed ({response.status_code}): {parse_api_error(response)}")
+            return None
 
-    payload = response.json()
-    meta = payload.get("meta") or {}
-    return meta.get("active_timer")
+        payload = response.json()
+        meta = payload.get("meta") or {}
+        return meta.get("active_timer")
+
+    return with_retries(attempt, "Timer poll")
 
 
 def capture_screen_base64() -> str:
@@ -393,7 +541,6 @@ def upload_screenshot(
     config: dict,
     session_id: str,
     project_id: int | None,
-    attempt: int = 1,
 ) -> bool:
     payload = {
         "image": capture_screen_base64(),
@@ -402,107 +549,157 @@ def upload_screenshot(
         "project_id": project_id,
     }
 
-    try:
+    def attempt() -> bool | None:
         response = requests.post(
             f"{config['api_base_url']}/screenshots",
             headers=headers(config),
             json=payload,
             timeout=120,
         )
-    except requests.RequestException as error:
-        log(f"Upload attempt {attempt}/{MAX_UPLOAD_ATTEMPTS} failed: {error}")
-        if attempt < MAX_UPLOAD_ATTEMPTS:
-            time.sleep(2 * attempt)
-            return upload_screenshot(config, session_id, project_id, attempt + 1)
-        log("Upload failed after maximum retries.")
-        return False
 
-    if response.status_code == 403:
-        try:
-            body = response.json()
-        except ValueError:
-            body = {}
-        code = body.get("code")
-        log(f"Upload rejected ({response.status_code}, code={code}): {response.text[:300]}")
-        return False
+        if response.status_code == 401:
+            raise RuntimeError("Session expired.")
 
-    if response.status_code >= 500 and attempt < MAX_UPLOAD_ATTEMPTS:
-        log(f"Upload attempt {attempt}/{MAX_UPLOAD_ATTEMPTS} failed with server error {response.status_code}.")
-        time.sleep(2 * attempt)
-        return upload_screenshot(config, session_id, project_id, attempt + 1)
+        if response.status_code == 403:
+            try:
+                body = response.json()
+            except ValueError:
+                body = {}
+            code = body.get("code")
+            log(f"Upload rejected ({response.status_code}, code={code}): {parse_api_error(response)}")
+            return False
 
-    if response.status_code >= 400:
-        log(f"Upload rejected ({response.status_code}): {response.text[:300]}")
-        return False
+        if response.status_code >= 400:
+            log(f"Upload rejected ({response.status_code}): {parse_api_error(response)}")
+            return None
 
-    log(f"Screenshot uploaded successfully on attempt {attempt}.")
-    return True
+        log("Screenshot uploaded successfully.")
+        return True
+
+    try:
+        result = with_retries(attempt, "Screenshot upload")
+    except RuntimeError:
+        raise
+
+    return result is True
+
+
+class TimerSession:
+    def __init__(self) -> None:
+        self.active_entry_id: int | None = None
+        self.session_id: str | None = None
+        self.project_id: int | None = None
+        self.last_capture_at: float = 0.0
+
+    def clear(self) -> None:
+        if self.active_entry_id is not None:
+            log("Timer stopped. Screenshot capture paused.")
+        self.active_entry_id = None
+        self.session_id = None
+        self.project_id = None
+        self.last_capture_at = 0.0
+
+
+def handle_timer_state(
+    config: dict,
+    session: TimerSession,
+    timer: dict | None,
+    *,
+    force_capture: bool = False,
+) -> None:
+    if not timer or timer.get("status") != "running":
+        session.clear()
+        return
+
+    entry_id = int(timer["id"])
+    project_id = timer.get("project_id")
+    new_session = session.active_entry_id != entry_id
+
+    if new_session:
+        session.active_entry_id = entry_id
+        session.session_id = str(uuid.uuid4())
+        session.project_id = project_id
+        session.last_capture_at = 0.0
+        log(f"Timer active (entry {entry_id}). Taking first screenshot now.")
+        force_capture = True
+
+    should_capture = session.session_id is not None and (
+        force_capture or time.time() - session.last_capture_at >= CAPTURE_INTERVAL_SECONDS
+    )
+
+    if not should_capture:
+        return
+
+    if upload_screenshot(config, session.session_id, session.project_id):
+        session.last_capture_at = time.time()
+    else:
+        session.last_capture_at = time.time() - (CAPTURE_INTERVAL_SECONDS - 60)
 
 
 def run_agent() -> None:
     config = ensure_config()
+    session = TimerSession()
+    offline = False
+    loop_index = 0
 
     log("AgencyPulse agent running.")
-    log("Start your timer in the web app — screenshots begin automatically.")
-
-    active_entry_id: int | None = None
-    session_id: str | None = None
-    project_id: int | None = None
-    last_capture_at: float = 0.0
+    log(
+        "Intervals: heartbeat 30s, timer poll 15s, screenshots 5m while timer is active."
+    )
 
     while True:
-        if WAKE_PATH.exists():
+        loop_index += 1
+        wake_received = WAKE_PATH.exists()
+        if wake_received:
             WAKE_PATH.unlink(missing_ok=True)
             log("Timer wake received — checking for active timer.")
 
-        send_heartbeat(config)
-
         try:
+            if loop_index % 2 == 1 or wake_received:
+                offline = not send_heartbeat(config, offline)
+
             timer = fetch_active_timer(config)
+            handle_timer_state(
+                config,
+                session,
+                timer,
+                force_capture=wake_received,
+            )
         except RuntimeError as error:
             log(str(error))
-            sleep_until(POLL_INTERVAL_SECONDS)
+            config = clear_auth(config)
+            config = ensure_config()
+            session.clear()
+            offline = False
             continue
 
-        if timer and timer.get("status") == "running":
-            entry_id = int(timer["id"])
-            project_id = timer.get("project_id")
-            new_session = active_entry_id != entry_id
+        sleep_until(TIMER_POLL_INTERVAL_SECONDS)
 
-            if new_session:
-                active_entry_id = entry_id
-                session_id = str(uuid.uuid4())
-                last_capture_at = 0.0
-                log(f"Timer active (entry {entry_id}). Taking first screenshot now.")
 
-            should_capture = session_id is not None and (
-                new_session or time.time() - last_capture_at >= CAPTURE_INTERVAL_SECONDS
-            )
-
-            if should_capture and upload_screenshot(config, session_id, project_id):
-                last_capture_at = time.time()
-            elif should_capture:
-                log("Screenshot capture failed; retrying in about 60 seconds.")
-                last_capture_at = time.time() - (CAPTURE_INTERVAL_SECONDS - 60)
-        else:
-            if active_entry_id is not None:
-                log("Timer stopped. Screenshot capture paused.")
-            active_entry_id = None
-            session_id = None
-            project_id = None
-            last_capture_at = 0.0
-
-        sleep_until(POLL_INTERVAL_SECONDS)
+def admin_install() -> int:
+    register_protocol()
+    add_startup_shortcut()
+    print("Admin install complete.")
+    return 0
 
 
 def main() -> int:
     args = [arg.lower() for arg in sys.argv[1:]]
 
-    if "--register" in args:
-        return register_protocol()
+    if "--install" in args or "--register" in args:
+        if not is_admin_mode():
+            notify_user(
+                "AgencyPulse Agent",
+                "This installation mode is restricted.\n\n"
+                "Please run the application normally by double-clicking AgencyPulseAgent.exe.",
+            )
+            return 1
+        return admin_install()
 
-    if "--install" in args:
-        return install_agent()
+    if any(arg.lower().startswith(f"{PROTOCOL}://") for arg in sys.argv[1:]):
+        if not acquire_lock():
+            signal_wake()
+            return 0
 
     if not acquire_lock():
         signal_wake()

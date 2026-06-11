@@ -8,9 +8,10 @@ if not exist "dist\AgencyPulseAgent.exe" (
   if errorlevel 1 exit /b 1
 )
 
-echo Installing AgencyPulse Desktop Agent...
+echo IT admin install (requires AGENCYPULSE_ADMIN=1 or .agencypulse-admin next to exe)...
+set AGENCYPULSE_ADMIN=1
 dist\AgencyPulseAgent.exe --install
 
 echo.
-echo Done. Run dist\AgencyPulseAgent.exe once to sign in.
+echo Done. Employees should double-click the exe normally to sign in.
 endlocal

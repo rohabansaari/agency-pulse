@@ -15,4 +15,5 @@ python -m PyInstaller `
 
 Write-Host ""
 Write-Host "Built: dist\AgencyPulseAgent.exe"
-Write-Host "Deploy: copy exe to employees, then run: AgencyPulseAgent.exe --install"
+Write-Host "Run build.bat to create dist\AgencyPulseAgent.zip for web download."
+Write-Host "Employees: extract zip, double-click exe, sign in once — no --install needed."
