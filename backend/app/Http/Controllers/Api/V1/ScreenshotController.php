@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\TimeEntryStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ScreenshotResource;
 use App\Models\Project;
 use App\Models\Screenshot;
+use App\Models\TimeEntry;
 use App\Support\ReportDateRange;
 use App\Services\Projects\ProjectAccessService;
 use App\Services\Screenshots\ScreenshotAccessService;
+use App\Services\Screenshots\ScreenshotAgentService;
 use App\Services\Screenshots\ScreenshotStorageService;
 use App\Services\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +26,8 @@ class ScreenshotController extends Controller
     public function __construct(
         private readonly ScreenshotStorageService $storage,
         private readonly ScreenshotAccessService $access,
-        private readonly ProjectAccessService $projectAccess
+        private readonly ProjectAccessService $projectAccess,
+        private readonly ScreenshotAgentService $agent
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -32,6 +36,19 @@ class ScreenshotController extends Controller
 
         if (! $user->can('screenshots.upload')) {
             return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $activeTimer = TimeEntry::query()
+            ->trackedTimers()
+            ->where('user_id', $user->id)
+            ->where('status', TimeEntryStatus::Running)
+            ->first();
+
+        if (! $activeTimer) {
+            return response()->json([
+                'message' => 'No active timer. Start your timer before uploading screenshots.',
+                'code' => 'NO_ACTIVE_TIMER',
+            ], 403);
         }
 
         $validated = $request->validate([
@@ -92,10 +109,38 @@ class ScreenshotController extends Controller
         ]);
 
         $screenshot->load(['user', 'project']);
+        $this->agent->recordHeartbeat($user);
 
         return response()->json([
             'screenshot' => ScreenshotResource::make($screenshot),
         ], 201);
+    }
+
+    public function heartbeat(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user->can('screenshots.upload')) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $this->agent->recordHeartbeat($user);
+
+        return response()->json([
+            'message' => 'Heartbeat recorded.',
+            'recorded_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    public function agentStatus(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user->can('screenshots.upload')) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        return response()->json($this->agent->status($user));
     }
 
     public function index(Request $request): AnonymousResourceCollection|JsonResponse

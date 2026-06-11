@@ -1,6 +1,7 @@
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { DesktopAgentBanner } from "@/components/screenshots/DesktopAgentBanner";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import type { User } from "@/lib/types";
 import Link from "next/link";
@@ -100,7 +101,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </header>
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto w-full max-w-7xl">{children}</div>
+            <div className="mx-auto w-full max-w-7xl">
+              {user.role === "employee" || user.role === "manager" ? (
+                <DesktopAgentBanner user={user} />
+              ) : null}
+              {children}
+            </div>
           </main>
         </div>
 

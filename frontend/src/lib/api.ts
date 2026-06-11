@@ -979,6 +979,16 @@ export function formatApiErrors(errors?: Record<string, string[]>): string {
   return Object.values(errors).flat().join(" ");
 }
 
+export interface ScreenshotAgentStatus {
+  connected: boolean;
+  last_heartbeat_at: string | null;
+  last_upload_at: string | null;
+}
+
+export async function fetchScreenshotAgentStatus(): Promise<ScreenshotAgentStatus> {
+  return apiFetch<ScreenshotAgentStatus>("/screenshots/agent-status");
+}
+
 export async function fetchScreenshots(params: {
   user_id?: number;
   session_id?: string;

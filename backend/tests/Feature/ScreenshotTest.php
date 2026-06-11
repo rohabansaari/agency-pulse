@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\TimeEntryStatus;
 use App\Models\Screenshot;
+use App\Models\TimeEntry;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,9 +36,20 @@ class ScreenshotTest extends TestCase
         ];
     }
 
-    public function test_employee_can_upload_screenshot(): void
+    private function startRunningTimer(User $user): TimeEntry
+    {
+        return TimeEntry::query()->create([
+            'user_id' => $user->id,
+            'organization_id' => $user->organization_id,
+            'start_time' => now(),
+            'status' => TimeEntryStatus::Running,
+        ]);
+    }
+
+    public function test_employee_can_upload_screenshot_with_active_timer(): void
     {
         $user = User::factory()->create();
+        $this->startRunningTimer($user);
         Sanctum::actingAs($user);
 
         $sessionId = Str::uuid()->toString();
@@ -57,6 +70,56 @@ class ScreenshotTest extends TestCase
             'organization_id' => $user->organization_id,
             'session_id' => $sessionId,
         ]);
+    }
+
+    public function test_upload_without_active_timer_returns_no_active_timer(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/screenshots', [
+                'image' => self::SAMPLE_IMAGE,
+                'timestamp' => now()->toIso8601String(),
+                'session_id' => Str::uuid()->toString(),
+            ]);
+
+        $response->assertForbidden()
+            ->assertJsonPath('code', 'NO_ACTIVE_TIMER');
+    }
+
+    public function test_manager_can_upload_screenshot_with_active_timer(): void
+    {
+        $manager = User::factory()->manager()->create();
+        $this->startRunningTimer($manager);
+        Sanctum::actingAs($manager);
+
+        $response = $this->withHeaders($this->tenantHeaders($manager))
+            ->postJson('/api/v1/screenshots', [
+                'image' => self::SAMPLE_IMAGE,
+                'timestamp' => now()->toIso8601String(),
+                'session_id' => Str::uuid()->toString(),
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('screenshot.user_id', $manager->id);
+    }
+
+    public function test_agent_heartbeat_marks_user_connected(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $heartbeat = $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/screenshots/agent-heartbeat');
+
+        $heartbeat->assertOk();
+
+        $status = $this->withHeaders($this->tenantHeaders($user))
+            ->getJson('/api/v1/screenshots/agent-status');
+
+        $status->assertOk()
+            ->assertJsonPath('connected', true);
     }
 
     public function test_unauthenticated_upload_is_rejected(): void

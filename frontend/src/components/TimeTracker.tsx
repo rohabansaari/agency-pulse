@@ -400,22 +400,6 @@ export function TimeTracker({ user }: { user?: User }) {
               : "Track your work hours across projects"}
         </p>
         {(isEmployee || isManager) ? (
-          <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-100">
-            <p className="font-medium">One-time desktop agent setup</p>
-            <p className="mt-1 text-blue-800/90 dark:text-blue-200/90">
-              Install <span className="font-mono text-xs">AgencyPulseAgent.exe</span> once
-              (run <span className="font-mono text-xs">--install</span> or{" "}
-              <span className="font-mono text-xs">register-agent.ps1</span>). When you start the
-              timer here, the agent wakes automatically and captures your full screen every 5
-              minutes. View captures on{" "}
-              <a href="/screenshots" className="underline hover:no-underline">
-                Screenshots
-              </a>
-              .
-            </p>
-          </div>
-        ) : null}
-        {(isEmployee || isManager) ? (
           <div className="mt-4 flex gap-2">
             <button
               type="button"

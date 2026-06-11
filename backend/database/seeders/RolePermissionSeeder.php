@@ -62,7 +62,7 @@ class RolePermissionSeeder extends Seeder
                 'employees.invite',
                 'timer.start', 'timer.stop', 'timer.pause', 'timer.view',
                 'timesheets.view', 'timesheets.create_manual', 'timesheets.approve',
-                'screenshots.view', 'screenshots.review',
+                'screenshots.upload', 'screenshots.view', 'screenshots.review',
                 'attendance.view',
                 'leave.view', 'leave.view_all', 'leave.apply', 'leave.approve',
                 'payroll.view_self',
