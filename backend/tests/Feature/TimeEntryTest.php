@@ -9,10 +9,12 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\ConnectsDesktopAgent;
 use Tests\TestCase;
 
 class TimeEntryTest extends TestCase
 {
+    use ConnectsDesktopAgent;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -32,6 +34,7 @@ class TimeEntryTest extends TestCase
     public function test_user_can_start_timer(): void
     {
         $user = User::factory()->create();
+        $this->connectDesktopAgent($user);
         Sanctum::actingAs($user);
 
         $response = $this->withHeaders($this->tenantHeaders($user))
@@ -54,6 +57,7 @@ class TimeEntryTest extends TestCase
         ]);
         $project->members()->attach($user->id);
 
+        $this->connectDesktopAgent($user);
         Sanctum::actingAs($user);
 
         $response = $this->withHeaders($this->tenantHeaders($user))
@@ -71,6 +75,7 @@ class TimeEntryTest extends TestCase
         $user = User::factory()->create();
         $otherProject = Project::factory()->create();
 
+        $this->connectDesktopAgent($user);
         Sanctum::actingAs($user);
 
         $response = $this->withHeaders($this->tenantHeaders($user))
@@ -85,6 +90,7 @@ class TimeEntryTest extends TestCase
     public function test_user_cannot_start_second_timer(): void
     {
         $user = User::factory()->create();
+        $this->connectDesktopAgent($user);
         Sanctum::actingAs($user);
 
         TimeEntry::create([
@@ -190,6 +196,18 @@ class TimeEntryTest extends TestCase
         $this->assertTrue($byProject->contains(
             fn (array $group) => $group['project_name'] === 'No project' && $group['total_duration'] === 1800
         ));
+    }
+
+    public function test_timer_start_requires_connected_desktop_agent(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/time/start');
+
+        $response->assertForbidden()
+            ->assertJsonPath('code', 'AGENT_NOT_CONNECTED');
     }
 
     public function test_time_routes_require_authentication(): void

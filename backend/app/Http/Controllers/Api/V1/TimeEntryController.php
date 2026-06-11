@@ -13,6 +13,7 @@ use App\Models\TimeEntry;
 use App\Services\Payroll\PayrollPeriodLockService;
 use App\Services\Projects\ProjectAccessService;
 use App\Services\Reporting\ReportingService;
+use App\Services\Screenshots\ScreenshotAgentService;
 use App\Services\Tenant\TenantContext;
 use App\Support\WorkforceMembers;
 use Illuminate\Http\JsonResponse;
@@ -27,7 +28,8 @@ class TimeEntryController extends Controller
     public function __construct(
         private readonly ProjectAccessService $projectAccess,
         private readonly ReportingService $reporting,
-        private readonly PayrollPeriodLockService $payrollLock
+        private readonly PayrollPeriodLockService $payrollLock,
+        private readonly ScreenshotAgentService $agent
     ) {}
 
     public function start(Request $request): JsonResponse
@@ -38,6 +40,16 @@ class TimeEntryController extends Controller
             throw ValidationException::withMessages([
                 'timer' => ['Administrators cannot track time. Use employee or manager accounts for time tracking.'],
             ]);
+        }
+
+        $role = $user->currentRole();
+        if (in_array($role, [UserRole::Employee, UserRole::Manager], true)) {
+            if (! $this->agent->status($user)['connected']) {
+                return response()->json([
+                    'message' => 'Install and connect the AgencyPulse Desktop Agent before starting your timer.',
+                    'code' => 'AGENT_NOT_CONNECTED',
+                ], 403);
+            }
         }
 
         $validated = $request->validate([

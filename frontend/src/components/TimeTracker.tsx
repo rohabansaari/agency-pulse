@@ -15,7 +15,12 @@ import { OvertimeRequestForm } from "@/components/time/OvertimeRequestForm";
 import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
+import {
+  AGENT_DOWNLOAD_FILENAME,
+  getAgentDownloadUrl,
+} from "@/lib/desktop-agent-config";
 import { wakeDesktopAgent } from "@/lib/desktop-agent";
+import { useDesktopAgentStatus } from "@/hooks/useDesktopAgentStatus";
 import type { Project, TimeEntry, User } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -177,6 +182,10 @@ export function TimeTracker({ user }: { user?: User }) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [projectsNotice, setProjectsNotice] = useState("");
+  const requiresAgent = isEmployee || isManager;
+  const { connected: agentConnected, checking: agentChecking, refresh: refreshAgentStatus } =
+    useDesktopAgentStatus(requiresAgent);
+  const canStartTimer = !requiresAgent || agentConnected;
 
   const loadToday = useCallback(async () => {
     setError("");
@@ -288,6 +297,14 @@ export function TimeTracker({ user }: { user?: User }) {
     setError("");
     setSuccessMessage("");
 
+    if (requiresAgent && !agentConnected) {
+      setError(
+        `Install and connect ${AGENT_DOWNLOAD_FILENAME} before starting your timer. Download it from the banner above, run --install, sign in, then click Check connection.`,
+      );
+      setActionLoading(false);
+      return;
+    }
+
     const projectId =
       selectedProjectId === GENERAL_TIME_VALUE
         ? null
@@ -312,7 +329,11 @@ export function TimeTracker({ user }: { user?: User }) {
       wakeDesktopAgent();
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(formatApiErrors(err.errors) || err.message);
+        const apiMessage = formatApiErrors(err.errors) || err.message;
+        if (err.status === 403 && apiMessage.toLowerCase().includes("desktop agent")) {
+          void refreshAgentStatus();
+        }
+        setError(apiMessage);
       } else {
         setError("Unable to start timer.");
       }
@@ -604,7 +625,7 @@ export function TimeTracker({ user }: { user?: User }) {
               <button
                 type="button"
                 onClick={handleStart}
-                disabled={actionLoading}
+                disabled={actionLoading || agentChecking || !canStartTimer}
                 className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-xl bg-green-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {actionLoading ? (
@@ -612,12 +633,29 @@ export function TimeTracker({ user }: { user?: User }) {
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     Starting...
                   </>
+                ) : agentChecking ? (
+                  "Checking agent..."
                 ) : (
                   "Start Timer"
                 )}
               </button>
             )}
           </div>
+
+          {requiresAgent && !activeTimer && !agentChecking && !agentConnected ? (
+            <p className="mt-4 text-sm text-amber-700 dark:text-amber-300">
+              Download{" "}
+              <a
+                href={getAgentDownloadUrl()}
+                download={AGENT_DOWNLOAD_FILENAME}
+                className="font-medium underline hover:no-underline"
+              >
+                {AGENT_DOWNLOAD_FILENAME}
+              </a>
+              , run <span className="font-mono text-xs">--install</span>, sign in, then click{" "}
+              <span className="font-medium">Check connection</span> in the banner above.
+            </p>
+          ) : null}
 
           {/* Feedback */}
           {successMessage ? (
