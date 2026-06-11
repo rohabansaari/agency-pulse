@@ -3,7 +3,7 @@
 import { fetchScreenshotAgentStatus } from "@/lib/api";
 import { useCallback, useEffect, useState } from "react";
 
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = 30_000;
 
 export function useDesktopAgentStatus(enabled: boolean) {
   const [connected, setConnected] = useState<boolean | null>(null);

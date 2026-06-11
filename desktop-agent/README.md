@@ -1,79 +1,55 @@
 # AgencyPulse Desktop Screenshot Agent
 
-Minimal Windows agent for full-screen screenshots while the **web timer** is running.
+Minimal Windows agent — **one-time setup**, then employees only start their web timer.
 
-- **Auto-starts capture** when you click **Start Timer** on the web app
-- Full desktop capture every **5 minutes** (first capture immediately)
-- Screenshots kept **60 days** on the server, then deleted automatically
-- No Chrome extension or screen-share dialog
-
-## How it works
-
-1. **One-time install** on the employee PC (`AgencyPulseAgent.exe --install`)
-2. **First run** — sign in with AgencyPulse email/password (saved locally)
-3. **Start timer** on **Time Tracking** in the web app
-4. The web app sends `agencypulse://wake` → agent wakes and uploads screenshots
-5. **Stop timer** → capture pauses automatically
-
-The agent also adds itself to **Windows Startup** so it is ready in the background after login.
-
-## For employees (Windows)
-
-### One-time setup (from your admin)
-
-1. Run `AgencyPulseAgent.exe --install` *(or double-click `register-agent.ps1` if IT built from source)*
-2. Double-click `AgencyPulseAgent.exe` once and sign in
-3. Leave it running (or restart PC — it starts again from Startup)
-
-### Daily use
+## Employee flow (after one-time setup)
 
 1. Open AgencyPulse in the browser
-2. Click **Start Timer** on `/time`
-3. Screenshots begin automatically — view them on `/screenshots`
+2. Click **Start Timer** on Time Tracking
+3. Screenshots capture automatically every 5 minutes
+
+No extra steps, no "Check connection", no `--install` command.
+
+## One-time setup (each PC)
+
+1. Download **AgencyPulseAgent.zip** from the website (not the raw `.exe` — browsers block exe downloads)
+2. Extract `AgencyPulseAgent.exe`
+3. Double-click it and sign in once
+
+The agent automatically registers with Windows, adds itself to Startup, and runs in the background.
 
 ## For IT / admin
 
-### Build single `.exe`
-
-On a Windows machine with Python 3:
+### Build
 
 ```bat
 cd desktop-agent
 build.bat
 ```
 
-If you prefer PowerShell and scripts are blocked:
+This creates:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\build.ps1
+- `dist\AgencyPulseAgent.zip` — upload to `frontend/public/downloads/` for web download
+- `dist\AgencyPulseAgent.exe` — inside the zip
+
+PowerShell scripts blocked? `build.bat` works without changing execution policy.
+
+### Deploy download file
+
+After `build.bat`:
+
+```bat
+copy dist\AgencyPulseAgent.zip ..\frontend\public\downloads\AgencyPulseAgent.zip
 ```
 
-Distribute `dist\AgencyPulseAgent.exe` to employees.
+Commit and redeploy the **frontend** so employees get the download link.
 
-### Install on employee PCs
+Or host the zip on R2/CDN and set `NEXT_PUBLIC_AGENT_DOWNLOAD_URL` on Render.
 
-```powershell
-.\AgencyPulseAgent.exe --install
-```
-
-This registers the `agencypulse://` URL handler and adds a Startup shortcut.
-
-Or run `register-agent.ps1` (builds first if needed).
-
-### API URL
-
-Default: `https://agency-pulse-api.onrender.com/api/v1`
-
-Edit after first login: `%USERPROFILE%\.agencypulse\agent-config.json`
-
-### Logs
+## Logs
 
 `%USERPROFILE%\.agencypulse\agent.log`
 
-### Re-login
+## Re-login
 
-Delete `agent-config.json` and run the agent again.
-
-## macOS / Linux
-
-Run with Python 3 (`pip install -r requirements.txt && python agent.py`). URL auto-wake and Startup install are Windows-only today.
+Delete `%USERPROFILE%\.agencypulse\agent-config.json` and run the agent again.

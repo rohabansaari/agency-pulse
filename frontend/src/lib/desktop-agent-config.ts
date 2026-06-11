@@ -4,7 +4,13 @@ export function getAgentDownloadUrl(): string {
     return configured;
   }
 
-  return "/downloads/AgencyPulseAgent.exe";
+  return "/downloads/AgencyPulseAgent.zip";
 }
 
-export const AGENT_DOWNLOAD_FILENAME = "AgencyPulseAgent.exe";
+export const AGENT_DOWNLOAD_FILENAME = "AgencyPulseAgent.zip";
+
+export const AGENT_SETUP_STEPS = [
+  "Download AgencyPulseAgent.zip and extract the .exe",
+  "Double-click AgencyPulseAgent.exe once and sign in",
+  "Start your timer on Time Tracking — screenshots begin automatically",
+] as const;

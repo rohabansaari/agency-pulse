@@ -23,7 +23,7 @@ import requests
 from PIL import Image
 
 CAPTURE_INTERVAL_SECONDS = 300
-POLL_INTERVAL_SECONDS = 15
+POLL_INTERVAL_SECONDS = 10
 MAX_IMAGE_WIDTH = 1600
 JPEG_QUALITY = 60
 MAX_UPLOAD_ATTEMPTS = 3
@@ -293,20 +293,36 @@ def prompt_login_gui() -> dict:
     return result
 
 
+def ensure_installed(config: dict) -> dict:
+    if config.get("desktop_installed"):
+        return config
+
+    log("Running first-time desktop setup (protocol + startup)...")
+    install_agent()
+    config["desktop_installed"] = True
+    save_config(config)
+    notify_user(
+        "AgencyPulse Agent",
+        "Setup complete.\n\nStart your timer on the AgencyPulse website — screenshots will begin automatically.",
+    )
+    return config
+
+
 def ensure_config() -> dict:
     config = load_config()
     if config.get("token") and config.get("organization_id"):
-        return config
+        return ensure_installed(config)
 
     launched_from_protocol = any(arg.lower().startswith(f"{PROTOCOL}://") for arg in sys.argv[1:])
 
     try:
-        return prompt_login_gui()
+        config = prompt_login_gui()
+        return ensure_installed(config)
     except Exception as error:
         message = (
             "AgencyPulse Desktop Agent is not set up on this PC.\n\n"
-            "Double-click AgencyPulseAgent.exe once to sign in, then run:\n"
-            "AgencyPulseAgent.exe --install"
+            "Download AgencyPulseAgent.zip from the website, extract it, "
+            "and double-click AgencyPulseAgent.exe once to sign in."
         )
         notify_user("AgencyPulse Agent", message)
         log(f"Unable to complete first-time sign-in: {error}")

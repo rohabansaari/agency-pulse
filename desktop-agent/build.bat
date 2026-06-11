@@ -23,10 +23,19 @@ if errorlevel 1 goto :error
 %PY% -m PyInstaller --onefile --name AgencyPulseAgent --hidden-import=tkinter --clean agent.py
 if errorlevel 1 goto :error
 
+echo Creating zip (avoids Chrome blocking direct .exe downloads)...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Compress-Archive -Force -Path 'dist\AgencyPulseAgent.exe' -DestinationPath 'dist\AgencyPulseAgent.zip'"
+if errorlevel 1 goto :error
+
+if exist "..\frontend\public\downloads\" (
+  copy /Y "dist\AgencyPulseAgent.zip" "..\frontend\public\downloads\AgencyPulseAgent.zip" >nul
+  echo Copied zip to frontend\public\downloads\AgencyPulseAgent.zip
+)
+
 echo.
-echo Built: dist\AgencyPulseAgent.exe
-echo Next: copy to frontend\public\downloads\AgencyPulseAgent.exe for web download
-echo       or distribute directly to employees, then run: AgencyPulseAgent.exe --install
+echo Built: dist\AgencyPulseAgent.zip
+echo Inside: AgencyPulseAgent.exe
+echo Employees: download zip, extract, run exe once and sign in.
 goto :end
 
 :error
