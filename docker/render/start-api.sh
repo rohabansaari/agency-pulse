@@ -18,6 +18,9 @@ php artisan route:cache
 echo "Running migrations..."
 php artisan migrate --force --no-interaction
 
+echo "Linking public storage..."
+php artisan storage:link --force --no-interaction 2>/dev/null || true
+
 echo "Ensuring platform super admin exists..."
 php artisan super-admin:ensure --no-interaction
 

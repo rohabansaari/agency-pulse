@@ -7,9 +7,14 @@ import {
   isBrowserScreenshotCaptureActive,
   startBrowserScreenshotCapture,
   stopBrowserScreenshotCapture,
+  setSharingRevokedHandler,
 } from "./screenshot-capture";
 
 export type ScreenshotTrackingMode = "extension" | "browser" | "none";
+
+export function setScreenshotSharingRevokedHandler(handler: (() => void) | null): void {
+  setSharingRevokedHandler(handler);
+}
 
 export async function startScreenshotTrackingForTimer(options: {
   timeEntryId?: number | null;

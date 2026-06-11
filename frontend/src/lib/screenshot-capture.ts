@@ -6,6 +6,9 @@ let stream: MediaStream | null = null;
 let intervalId: number | null = null;
 let sessionId: string | null = null;
 let projectId: number | null = null;
+let videoEl: HTMLVideoElement | null = null;
+let sharingRevokedHandler: (() => void) | null = null;
+let captureInProgress = false;
 
 function createSessionId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -19,13 +22,17 @@ export function isBrowserScreenshotCaptureActive(): boolean {
   return stream !== null;
 }
 
+export function setSharingRevokedHandler(handler: (() => void) | null): void {
+  sharingRevokedHandler = handler;
+}
+
 export async function startBrowserScreenshotCapture(options: {
   projectId?: number | null;
 }): Promise<{ ok: boolean; error?: string }> {
   if (typeof navigator === "undefined" || !navigator.mediaDevices?.getDisplayMedia) {
     return {
       ok: false,
-      error: "This browser does not support tab screenshot capture.",
+      error: "This browser does not support screen capture.",
     };
   }
 
@@ -36,13 +43,15 @@ export async function startBrowserScreenshotCapture(options: {
   try {
     stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
-        displaySurface: "browser",
+        width: { ideal: 1920, max: 1920 },
+        height: { ideal: 1080, max: 1080 },
       },
       audio: false,
-      preferCurrentTab: true,
-      selfBrowserSurface: "include",
+      preferCurrentTab: false,
+      selfBrowserSurface: "exclude",
       surfaceSwitching: "exclude",
-      monitorTypeSurfaces: "exclude",
+      monitorTypeSurfaces: "include",
+      systemAudio: "exclude",
     } as DisplayMediaStreamOptions);
 
     sessionId = createSessionId();
@@ -50,7 +59,7 @@ export async function startBrowserScreenshotCapture(options: {
 
     const track = stream.getVideoTracks()[0];
     track.addEventListener("ended", () => {
-      void stopBrowserScreenshotCapture();
+      void handleSharingRevoked();
     });
 
     await captureAndUploadFrame();
@@ -68,13 +77,14 @@ export async function startBrowserScreenshotCapture(options: {
     if (error instanceof DOMException && error.name === "NotAllowedError") {
       return {
         ok: false,
-        error: "Tab sharing was declined. Choose “This tab” or “Share” to enable screenshots.",
+        error:
+          'Screen sharing is required. Choose "Entire screen" in the Chrome dialog and click Share.',
       };
     }
 
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Unable to start tab capture.",
+      error: error instanceof Error ? error.message : "Unable to start screen capture.",
     };
   }
 }
@@ -88,62 +98,106 @@ export async function stopBrowserScreenshotCapture(): Promise<void> {
   stopStream();
   sessionId = null;
   projectId = null;
+  captureInProgress = false;
+}
+
+async function handleSharingRevoked(): Promise<void> {
+  await stopBrowserScreenshotCapture();
+  sharingRevokedHandler?.();
 }
 
 function stopStream(): void {
   stream?.getTracks().forEach((track) => track.stop());
   stream = null;
+
+  if (videoEl) {
+    videoEl.srcObject = null;
+  }
+}
+
+function getVideoElement(): HTMLVideoElement {
+  if (!videoEl) {
+    videoEl = document.createElement("video");
+    videoEl.muted = true;
+    videoEl.playsInline = true;
+  }
+
+  return videoEl;
 }
 
 async function captureAndUploadFrame(): Promise<void> {
-  if (!stream || !sessionId) {
+  if (!stream || !sessionId || captureInProgress) {
     return;
   }
 
-  const video = document.createElement("video");
-  video.srcObject = stream;
-  video.muted = true;
-  video.playsInline = true;
-
-  await new Promise<void>((resolve, reject) => {
-    video.onloadedmetadata = () => {
-      video
-        .play()
-        .then(() => resolve())
-        .catch(reject);
-    };
-    video.onerror = () => reject(new Error("Unable to read shared tab video."));
-  });
-
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
-
-  const canvas = document.createElement("canvas");
-  const maxWidth = 1600;
-  const scale = Math.min(1, maxWidth / Math.max(video.videoWidth, 1));
-  canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
-  canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
-
-  const context = canvas.getContext("2d");
-  if (!context) {
-    video.srcObject = null;
-    return;
-  }
-
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  video.srcObject = null;
-
-  const image = canvas.toDataURL("image/jpeg", 0.65);
+  captureInProgress = true;
 
   try {
-    await uploadScreenshot({
+    const video = getVideoElement();
+    video.srcObject = stream;
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(() => {
+        reject(new Error("Screen capture timed out."));
+      }, 15000);
+
+      video.onloadedmetadata = () => {
+        window.clearTimeout(timeout);
+        video
+          .play()
+          .then(() => resolve())
+          .catch(reject);
+      };
+      video.onerror = () => {
+        window.clearTimeout(timeout);
+        reject(new Error("Unable to read shared screen."));
+      };
+    });
+
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    const canvas = document.createElement("canvas");
+    const maxWidth = 1600;
+    const scale = Math.min(1, maxWidth / Math.max(video.videoWidth, 1));
+    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const image = canvas.toDataURL("image/jpeg", 0.6);
+
+    await uploadScreenshotWithRetry({
       image,
       timestamp: new Date().toISOString(),
       session_id: sessionId,
       project_id: projectId,
     });
   } catch {
-    // Timer keeps running even if one upload fails.
+    // Keep the timer running; the next interval will retry capture.
+  } finally {
+    captureInProgress = false;
+  }
+}
+
+async function uploadScreenshotWithRetry(
+  payload: Parameters<typeof uploadScreenshot>[0],
+  attempt = 1,
+): Promise<void> {
+  try {
+    await uploadScreenshot(payload);
+  } catch {
+    if (attempt >= 3) {
+      return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 1500 * attempt));
+    await uploadScreenshotWithRetry(payload, attempt + 1);
   }
 }

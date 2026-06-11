@@ -17,12 +17,13 @@ import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
 import {
   resumeExtensionTrackingForTimer,
+  setScreenshotSharingRevokedHandler,
   startScreenshotTrackingForTimer,
   stopScreenshotTracking,
 } from "@/lib/screenshot-tracking";
 import { pingScreenshotExtension } from "@/lib/screenshot-bridge";
 import type { Project, TimeEntry, User } from "@/lib/types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const GENERAL_TIME_VALUE = "";
 
@@ -183,21 +184,37 @@ export function TimeTracker({ user }: { user?: User }) {
   const [successMessage, setSuccessMessage] = useState("");
   const [projectsNotice, setProjectsNotice] = useState("");
   const tracksTime = isEmployee || isManager;
+  const activeTimerRef = useRef<TimeEntry | null>(null);
 
-  const loadToday = useCallback(async () => {
-    setError("");
-    const response = await fetchTodayTime();
-    setEntries(response.data);
-    setTotalDuration(response.meta.total_duration);
-    setActiveTimer(response.meta.active_timer);
-    setLiveElapsed(
-      response.meta.active_timer
-        ? elapsedSeconds(response.meta.active_timer.start_time)
-        : 0,
-    );
+  const loadToday = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setError("");
+    }
 
-    if (response.meta.active_timer?.project_id) {
-      setSelectedProjectId(String(response.meta.active_timer.project_id));
+    try {
+      const response = await fetchTodayTime();
+      setEntries(response.data ?? []);
+      setTotalDuration(response.meta.total_duration);
+      setActiveTimer(response.meta.active_timer);
+      setLiveElapsed(
+        response.meta.active_timer
+          ? elapsedSeconds(response.meta.active_timer.start_time)
+          : 0,
+      );
+
+      if (response.meta.active_timer?.project_id) {
+        setSelectedProjectId(String(response.meta.active_timer.project_id));
+      }
+    } catch (err) {
+      if (options?.silent) {
+        return;
+      }
+
+      if (err instanceof ApiError) {
+        setError(formatApiErrors(err.errors) || err.message);
+      } else {
+        setError("Unable to load today's time entries.");
+      }
     }
   }, []);
 
@@ -231,6 +248,38 @@ export function TimeTracker({ user }: { user?: User }) {
   }, [loadToday]);
 
   useEffect(() => {
+    activeTimerRef.current = activeTimer;
+  }, [activeTimer]);
+
+  useEffect(() => {
+    if (!tracksTime) {
+      return;
+    }
+
+    setScreenshotSharingRevokedHandler(() => {
+      void (async () => {
+        await stopScreenshotTracking();
+
+        if (!activeTimerRef.current) {
+          return;
+        }
+
+        try {
+          await stopTimer();
+          await loadToday({ silent: true });
+          setError(
+            "Screen sharing ended, so your timer was stopped. Start again and choose Entire screen when Chrome asks.",
+          );
+        } catch {
+          setError("Screen sharing ended. Stop and restart your timer with screen sharing enabled.");
+        }
+      })();
+    });
+
+    return () => setScreenshotSharingRevokedHandler(null);
+  }, [tracksTime, loadToday]);
+
+  useEffect(() => {
     if (!tracksTime || loading || !activeTimer) {
       return;
     }
@@ -240,6 +289,18 @@ export function TimeTracker({ user }: { user?: User }) {
       projectId: activeTimer.project_id,
     });
   }, [activeTimer?.id, loading, tracksTime]);
+
+  useEffect(() => {
+    if (!activeTimer) {
+      return;
+    }
+
+    const sync = window.setInterval(() => {
+      void loadToday({ silent: true });
+    }, 60000);
+
+    return () => window.clearInterval(sync);
+  }, [activeTimer?.id, loadToday]);
 
   useEffect(() => {
     if (!activeTimer) return;
@@ -305,25 +366,30 @@ export function TimeTracker({ user }: { user?: User }) {
       const hasExtension = await pingScreenshotExtension();
       let captureMode: "extension" | "browser" | "none" = "none";
 
+      const response = await startTimer(projectId);
+
       if (!hasExtension) {
-        const capture = await startScreenshotTrackingForTimer({ projectId });
+        const capture = await startScreenshotTrackingForTimer({
+          projectId: response.entry.project_id,
+        });
+
         if (!capture.ok) {
+          await stopTimer();
+          await loadToday({ silent: true });
           setError(
             capture.error ??
-              "Allow tab sharing when prompted so work screenshots can be captured.",
+              'Screen sharing is required. Choose "Entire screen" in the Chrome dialog and click Share.',
           );
           return;
         }
+
         captureMode = capture.mode;
-      }
-
-      const response = await startTimer(projectId);
-
-      if (hasExtension) {
+      } else {
         const capture = await startScreenshotTrackingForTimer({
           timeEntryId: response.entry.id,
           projectId: response.entry.project_id,
         });
+
         if (!capture.ok) {
           setError(
             capture.error ??
@@ -348,7 +414,7 @@ export function TimeTracker({ user }: { user?: User }) {
       }
       setSuccessMessage(
         captureMode === "browser"
-          ? "Timer started — tab sharing active for screenshots every 5 minutes"
+          ? "Timer started — share your entire screen. Screenshots capture every 5 minutes."
           : "Timer started",
       );
     } catch (err) {
@@ -437,9 +503,9 @@ export function TimeTracker({ user }: { user?: User }) {
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           {isEmployee
-            ? "Start your timer — Chrome will ask once to share your tab for screenshots every 5 minutes"
+            ? "Start your timer — Chrome will ask you to share your entire screen (required)"
             : isManager
-              ? "Track your hours, record manual time for your team, and share your tab when the timer starts"
+              ? "Track your hours and share your entire screen when the timer starts (required)"
               : "Track your work hours across projects"}
         </p>
         {(isEmployee || isManager) ? (

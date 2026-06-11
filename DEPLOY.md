@@ -137,7 +137,9 @@ Replace with **your** API URL from Part 2, including `/api/v1`.
 
 Employees and managers **do not need to install a Chrome extension** on Render.
 
-When they click **Start Timer** on `/time`, Chrome shows a one-time **“Share this tab”** permission dialog. After they click **Share**, screenshots upload every **5 minutes** automatically until they stop the timer.
+When they click **Start Timer** on `/time`, Chrome shows a one-time **“Share this screen”** permission dialog. They must choose **Entire screen** and click **Share**. Screenshots upload every **5 minutes** until they stop the timer.
+
+If they click Chrome’s **Stop sharing** button, the timer is **automatically stopped** (this cannot be hidden — it is controlled by Chrome).
 
 **API checklist (Render → API service → Environment):**
 
