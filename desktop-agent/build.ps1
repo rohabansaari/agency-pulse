@@ -14,4 +14,4 @@ python -m PyInstaller `
 
 Write-Host ""
 Write-Host "Built: dist\AgencyPulseAgent.exe"
-Write-Host "Copy that file to employee laptops and double-click to run."
+Write-Host "Deploy: copy exe to employees, then run: AgencyPulseAgent.exe --install"

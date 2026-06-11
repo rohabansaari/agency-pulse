@@ -133,35 +133,56 @@ Replace with **your** API URL from Part 2, including `/api/v1`.
 
 ---
 
-## Part 3b — Screenshots (no Chrome extension required)
+## Part 3b — Screenshots (Desktop Agent + Cloudflare R2)
 
-Employees and managers **do not need to install a Chrome extension** on Render.
+Screenshots are captured by the **AgencyPulse Desktop Agent** (`desktop-agent/`), not the browser.
 
-When they click **Start Timer** on `/time`, Chrome shows a one-time **“Share this screen”** permission dialog. They must choose **Entire screen** and click **Share**. Screenshots upload every **5 minutes** until they stop the timer.
+1. Employee runs **one-time install**: `AgencyPulseAgent.exe --install` (registers `agencypulse://` + Windows Startup).
+2. Employee signs in on first agent run (credentials saved locally).
+3. Employee starts the timer on **Time Tracking** (`/time`) — the web app wakes the agent automatically.
+4. Agent captures **full-desktop screenshots every 5 minutes** (first capture immediately).
+5. Employees and managers view captures on **Screenshots** (`/screenshots`) — **read-only**.
+6. Screenshots older than **60 days** are purged automatically (daily scheduler in the API container).
 
-If they click Chrome’s **Stop sharing** button, the timer is **automatically stopped** (this cannot be hidden — it is controlled by Chrome).
+### Build and distribute the desktop agent
 
-**API checklist (Render → API service → Environment):**
+On a Windows machine with Python 3:
+
+```powershell
+cd desktop-agent
+.\build.ps1
+```
+
+Share `dist\AgencyPulseAgent.exe` with employees and managers. Each employee runs **once**:
+
+```powershell
+AgencyPulseAgent.exe --install
+AgencyPulseAgent.exe
+```
+
+Sign in on first run. After that, starting the web timer auto-wakes the agent. See `desktop-agent/README.md`.
+
+### API environment (Cloudflare R2 — recommended for production)
+
+Add these on **Render → API service → Environment**:
 
 | Key | Value |
 |-----|--------|
-| `SCREENSHOT_DISK` | `public` *(default — files on API disk; fine for MVP)* |
+| `SCREENSHOT_DISK` | `s3` |
+| `SCREENSHOT_RETENTION_DAYS` | `60` |
+| `AWS_ACCESS_KEY_ID` | R2 access key ID |
+| `AWS_SECRET_ACCESS_KEY` | R2 secret access key |
+| `AWS_DEFAULT_REGION` | `auto` |
+| `AWS_BUCKET` | Your R2 bucket name |
+| `AWS_ENDPOINT` | `https://<account_id>.r2.cloudflarestorage.com` |
+| `AWS_USE_PATH_STYLE_ENDPOINT` | `true` |
 | `FRONTEND_URL` | `https://agencypulse-web.onrender.com` |
 
-After deploying API code with the screenshots migration, open **Shell** on the API service (or redeploy with migrate in start script) and run:
+Create R2 credentials in **Cloudflare Dashboard → R2 → Manage R2 API tokens**. The bucket can be private — the API serves signed image URLs to authorized users only.
 
-```bash
-php artisan migrate --force
-php artisan storage:link
-```
+For local dev only, you can use `SCREENSHOT_DISK=public` (files on API disk).
 
-Optional later: set `SCREENSHOT_DISK=s3` and Cloudflare R2 / AWS keys for scalable image storage.
-
-The optional `chrome-extension/` folder is **not required** for Render. IT may still force-install it via Chrome Enterprise if you want extension-based capture instead of tab sharing.
-
-### Desktop agent (full screen, no share dialog)
-
-See `desktop-agent/README.md`. Build `AgencyPulseAgent.exe` once and give it to employees. It watches the web timer and captures the full desktop every 5 minutes.
+Migrations and `storage:link` run automatically on deploy via `docker/render/start-api.sh`.
 
 ---
 
@@ -171,7 +192,8 @@ See `desktop-agent/README.md`. Build `AgencyPulseAgent.exe` once and give it to 
 |-------|-----|
 | API health | `https://agencypulse-api.onrender.com/api/v1/health` |
 | Login / Dashboard | `https://agencypulse-web.onrender.com/dashboard` |
-| Time tracking + screenshots | `https://agencypulse-web.onrender.com/time` |
+| Time tracking | `https://agencypulse-web.onrender.com/time` |
+| Screenshots gallery | `https://agencypulse-web.onrender.com/screenshots` |
 | Payroll | `https://agencypulse-web.onrender.com/admin/payroll` |
 
 Use the **frontend** URL for the app — not the API URL.

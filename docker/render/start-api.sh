@@ -24,5 +24,8 @@ php artisan storage:link --force --no-interaction 2>/dev/null || true
 echo "Ensuring platform super admin exists..."
 php artisan super-admin:ensure --no-interaction
 
+echo "Starting Laravel scheduler in background (screenshot retention purge)..."
+(while true; do php artisan schedule:run --no-interaction; sleep 60; done) &
+
 echo "Starting API on port ${PORT:-10000}..."
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"

@@ -15,15 +15,9 @@ import { OvertimeRequestForm } from "@/components/time/OvertimeRequestForm";
 import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
-import {
-  resumeExtensionTrackingForTimer,
-  setScreenshotSharingRevokedHandler,
-  startScreenshotTrackingForTimer,
-  stopScreenshotTracking,
-} from "@/lib/screenshot-tracking";
-import { pingScreenshotExtension } from "@/lib/screenshot-bridge";
+import { wakeDesktopAgent } from "@/lib/desktop-agent";
 import type { Project, TimeEntry, User } from "@/lib/types";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const GENERAL_TIME_VALUE = "";
 
@@ -183,13 +177,9 @@ export function TimeTracker({ user }: { user?: User }) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [projectsNotice, setProjectsNotice] = useState("");
-  const tracksTime = isEmployee || isManager;
-  const activeTimerRef = useRef<TimeEntry | null>(null);
 
-  const loadToday = useCallback(async (options?: { silent?: boolean }) => {
-    if (!options?.silent) {
-      setError("");
-    }
+  const loadToday = useCallback(async () => {
+    setError("");
 
     try {
       const response = await fetchTodayTime();
@@ -206,10 +196,6 @@ export function TimeTracker({ user }: { user?: User }) {
         setSelectedProjectId(String(response.meta.active_timer.project_id));
       }
     } catch (err) {
-      if (options?.silent) {
-        return;
-      }
-
       if (err instanceof ApiError) {
         setError(formatApiErrors(err.errors) || err.message);
       } else {
@@ -246,61 +232,6 @@ export function TimeTracker({ user }: { user?: User }) {
 
     void init();
   }, [loadToday]);
-
-  useEffect(() => {
-    activeTimerRef.current = activeTimer;
-  }, [activeTimer]);
-
-  useEffect(() => {
-    if (!tracksTime) {
-      return;
-    }
-
-    setScreenshotSharingRevokedHandler(() => {
-      void (async () => {
-        await stopScreenshotTracking();
-
-        if (!activeTimerRef.current) {
-          return;
-        }
-
-        try {
-          await stopTimer();
-          await loadToday({ silent: true });
-          setError(
-            "Screen sharing ended, so your timer was stopped. Start again and choose Entire screen when Chrome asks.",
-          );
-        } catch {
-          setError("Screen sharing ended. Stop and restart your timer with screen sharing enabled.");
-        }
-      })();
-    });
-
-    return () => setScreenshotSharingRevokedHandler(null);
-  }, [tracksTime, loadToday]);
-
-  useEffect(() => {
-    if (!tracksTime || loading || !activeTimer) {
-      return;
-    }
-
-    void resumeExtensionTrackingForTimer({
-      timeEntryId: activeTimer.id,
-      projectId: activeTimer.project_id,
-    });
-  }, [activeTimer?.id, loading, tracksTime]);
-
-  useEffect(() => {
-    if (!activeTimer) {
-      return;
-    }
-
-    const sync = window.setInterval(() => {
-      void loadToday({ silent: true });
-    }, 60000);
-
-    return () => window.clearInterval(sync);
-  }, [activeTimer?.id, loadToday]);
 
   useEffect(() => {
     if (!activeTimer) return;
@@ -363,42 +294,7 @@ export function TimeTracker({ user }: { user?: User }) {
         : Number(selectedProjectId);
 
     try {
-      const hasExtension = await pingScreenshotExtension();
-      let captureMode: "extension" | "browser" | "none" = "none";
-
-      const response = await startTimer(projectId);
-
-      if (!hasExtension) {
-        const capture = await startScreenshotTrackingForTimer({
-          projectId: response.entry.project_id,
-        });
-
-        if (!capture.ok) {
-          await stopTimer();
-          await loadToday({ silent: true });
-          setError(
-            capture.error ??
-              'Screen sharing is required. Choose "Entire screen" in the Chrome dialog and click Share.',
-          );
-          return;
-        }
-
-        captureMode = capture.mode;
-      } else {
-        const capture = await startScreenshotTrackingForTimer({
-          timeEntryId: response.entry.id,
-          projectId: response.entry.project_id,
-        });
-
-        if (!capture.ok) {
-          setError(
-            capture.error ??
-              "Timer started, but screenshot tracking could not start in the extension.",
-          );
-        } else {
-          captureMode = capture.mode;
-        }
-      }
+      await startTimer(projectId);
 
       try {
         await loadToday();
@@ -412,13 +308,9 @@ export function TimeTracker({ user }: { user?: User }) {
         }
         return;
       }
-      setSuccessMessage(
-        captureMode === "browser"
-          ? "Timer started — share your entire screen. Screenshots capture every 5 minutes."
-          : "Timer started",
-      );
+      setSuccessMessage("Timer started — desktop agent capturing screenshots");
+      wakeDesktopAgent();
     } catch (err) {
-      await stopScreenshotTracking();
       if (err instanceof ApiError) {
         setError(formatApiErrors(err.errors) || err.message);
       } else {
@@ -436,7 +328,6 @@ export function TimeTracker({ user }: { user?: User }) {
 
     try {
       await stopTimer();
-      await stopScreenshotTracking();
       try {
         await loadToday();
       } catch (refreshErr) {
@@ -503,11 +394,27 @@ export function TimeTracker({ user }: { user?: User }) {
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           {isEmployee
-            ? "Start your timer — Chrome will ask you to share your entire screen (required)"
+            ? "Start your timer — the desktop agent starts capturing automatically."
             : isManager
-              ? "Track your hours and share your entire screen when the timer starts (required)"
+              ? "Start your timer — the desktop agent starts capturing automatically."
               : "Track your work hours across projects"}
         </p>
+        {(isEmployee || isManager) ? (
+          <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-100">
+            <p className="font-medium">One-time desktop agent setup</p>
+            <p className="mt-1 text-blue-800/90 dark:text-blue-200/90">
+              Install <span className="font-mono text-xs">AgencyPulseAgent.exe</span> once
+              (run <span className="font-mono text-xs">--install</span> or{" "}
+              <span className="font-mono text-xs">register-agent.ps1</span>). When you start the
+              timer here, the agent wakes automatically and captures your full screen every 5
+              minutes. View captures on{" "}
+              <a href="/screenshots" className="underline hover:no-underline">
+                Screenshots
+              </a>
+              .
+            </p>
+          </div>
+        ) : null}
         {(isEmployee || isManager) ? (
           <div className="mt-4 flex gap-2">
             <button

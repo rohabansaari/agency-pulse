@@ -32,10 +32,10 @@ export function ScreenshotsView({ user }: { user: User }) {
 
   const pageDescription =
     user.role === "employee"
-      ? "View screenshots captured from your active Chrome tab while tracking is enabled."
+      ? "View your desktop screenshots captured every 5 minutes while your timer was running. Read-only — you cannot edit or delete captures."
       : user.role === "manager"
-        ? "Review screenshots from employees on your teams."
-        : "Review browser activity captures uploaded by the Chrome extension.";
+        ? "Review desktop screenshots from employees on your teams. Read-only — you cannot edit or delete captures."
+        : "Review desktop screenshots uploaded by the AgencyPulse Desktop Agent. Read-only gallery.";
 
   useEffect(() => {
     if (!canFilterUsers) {

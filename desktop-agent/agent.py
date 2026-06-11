@@ -1,11 +1,10 @@
 """
 AgencyPulse Desktop Screenshot Agent (minimal)
 
-- Watches your AgencyPulse timer via the API
+- Registers as agencypulse:// URL handler (one-time --register)
+- Wakes automatically when the web timer starts (agencypulse://wake)
 - Captures full-screen screenshots every 5 minutes while the timer is running
 - Uploads to POST /api/v1/screenshots
-
-No browser extension or screen-share dialog required.
 """
 
 from __future__ import annotations
@@ -24,13 +23,18 @@ import requests
 from PIL import Image
 
 CAPTURE_INTERVAL_SECONDS = 300
-POLL_INTERVAL_SECONDS = 30
+POLL_INTERVAL_SECONDS = 15
 MAX_IMAGE_WIDTH = 1600
 JPEG_QUALITY = 60
+PROTOCOL = "agencypulse"
 
 CONFIG_DIR = Path.home() / ".agencypulse"
 CONFIG_PATH = CONFIG_DIR / "agent-config.json"
 LOG_PATH = CONFIG_DIR / "agent.log"
+LOCK_PATH = CONFIG_DIR / "agent.lock"
+WAKE_PATH = CONFIG_DIR / "wake.signal"
+
+_lock_handle = None
 
 
 def log(message: str) -> None:
@@ -39,6 +43,145 @@ def log(message: str) -> None:
     print(line)
     with LOG_PATH.open("a", encoding="utf-8") as handle:
         handle.write(line + "\n")
+
+
+def executable_command() -> str:
+    if getattr(sys, "frozen", False):
+        return f'"{Path(sys.executable).resolve()}" "%1"'
+
+    script = Path(__file__).resolve()
+    return f'"{Path(sys.executable).resolve()}" "{script}" "%1"'
+
+
+def register_protocol() -> int:
+    if sys.platform != "win32":
+        print("Protocol registration is supported on Windows only.")
+        return 1
+
+    import winreg
+
+    command = executable_command()
+    base = f"Software\\Classes\\{PROTOCOL}"
+
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, base) as key:
+        winreg.SetValue(key, None, winreg.REG_SZ, "URL:AgencyPulse Agent")
+        winreg.SetValueEx(key, "URL Protocol", 0, winreg.REG_SZ, "")
+
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, f"{base}\\DefaultIcon") as key:
+        icon = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve()
+        winreg.SetValue(key, None, winreg.REG_SZ, f"{icon},0")
+
+    with winreg.CreateKey(
+        winreg.HKEY_CURRENT_USER,
+        f"{base}\\shell\\open\\command",
+    ) as key:
+        winreg.SetValue(key, None, winreg.REG_SZ, command)
+
+    log(f"Registered {PROTOCOL}:// handler.")
+    print(f"Registered {PROTOCOL}:// — the web app can wake this agent when a timer starts.")
+    return 0
+
+
+def add_startup_shortcut() -> int:
+    if sys.platform != "win32":
+        print("Startup shortcut is supported on Windows only.")
+        return 1
+
+    import subprocess
+
+    target = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve()
+    startup = (
+        Path.home()
+        / "AppData"
+        / "Roaming"
+        / "Microsoft"
+        / "Windows"
+        / "Start Menu"
+        / "Programs"
+        / "Startup"
+    )
+    startup.mkdir(parents=True, exist_ok=True)
+    shortcut_path = startup / "AgencyPulse Agent.lnk"
+
+    ps = (
+        "$shell = New-Object -ComObject WScript.Shell; "
+        f"$s = $shell.CreateShortcut('{shortcut_path}'); "
+        f"$s.TargetPath = '{target}'; "
+        f"$s.WorkingDirectory = '{target.parent}'; "
+        "$s.Description = 'AgencyPulse screenshot agent'; "
+        "$s.Save()"
+    )
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-Command", ps],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        print("Could not add Startup shortcut. Add AgencyPulseAgent.exe to Startup manually.")
+        if result.stderr:
+            print(result.stderr.strip())
+        return 1
+
+    log(f"Added startup shortcut: {shortcut_path}")
+    print("Agent will start automatically when you sign in to Windows.")
+    return 0
+
+
+def install_agent() -> int:
+    code = register_protocol()
+    if code != 0:
+        return code
+
+    if add_startup_shortcut() != 0:
+        print("Protocol registered. Add AgencyPulseAgent.exe to Windows Startup manually if needed.")
+
+    return 0
+
+
+def acquire_lock() -> bool:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    global _lock_handle
+
+    if sys.platform == "win32":
+        import msvcrt
+
+        _lock_handle = open(LOCK_PATH, "a+")
+        try:
+            msvcrt.locking(_lock_handle.fileno(), msvcrt.LK_NBLCK, 1)
+            return True
+        except OSError:
+            _lock_handle.close()
+            _lock_handle = None
+            return False
+
+    try:
+        import fcntl
+
+        _lock_handle = open(LOCK_PATH, "a+")
+        fcntl.flock(_lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except OSError:
+        if _lock_handle is not None:
+            _lock_handle.close()
+            _lock_handle = None
+        return False
+
+
+def signal_wake() -> None:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    WAKE_PATH.write_text(str(time.time()), encoding="utf-8")
+    log("Wake signal sent to running agent.")
+
+
+def sleep_until(seconds: float) -> None:
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        if WAKE_PATH.exists():
+            WAKE_PATH.unlink(missing_ok=True)
+            return
+        time.sleep(0.25)
 
 
 def load_config() -> dict:
@@ -178,8 +321,8 @@ def run_agent() -> None:
     if not config.get("token") or not config.get("organization_id"):
         config = prompt_login()
 
-    log("AgencyPulse agent running. Start your timer in the web app.")
-    log("Captures full screen every 5 minutes while the timer is active.")
+    log("AgencyPulse agent running.")
+    log("Start your timer in the web app — screenshots begin automatically.")
 
     active_entry_id: int | None = None
     session_id: str | None = None
@@ -187,29 +330,36 @@ def run_agent() -> None:
     last_capture_at: float = 0.0
 
     while True:
+        if WAKE_PATH.exists():
+            WAKE_PATH.unlink(missing_ok=True)
+            log("Timer wake received — checking for active timer.")
+
         try:
             timer = fetch_active_timer(config)
         except RuntimeError as error:
             log(str(error))
-            time.sleep(POLL_INTERVAL_SECONDS)
+            sleep_until(POLL_INTERVAL_SECONDS)
             continue
 
         if timer and timer.get("status") == "running":
             entry_id = int(timer["id"])
             project_id = timer.get("project_id")
+            new_session = active_entry_id != entry_id
 
-            if active_entry_id != entry_id:
+            if new_session:
                 active_entry_id = entry_id
                 session_id = str(uuid.uuid4())
                 last_capture_at = 0.0
-                log(f"Timer detected (entry {entry_id}). Screenshot session started.")
+                log(f"Timer active (entry {entry_id}). Taking first screenshot now.")
 
-            now = time.time()
-            if session_id and now - last_capture_at >= CAPTURE_INTERVAL_SECONDS:
-                if upload_screenshot(config, session_id, project_id):
-                    last_capture_at = now
-                else:
-                    last_capture_at = now - (CAPTURE_INTERVAL_SECONDS - 60)
+            should_capture = session_id is not None and (
+                new_session or time.time() - last_capture_at >= CAPTURE_INTERVAL_SECONDS
+            )
+
+            if should_capture and upload_screenshot(config, session_id, project_id):
+                last_capture_at = time.time()
+            elif should_capture:
+                last_capture_at = time.time() - (CAPTURE_INTERVAL_SECONDS - 60)
         else:
             if active_entry_id is not None:
                 log("Timer stopped. Screenshot capture paused.")
@@ -218,12 +368,30 @@ def run_agent() -> None:
             project_id = None
             last_capture_at = 0.0
 
-        time.sleep(POLL_INTERVAL_SECONDS)
+        sleep_until(POLL_INTERVAL_SECONDS)
 
 
-if __name__ == "__main__":
+def main() -> int:
+    args = [arg.lower() for arg in sys.argv[1:]]
+
+    if "--register" in args:
+        return register_protocol()
+
+    if "--install" in args:
+        return install_agent()
+
+    if not acquire_lock():
+        signal_wake()
+        return 0
+
     try:
         run_agent()
     except KeyboardInterrupt:
         log("Agent stopped.")
-        sys.exit(0)
+        return 0
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

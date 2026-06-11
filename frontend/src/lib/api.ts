@@ -979,23 +979,6 @@ export function formatApiErrors(errors?: Record<string, string[]>): string {
   return Object.values(errors).flat().join(" ");
 }
 
-export async function uploadScreenshot(payload: {
-  image: string;
-  timestamp: string;
-  session_id: string;
-  project_id?: number | null;
-}): Promise<void> {
-  await apiFetch<{ screenshot: ScreenshotRecord }>("/screenshots", {
-    method: "POST",
-    body: JSON.stringify({
-      image: payload.image,
-      timestamp: payload.timestamp,
-      session_id: payload.session_id,
-      project_id: payload.project_id ?? null,
-    }),
-  });
-}
-
 export async function fetchScreenshots(params: {
   user_id?: number;
   session_id?: string;
