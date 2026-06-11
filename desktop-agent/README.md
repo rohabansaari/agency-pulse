@@ -37,9 +37,15 @@ The agent also adds itself to **Windows Startup** so it is ready in the backgrou
 
 On a Windows machine with Python 3:
 
-```powershell
+```bat
 cd desktop-agent
-.\build.ps1
+build.bat
+```
+
+If you prefer PowerShell and scripts are blocked:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
 Distribute `dist\AgencyPulseAgent.exe` to employees.
