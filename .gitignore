@@ -32,6 +32,11 @@ playwright-report/
 test-results/
 coverage/
 
+# Desktop agent build
+desktop-agent/build/
+desktop-agent/dist/
+desktop-agent/*.spec
+
 # Docker volumes (local)
 mysql_data/
 redis_data/

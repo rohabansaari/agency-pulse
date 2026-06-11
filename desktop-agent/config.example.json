@@ -1,0 +1,5 @@
+{
+  "api_base_url": "https://agency-pulse-api.onrender.com/api/v1",
+  "token": "paste-your-token-here",
+  "organization_id": 1
+}

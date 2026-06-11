@@ -159,6 +159,10 @@ Optional later: set `SCREENSHOT_DISK=s3` and Cloudflare R2 / AWS keys for scalab
 
 The optional `chrome-extension/` folder is **not required** for Render. IT may still force-install it via Chrome Enterprise if you want extension-based capture instead of tab sharing.
 
+### Desktop agent (full screen, no share dialog)
+
+See `desktop-agent/README.md`. Build `AgencyPulseAgent.exe` once and give it to employees. It watches the web timer and captures the full desktop every 5 minutes.
+
 ---
 
 ## Part 4 — Verify
