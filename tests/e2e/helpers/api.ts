@@ -12,20 +12,48 @@ export async function registerAdmin(
   suffix = Date.now(),
 ): Promise<AuthSession> {
   const email = `qa-admin-${suffix}@example.com`;
+  const password = "password123";
 
-  const response = await request.post(`${apiBase}/auth/register`, {
+  const superLogin = await request.post(`${apiBase}/auth/login`, {
     data: {
-      name: "QA Admin",
-      email,
-      password: "password123",
+      email: process.env.E2E_SUPER_ADMIN_EMAIL ?? "superadmin@gmail.com",
+      password: process.env.E2E_SUPER_ADMIN_PASSWORD ?? "12345678",
     },
   });
 
-  if (!response.ok()) {
-    throw new Error(`Register failed: ${response.status()} ${await response.text()}`);
+  if (!superLogin.ok()) {
+    throw new Error(`Super admin login failed: ${superLogin.status()} ${await superLogin.text()}`);
   }
 
-  const body = await response.json();
+  const superBody = await superLogin.json();
+
+  const createOrg = await request.post(`${apiBase}/platform/organizations`, {
+    headers: {
+      Authorization: `Bearer ${superBody.token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    data: {
+      organization_name: `QA Org ${suffix}`,
+      admin_name: "QA Admin",
+      admin_email: email,
+      admin_password: password,
+    },
+  });
+
+  if (!createOrg.ok()) {
+    throw new Error(`Create org failed: ${createOrg.status()} ${await createOrg.text()}`);
+  }
+
+  const login = await request.post(`${apiBase}/auth/login`, {
+    data: { email, password },
+  });
+
+  if (!login.ok()) {
+    throw new Error(`Admin login failed: ${login.status()} ${await login.text()}`);
+  }
+
+  const body = await login.json();
 
   return {
     token: body.token,

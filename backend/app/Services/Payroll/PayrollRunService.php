@@ -22,6 +22,8 @@ use App\Models\User;
 
 use App\Services\Audit\AuditLogger;
 
+use App\Services\Payroll\SalaryAdvanceService;
+
 use App\Services\Tenant\TenantContext;
 
 use App\Support\DisplayDate;
@@ -46,7 +48,9 @@ class PayrollRunService
 
         private readonly PayrollCalculationService $payrollCalculation,
 
-        private readonly \App\Services\Time\OvertimeRequestService $overtimeRequests
+        private readonly \App\Services\Time\OvertimeRequestService $overtimeRequests,
+
+        private readonly SalaryAdvanceService $salaryAdvances,
 
     ) {}
 
@@ -313,6 +317,10 @@ class PayrollRunService
             'finalized_at' => now(),
 
         ]);
+
+        foreach ($run->employeeRecords as $record) {
+            $this->salaryAdvances->deductApprovedForPayroll($record->user_id, $run->id);
+        }
 
 
 

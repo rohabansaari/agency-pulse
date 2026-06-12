@@ -1,21 +1,21 @@
 import { test, expect } from "@playwright/test";
+import { registerAdmin } from "./helpers/api";
 
 test.describe("Payroll admin UI", () => {
-  test("admin can open payroll page and see settings", async ({ page }) => {
+  test("admin can open payroll page and see settings", async ({ page, request }) => {
     test.setTimeout(90_000);
 
-    const email = `qa-payroll-${Date.now()}@example.com`;
+    const session = await registerAdmin(request);
 
-    await page.goto("/register");
-    await page.getByLabel(/full name/i).fill("Payroll QA Admin");
-    await page.getByLabel(/email/i).fill(email);
-    await page.getByLabel(/^password$/i).fill("password123");
-    await page.getByRole("button", { name: /create account/i }).click();
+    await page.goto("/login");
+    await page.getByLabel(/email/i).fill(session.email);
+    await page.getByLabel(/password/i).fill("password123");
+    await page.getByRole("button", { name: /sign in/i }).click();
 
-    await expect(page.getByRole("button", { name: /creating account/i })).toBeHidden({
+    await expect(page.getByRole("button", { name: /signing in/i })).toBeHidden({
       timeout: 60_000,
     });
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/dashboard|\/onboarding/, { timeout: 15_000 });
     await expect(page.getByText("Loading...")).toBeHidden({ timeout: 60_000 });
 
     await page.getByRole("link", { name: /^payroll$/i }).click();

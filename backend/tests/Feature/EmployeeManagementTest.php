@@ -202,28 +202,20 @@ class EmployeeManagementTest extends TestCase
 
 
 
-    public function test_register_only_creates_admin_user(): void
-
+    public function test_admin_role_cannot_be_created_via_employee_endpoint(): void
     {
+        $admin = User::factory()->admin()->create();
 
-        $this->postJson('/api/v1/auth/register', [
+        Sanctum::actingAs($admin);
 
-            'name' => 'Org Owner',
-
-            'email' => 'owner@example.com',
-
+        $this->postJson('/api/v1/team/create-employee', [
+            'name' => 'Blocked Admin',
+            'email' => 'blocked-admin@example.com',
             'password' => 'password123',
-
-        ])
-
-            ->assertCreated()
-
-            ->assertJsonPath('user.role', UserRole::Admin->value);
-
-
-
-        $this->assertDatabaseMissing('users', ['role' => UserRole::Employee->value]);
-
+            'role' => UserRole::Admin->value,
+            'salary_type' => 'monthly',
+            'monthly_salary' => 5000,
+        ])->assertStatus(422);
     }
 
 }

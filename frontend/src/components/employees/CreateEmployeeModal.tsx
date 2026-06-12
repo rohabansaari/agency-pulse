@@ -3,7 +3,8 @@
 import { Modal } from "@/components/ui/Modal";
 import { Alert } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { FormField, Input, PasswordInput, Select } from "@/components/ui/Input";
+import { FormField, Input, PasswordInput } from "@/components/ui/Input";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { ApiError, createEmployee, formatApiErrors } from "@/lib/api";
 import { CREATION_ROLES, ROLE_LABELS } from "@/lib/navigation";
 import type { PayrollVaultStatus, SalaryType, UserRole } from "@/lib/types";
@@ -97,7 +98,7 @@ export function CreateEmployeeModal({
   return (
     <Modal
       title="Create employee"
-      description="Set up a new team member with salary and role. Admin roles should only be assigned when necessary."
+      description="Set up a new team member with salary and role."
       onClose={handleClose}
       size="lg"
     >
@@ -128,13 +129,14 @@ export function CreateEmployeeModal({
           </FormField>
           {canSelectRole ? (
             <FormField label="Role" required>
-              <Select value={role} onChange={(e) => setRole(e.target.value as UserRole)} required>
-                {CREATION_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ))}
-              </Select>
+              <Dropdown
+                value={role}
+                onChange={(v) => setRole(v as UserRole)}
+                options={CREATION_ROLES.map((r) => ({
+                  value: r,
+                  label: ROLE_LABELS[r],
+                }))}
+              />
             </FormField>
           ) : null}
         </div>
@@ -143,14 +145,14 @@ export function CreateEmployeeModal({
           <p className="mb-3 text-sm font-medium text-zinc-900 dark:text-zinc-50">Compensation</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Salary type" required>
-              <Select
+              <Dropdown
                 value={salaryType}
-                onChange={(e) => setSalaryType(e.target.value as SalaryType)}
-                required
-              >
-                <option value="hourly">Hourly</option>
-                <option value="monthly">Monthly</option>
-              </Select>
+                onChange={(v) => setSalaryType(v as SalaryType)}
+                options={[
+                  { value: "hourly", label: "Hourly" },
+                  { value: "monthly", label: "Monthly" },
+                ]}
+              />
             </FormField>
             <FormField
               label={salaryType === "hourly" ? "Hourly rate" : "Monthly salary"}

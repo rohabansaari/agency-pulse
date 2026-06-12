@@ -16,6 +16,7 @@ use App\Models\TimeEntry;
 
 use App\Services\Payroll\Deductions\PayrollDeductionEngine;
 use App\Services\Payroll\PayrollComponentService;
+use App\Services\Payroll\SalaryAdvanceService;
 
 use App\Services\Tenant\TenantContext;
 
@@ -38,6 +39,8 @@ class PayrollCalculationService
         private readonly PayrollDeductionEngine $deductionEngine,
 
         private readonly PayrollComponentService $payrollComponents,
+
+        private readonly SalaryAdvanceService $salaryAdvances,
 
     ) {}
 
@@ -570,7 +573,9 @@ class PayrollCalculationService
 
             $bonuses = $componentTotals['increments'];
 
-            $totalDeductions = round($deductions->totalDeductions() + $componentTotals['deductions'], 2);
+            $advanceDeduction = $this->salaryAdvances->pendingDeductionTotal($userId, $settings->organization_id);
+
+            $totalDeductions = round($deductions->totalDeductions() + $componentTotals['deductions'] + $advanceDeduction, 2);
 
             $net = round($gross - $totalDeductions + $bonuses, 2);
 
@@ -625,6 +630,8 @@ class PayrollCalculationService
                 'custom_deduction_snapshot' => number_format($deductions->customDeduction + $componentTotals['deductions'], 2, '.', ''),
 
                 'bonuses_snapshot' => number_format($bonuses, 2, '.', ''),
+
+                'advance_deduction_snapshot' => number_format($advanceDeduction, 2, '.', ''),
 
                 'net_salary_snapshot' => number_format($net, 2, '.', ''),
 

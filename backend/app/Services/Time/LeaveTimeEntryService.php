@@ -23,7 +23,8 @@ use Illuminate\Validation\ValidationException;
 class LeaveTimeEntryService
 {
     public function __construct(
-        private readonly PayrollPeriodLockService $payrollLock
+        private readonly PayrollPeriodLockService $payrollLock,
+        private readonly LeaveBalanceService $leaveBalances,
     ) {}
 
     /**
@@ -53,6 +54,8 @@ class LeaveTimeEntryService
 
         $team->loadMissing('manager');
 
+        $balance = $this->leaveBalances->balanceForUser($employee);
+
         return [
             'can_request' => true,
             'reason' => null,
@@ -60,6 +63,11 @@ class LeaveTimeEntryService
             'manager' => [
                 'id' => $team->manager->id,
                 'name' => $team->manager->name,
+            ],
+            'leave_balance' => [
+                'annual_limit_days' => $balance->annual_limit_days,
+                'used_days' => (float) $balance->used_days,
+                'remaining_days' => $balance->remainingDays(),
             ],
         ];
     }
@@ -144,6 +152,14 @@ class LeaveTimeEntryService
         [$startDate, $endDate] = $this->parseDateRange($data);
         $this->ensureEmployeeLeaveDatesNotInPast($startDate);
         $this->assertDateRangeModifiable($startDate, $endDate);
+
+        $requestedDays = $startDate->copy()->startOfDay()->diffInDays($endDate->copy()->startOfDay()) + 1;
+        $balance = $this->leaveBalances->balanceForUser($employee);
+        if ($balance->remainingDays() < $requestedDays) {
+            throw ValidationException::withMessages([
+                'start_date' => ['Insufficient leave balance. You have '.$balance->remainingDays().' days remaining.'],
+            ]);
+        }
 
         return $this->createLeaveEntries(
             employee: $employee,
@@ -402,6 +418,8 @@ class LeaveTimeEntryService
             'approved_at' => now(),
         ]);
 
+        $this->leaveBalances->consumeDays($entry->user, 1);
+
         return $entry->fresh(['user', 'team', 'approver', 'assignedManager']);
     }
 
@@ -469,6 +487,10 @@ class LeaveTimeEntryService
             ]));
 
             $cursor->addDay();
+        }
+
+        if ($status === TimeEntryStatus::Approved) {
+            $this->leaveBalances->consumeDays($employee, $entries->count());
         }
 
         return $entries;

@@ -1,8 +1,11 @@
 "use client";
 
-import { AuthCard } from "@/components/AuthCard";
+import { AuthShell } from "@/components/AuthCard";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/EmptyState";
+import { FormField, Input, PasswordInput } from "@/components/ui/Input";
 import { ApiError, formatApiErrors, login, resolvePostAuthPath } from "@/lib/api";
-import Link from "next/link";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -33,72 +36,42 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthCard
-      title="Sign in"
-      subtitle="Access your AgencyPulse workspace"
-      footer={
-        <>
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/register"
-            className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-          >
-            Create one
-          </Link>
-        </>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-            {error}
-          </div>
-        ) : null}
+    <AuthShell title="Welcome back" subtitle="Sign in to your AgencyPulse workspace">
+      <motion.form
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        onSubmit={handleSubmit}
+        className="space-y-4"
+      >
+        {error ? <Alert variant="error">{error}</Alert> : null}
 
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-          >
-            Email
-          </label>
-          <input
+        <FormField label="Email" htmlFor="email" required>
+          <Input
             id="email"
             type="email"
             required
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+            placeholder="you@company.com"
           />
-        </div>
+        </FormField>
 
-        <div>
-          <label
-            htmlFor="password"
-            className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-          >
-            Password
-          </label>
-          <input
+        <FormField label="Password" htmlFor="password" required>
+          <PasswordInput
             id="password"
-            type="password"
             required
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
           />
-        </div>
+        </FormField>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
-    </AuthCard>
+        <Button type="submit" disabled={loading} className="w-full" size="lg">
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
+      </motion.form>
+    </AuthShell>
   );
 }

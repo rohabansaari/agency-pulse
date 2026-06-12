@@ -24,7 +24,7 @@ class AuthTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_user_can_register(): void
+    public function test_register_route_is_not_available(): void
     {
         $response = $this->postJson('/api/v1/auth/register', [
             'name' => 'Jane Doe',
@@ -32,28 +32,7 @@ class AuthTest extends TestCase
             'password' => 'password123',
         ]);
 
-        $response->assertCreated()
-            ->assertJsonStructure([
-                'user' => ['id', 'name', 'email', 'role', 'created_at', 'updated_at'],
-                'memberships',
-                'current_organization_id',
-                'token',
-            ])
-            ->assertJsonPath('user.role', UserRole::Admin->value);
-
-        $this->assertDatabaseHas('users', [
-            'email' => 'jane@example.com',
-            'role' => UserRole::Admin->value,
-        ]);
-
-        $this->assertDatabaseHas('organizations', [
-            'name' => "Jane Doe's Organization",
-        ]);
-
-        $this->assertDatabaseHas('organization_members', [
-            'role' => UserRole::Admin->value,
-            'status' => OrganizationMemberStatus::Active->value,
-        ]);
+        $response->assertNotFound();
     }
 
     public function test_user_can_login_and_receive_token(): void
@@ -113,19 +92,14 @@ class AuthTest extends TestCase
             ->assertHeaderMissing('Set-Cookie');
     }
 
-    public function test_register_accepts_ten_consecutive_requests(): void
+    public function test_register_endpoint_rejects_public_signup(): void
     {
-        for ($i = 1; $i <= 10; $i++) {
-            $response = $this->withHeaders([
-                'Origin' => 'http://localhost:3000',
-            ])->postJson('/api/v1/auth/register', [
+        for ($i = 1; $i <= 3; $i++) {
+            $this->postJson('/api/v1/auth/register', [
                 'name' => "User {$i}",
                 'email' => "user{$i}@example.com",
                 'password' => 'password123',
-            ]);
-
-            $response->assertCreated()
-                ->assertJsonStructure(['user', 'token']);
+            ])->assertNotFound();
         }
     }
 

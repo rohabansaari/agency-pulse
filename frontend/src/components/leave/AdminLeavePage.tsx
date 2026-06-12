@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppUser } from "@/components/dashboard/AppShell";
+import { LeaveLimitsPanel } from "@/components/leave/LeaveBalancePanel";
 import {
   LeaveStatusFilter,
   type LeaveStatusFilter as LeaveStatusFilterValue,
@@ -25,11 +26,13 @@ export function AdminLeavePage() {
           Leave management
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Organization-wide leave control — assign, backdate, and override statuses.
+          Organization-wide leave control — limits, assignments, and audit visibility.
         </p>
       </div>
 
-      <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <LeaveLimitsPanel />
+
+      <section className="ui-card p-5">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           Assign paid leave
         </h2>
@@ -38,7 +41,7 @@ export function AdminLeavePage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="ui-card p-5">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">

@@ -41,6 +41,9 @@ import type {
   PayrollComponentType,
   PayrollComponentValueMode,
   SalaryType,
+  SalaryAdvanceRequest,
+  LeaveBalance,
+  LeaveBalanceEntry,
 } from "./types";
 
 const API_BASE =
@@ -124,23 +127,6 @@ export async function login(
     auth: false,
     tenant: false,
     body: JSON.stringify({ email, password }),
-  });
-
-  persistAuthSession(response);
-
-  return response;
-}
-
-export async function register(
-  name: string,
-  email: string,
-  password: string,
-): Promise<AuthResponse> {
-  const response = await apiFetch<AuthResponse>("/auth/register", {
-    method: "POST",
-    auth: false,
-    tenant: false,
-    body: JSON.stringify({ name, email, password }),
   });
 
   persistAuthSession(response);
@@ -1064,4 +1050,58 @@ export async function fetchScreenshots(params: {
   return apiFetch<PaginatedResponse<ScreenshotRecord>>(
     `/screenshots${query ? `?${query}` : ""}`,
   );
+}
+
+export async function fetchSalaryAdvances(): Promise<SalaryAdvanceRequest[]> {
+  return apiFetch<SalaryAdvanceRequest[]>("/hr/advances");
+}
+
+export async function fetchPendingSalaryAdvances(): Promise<SalaryAdvanceRequest[]> {
+  return apiFetch<SalaryAdvanceRequest[]>("/hr/advances/pending");
+}
+
+export async function createSalaryAdvance(data: {
+  amount: number;
+  reason?: string;
+}): Promise<{ message: string; request: SalaryAdvanceRequest }> {
+  return apiFetch("/hr/advances", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function approveSalaryAdvance(
+  id: number,
+): Promise<{ message: string; request: SalaryAdvanceRequest }> {
+  return apiFetch(`/hr/advances/${id}/approve`, { method: "POST" });
+}
+
+export async function rejectSalaryAdvance(
+  id: number,
+): Promise<{ message: string; request: SalaryAdvanceRequest }> {
+  return apiFetch(`/hr/advances/${id}/reject`, { method: "POST" });
+}
+
+export async function fetchMyLeaveBalance(): Promise<{ balance: LeaveBalance }> {
+  return apiFetch<{ balance: LeaveBalance }>("/hr/leave-balance");
+}
+
+export async function fetchLeaveBalances(): Promise<{ balances: LeaveBalanceEntry[] }> {
+  return apiFetch<{ balances: LeaveBalanceEntry[] }>("/hr/leave-balances");
+}
+
+export async function updateLeaveLimit(
+  userId: number,
+  annual_limit_days: number,
+): Promise<{ message: string; balance: LeaveBalance }> {
+  return apiFetch(`/hr/leave-balances/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ annual_limit_days }),
+  });
+}
+
+export async function resetLeaveBalance(
+  userId: number,
+): Promise<{ message: string; balance: LeaveBalance }> {
+  return apiFetch(`/hr/leave-balances/${userId}/reset`, { method: "POST" });
 }

@@ -79,10 +79,15 @@ class TeamController extends Controller
                 'regex:/^\d{4,8}$/',
                 'confirmed',
             ],
-            'role' => ['required', Rule::enum(UserRole::class), Rule::notIn([UserRole::SuperAdmin->value])],
+            'role' => [
+                'required',
+                Rule::enum(UserRole::class),
+                Rule::notIn([UserRole::SuperAdmin->value, UserRole::Admin->value]),
+            ],
         ]);
 
         $assignedRole = UserRole::from($validated['role']);
+        RoleMutationGuard::assertCreationRoleAllowed($assignedRole);
         RoleMutationGuard::assertPrivilegedRoleAssignable($request->user(), $assignedRole);
 
         $membership = DB::transaction(function () use ($validated, $request, $assignedRole) {

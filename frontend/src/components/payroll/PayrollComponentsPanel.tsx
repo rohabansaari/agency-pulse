@@ -12,7 +12,8 @@ import { usePayrollVault } from "@/components/payroll/PayrollVaultProvider";
 import { Alert, EmptyState, Spinner } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { FormField, Input, Select } from "@/components/ui/Input";
+import { FormField, Input } from "@/components/ui/Input";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { Modal } from "@/components/ui/Modal";
 import type { PayrollComponent, PayrollComponentType, PayrollComponentValueMode } from "@/lib/types";
 import { MinusCircle, Pencil, Plus, Trash2, TrendingUp } from "lucide-react";
@@ -330,25 +331,27 @@ export function PayrollComponentsPanel() {
             </FormField>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField label="Type" required>
-                <Select
+                <Dropdown
                   value={form.type}
-                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as PayrollComponentType }))}
+                  onChange={(v) => setForm((f) => ({ ...f, type: v as PayrollComponentType }))}
                   disabled={Boolean(editing)}
-                >
-                  <option value="deduction">Deduction</option>
-                  <option value="increment">Increment</option>
-                </Select>
+                  options={[
+                    { value: "deduction", label: "Deduction" },
+                    { value: "increment", label: "Increment" },
+                  ]}
+                />
               </FormField>
               <FormField label="Value mode" required>
-                <Select
+                <Dropdown
                   value={form.value_mode}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, value_mode: e.target.value as PayrollComponentValueMode }))
+                  onChange={(v) =>
+                    setForm((f) => ({ ...f, value_mode: v as PayrollComponentValueMode }))
                   }
-                >
-                  <option value="percentage">Percentage</option>
-                  <option value="fixed">Fixed amount</option>
-                </Select>
+                  options={[
+                    { value: "percentage", label: "Percentage" },
+                    { value: "fixed", label: "Fixed amount" },
+                  ]}
+                />
               </FormField>
             </div>
             <FormField

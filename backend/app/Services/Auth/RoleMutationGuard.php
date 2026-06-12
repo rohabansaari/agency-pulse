@@ -10,10 +10,28 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 final class RoleMutationGuard
 {
     /** @var list<UserRole> */
+    public const CREATION_ROLES = [UserRole::Employee, UserRole::Manager, UserRole::SubAdmin];
+
+    /** @var list<UserRole> */
     public const MUTABLE_ROLES = [UserRole::Employee, UserRole::Manager];
 
     /** @var list<UserRole> */
     public const IMMUTABLE_ROLES = [UserRole::Admin, UserRole::SubAdmin];
+
+    public static function assertCreationRoleAllowed(UserRole $targetRole): void
+    {
+        if ($targetRole === UserRole::Admin) {
+            throw new HttpException(403, 'Admin role cannot be assigned during employee creation.');
+        }
+
+        if ($targetRole === UserRole::SuperAdmin) {
+            throw new HttpException(403, 'Invalid role.');
+        }
+
+        if (! in_array($targetRole, self::CREATION_ROLES, true)) {
+            throw new HttpException(403, 'Invalid role for employee creation.');
+        }
+    }
 
     public static function assertPrivilegedRoleAssignable(User $actor, UserRole $targetRole): void
     {

@@ -623,6 +623,7 @@ export interface PayrollRunEmployeeRecord {
   social_security_snapshot: string | null;
   custom_deduction_snapshot: string | null;
   bonuses_snapshot: string | null;
+  advance_deduction_snapshot?: string | null;
   net_salary_snapshot: string | null;
   financial_data_masked?: boolean;
 }
@@ -688,4 +689,36 @@ export interface PaginatedResponse<T> {
     per_page: number;
     total: number;
   };
+}
+
+export type AdvanceRequestStatus = "pending" | "approved" | "rejected" | "deducted";
+
+export interface SalaryAdvanceRequest {
+  id: number;
+  user_id: number;
+  user?: { id: number; name: string; email: string };
+  amount: string;
+  reason: string | null;
+  status: AdvanceRequestStatus;
+  status_label: string;
+  reviewed_by?: number | null;
+  reviewer?: { id: number; name: string } | null;
+  reviewed_at?: string | null;
+  deducted_at?: string | null;
+  created_at?: string;
+}
+
+export interface LeaveBalance {
+  id: number;
+  user_id: number;
+  annual_limit_days: number;
+  used_days: string;
+  remaining_days: string;
+  reset_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface LeaveBalanceEntry {
+  user: { id: number; name: string; email: string; role?: string };
+  balance: LeaveBalance;
 }
