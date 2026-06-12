@@ -45,9 +45,10 @@ T = TypeVar("T")
 def log(message: str) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     line = f"{datetime.now().isoformat()} {message}"
-    print(line)
     with LOG_PATH.open("a", encoding="utf-8") as handle:
         handle.write(line + "\n")
+    if sys.stdout is not None and sys.stdout.isatty():
+        print(line)
 
 
 def notify_user(title: str, message: str) -> None:
@@ -656,6 +657,12 @@ class TimerSession:
         self.last_capture_at = 0.0
 
 
+def is_timer_running(timer: dict | None) -> bool:
+    if not timer or not isinstance(timer, dict):
+        return False
+    return str(timer.get("status", "")).lower() == "running"
+
+
 def handle_timer_state(
     config: dict,
     session: TimerSession,
@@ -663,7 +670,7 @@ def handle_timer_state(
     *,
     force_capture: bool = False,
 ) -> None:
-    if not timer or timer.get("status") != "running":
+    if not is_timer_running(timer):
         session.clear()
         return
 
@@ -686,9 +693,12 @@ def handle_timer_state(
     if not should_capture:
         return
 
+    log("Capturing screenshot...")
     if upload_screenshot(config, session.session_id, session.project_id):
         session.last_capture_at = time.time()
+        log("Screenshot capture cycle complete.")
     else:
+        log("Screenshot upload failed — will retry on the next interval.")
         session.last_capture_at = time.time() - (CAPTURE_INTERVAL_SECONDS - 60)
 
 
@@ -756,6 +766,7 @@ def main() -> int:
         if not acquire_lock():
             signal_wake()
             return 0
+        log("Launched from browser timer wake.")
 
     if not acquire_lock():
         signal_wake()

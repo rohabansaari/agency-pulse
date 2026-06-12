@@ -20,7 +20,7 @@ echo Building AgencyPulse Desktop Agent...
 %PY% -m pip install -r requirements.txt pyinstaller
 if errorlevel 1 goto :error
 
-%PY% -m PyInstaller --onefile --name AgencyPulseAgent --hidden-import=tkinter --clean agent.py
+%PY% -m PyInstaller --onefile --windowed --name AgencyPulseAgent --hidden-import=tkinter --clean agent.py
 if errorlevel 1 goto :error
 
 echo Creating zip (avoids Chrome blocking direct .exe downloads)...

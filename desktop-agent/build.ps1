@@ -8,6 +8,7 @@ python -m pip install -r requirements.txt pyinstaller
 
 python -m PyInstaller `
   --onefile `
+  --windowed `
   --name AgencyPulseAgent `
   --hidden-import=tkinter `
   --clean `

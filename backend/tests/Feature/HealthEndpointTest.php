@@ -15,6 +15,8 @@ class HealthEndpointTest extends TestCase
                 'status',
                 'service',
                 'timestamp',
+                'screenshot_disk',
+                'screenshot_s3_configured',
             ])
             ->assertJson([
                 'status' => 'ok',
