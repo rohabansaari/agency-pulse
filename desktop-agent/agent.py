@@ -542,25 +542,38 @@ def send_heartbeat(config: dict, offline: bool) -> bool:
 
 
 def fetch_active_timer(config: dict) -> dict | None:
-    def attempt() -> dict | None:
-        response = requests.get(
-            f"{config['api_base_url']}/time/today",
-            headers=headers(config),
-            timeout=60,
-        )
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = requests.get(
+                f"{config['api_base_url']}/time/today",
+                headers=headers(config),
+                timeout=60,
+            )
+        except requests.RequestException as error:
+            log(f"Timer poll attempt {attempt}/{MAX_RETRIES} failed: {error}")
+            if attempt < MAX_RETRIES:
+                delay = RETRY_DELAYS_SECONDS[attempt - 1]
+                log(f"Timer poll retrying in {delay}s...")
+                time.sleep(delay)
+            continue
 
         if response.status_code == 401:
             raise RuntimeError("Session expired.")
 
         if response.status_code >= 400:
             log(f"Timer check failed ({response.status_code}): {parse_api_error(response)}")
-            return None
+            if attempt < MAX_RETRIES:
+                delay = RETRY_DELAYS_SECONDS[attempt - 1]
+                log(f"Timer poll retrying in {delay}s...")
+                time.sleep(delay)
+            continue
 
         payload = response.json()
         meta = payload.get("meta") or {}
         return meta.get("active_timer")
 
-    return with_retries(attempt, "Timer poll")
+    log("Timer poll failed after maximum retries.")
+    return None
 
 
 def capture_screen_base64() -> str:
