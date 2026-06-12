@@ -16,6 +16,8 @@ import {
 import { formatDuration } from "@/lib/time";
 import type { PayrollRun, PayrollRunEmployeeRecord, PayrollRunStatus } from "@/lib/types";
 import { PayrollNav } from "@/components/payroll/PayrollNav";
+import { PageTransition } from "@/components/motion/PageTransition";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { usePayrollVault } from "@/components/payroll/PayrollVaultProvider";
 import { PayrollSettingsPanel } from "@/components/payroll/PayrollSettingsPanel";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
@@ -323,15 +325,13 @@ export function AdminPayrollPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Payroll</h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Draft runs can be edited or deleted. Finalized and locked runs are read-only. No compensation amounts are listed.
-        </p>
-      </div>
-
-      <PayrollNav />
+    <PageTransition>
+      <div className="space-y-6">
+        <PageHeader
+          title="Payroll"
+          description="Manage payroll runs, organization settings, and compensation snapshots."
+        />
+        <PayrollNav />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <ReportDateRangeFilter value={filterRange} onChange={setFilterRange} disabled={loading} />
@@ -558,6 +558,7 @@ export function AdminPayrollPage() {
           </div>
         )}
       </section>
-    </div>
+      </div>
+    </PageTransition>
   );
 }

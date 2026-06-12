@@ -75,11 +75,7 @@ class ProjectAssignmentController extends Controller
 
 
         $validated = $request->validate([
-
             'user_id' => ['required', 'integer', 'exists:users,id'],
-
-            'role_in_project' => ['nullable', Rule::enum(ProjectAssignmentRole::class)],
-
         ]);
 
 
@@ -117,9 +113,7 @@ class ProjectAssignmentController extends Controller
 
 
         $project->members()->attach($user->id, [
-
-            'role_in_project' => $validated['role_in_project'] ?? ProjectAssignmentRole::Worker->value,
-
+            'role_in_project' => ProjectAssignmentRole::Worker->value,
         ]);
 
 
@@ -135,6 +129,98 @@ class ProjectAssignmentController extends Controller
             ),
 
         ], 201);
+
+    }
+
+
+
+    public function assignBulk(Request $request, Project $project): JsonResponse
+
+    {
+
+        $this->authorizeAssignmentManagement($request, $project);
+
+
+
+        $validated = $request->validate([
+
+            'user_ids' => ['required', 'array', 'min:1'],
+
+            'user_ids.*' => ['integer', 'exists:users,id'],
+
+        ]);
+
+
+
+        $assigned = 0;
+
+        $skipped = 0;
+
+
+
+        foreach ($validated['user_ids'] as $userId) {
+
+            $user = User::query()->find($userId);
+
+            if (! $user || ! $this->isActiveOrgMember($user->id)) {
+
+                $skipped++;
+
+                continue;
+
+            }
+
+
+
+            try {
+
+                $this->ensureManagerCanAssignUser($request, $user->id);
+
+            } catch (ValidationException) {
+
+                $skipped++;
+
+                continue;
+
+            }
+
+
+
+            if ($project->members()->where('users.id', $user->id)->exists()) {
+
+                $skipped++;
+
+                continue;
+
+            }
+
+
+
+            $project->members()->attach($user->id, [
+
+                'role_in_project' => ProjectAssignmentRole::Worker->value,
+
+            ]);
+
+            $assigned++;
+
+        }
+
+
+
+        return response()->json([
+
+            'message' => $assigned > 0
+
+                ? "{$assigned} employee(s) assigned to project."
+
+                : 'No new employees were assigned.',
+
+            'assigned' => $assigned,
+
+            'skipped' => $skipped,
+
+        ], $assigned > 0 ? 201 : 200);
 
     }
 

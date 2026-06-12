@@ -266,19 +266,25 @@ export async function fetchProjectAssignees(
 export async function assignProjectEmployee(
   projectId: number,
   userId: number,
-  roleInProject: "worker" | "reviewer" = "worker",
 ): Promise<ProjectAssignee> {
   const response = await apiFetch<{ assignee: ProjectAssignee }>(
     `/projects/${projectId}/assign`,
     {
       method: "POST",
-      body: JSON.stringify({
-        user_id: userId,
-        role_in_project: roleInProject,
-      }),
+      body: JSON.stringify({ user_id: userId }),
     },
   );
   return response.assignee;
+}
+
+export async function assignProjectEmployees(
+  projectId: number,
+  userIds: number[],
+): Promise<{ message: string; assigned: number; skipped: number }> {
+  return apiFetch(`/projects/${projectId}/assign-bulk`, {
+    method: "POST",
+    body: JSON.stringify({ user_ids: userIds }),
+  });
 }
 
 export async function unassignProjectEmployee(

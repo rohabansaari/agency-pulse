@@ -42,7 +42,6 @@ class ProjectAssignmentTest extends TestCase
         $this->withHeaders($this->headers($manager))
             ->postJson("/api/v1/projects/{$project->id}/assign", [
                 'user_id' => $employee->id,
-                'role_in_project' => 'worker',
             ])
             ->assertCreated()
             ->assertJsonPath('assignee.id', $employee->id);
@@ -92,5 +91,27 @@ class ProjectAssignmentTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1)
             ->assertJsonPath('0.id', $assigned->id);
+    }
+
+    public function test_admin_can_bulk_assign_employees(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $employee1 = User::factory()->create(['organization_id' => $admin->organization_id]);
+        $employee2 = User::factory()->create(['organization_id' => $admin->organization_id]);
+        $project = Project::factory()->create(['organization_id' => $admin->organization_id]);
+
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson("/api/v1/projects/{$project->id}/assign-bulk", [
+                'user_ids' => [$employee1->id, $employee2->id],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('assigned', 2);
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson("/api/v1/projects/{$project->id}/assignees")
+            ->assertOk()
+            ->assertJsonCount(2);
     }
 }

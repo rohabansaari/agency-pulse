@@ -16,6 +16,8 @@ import {
 } from "@/lib/api";
 import { clearToken, getToken } from "@/lib/auth";
 import type { OnboardingStatus, UserRole } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { FormField, Input, Select } from "@/components/ui/Input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState, type ReactNode } from "react";
@@ -49,7 +51,7 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 ];
 
 const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
+  "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50";
 
 export function OnboardingWizard() {
   const router = useRouter();
@@ -272,7 +274,7 @@ export function OnboardingWizard() {
   const current = STEPS.find((item) => item.id === step) ?? STEPS[0];
 
   return (
-    <div className="onboarding-shell bg-gradient-to-br from-zinc-50 via-white to-blue-50/40 dark:from-zinc-950 dark:via-zinc-950 dark:to-blue-950/20">
+    <div className="onboarding-shell">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
         <header className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
@@ -592,7 +594,7 @@ function ActionRow({
       ) : (
         <span />
       )}
-      <button type="submit" disabled={submitting} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+      <button type="submit" disabled={submitting} className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
         {submitting ? "Saving…" : continueLabel}
       </button>
     </div>

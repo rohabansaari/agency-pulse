@@ -33,7 +33,7 @@ Route::middleware('rbac:admin,sub_admin,manager')->group(function () {
     Route::get('/{project}/assignees', [ProjectAssignmentController::class, 'assignees']);
 
     Route::post('/{project}/assign', [ProjectAssignmentController::class, 'assign']);
-
+    Route::post('/{project}/assign-bulk', [ProjectAssignmentController::class, 'assignBulk']);
     Route::delete('/{project}/unassign/{user}', [ProjectAssignmentController::class, 'unassign']);
 
 

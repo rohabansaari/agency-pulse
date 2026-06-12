@@ -7,6 +7,8 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { Alert, Spinner } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { FormField, Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
   ApiError,
@@ -25,7 +27,7 @@ import {
 } from "@/lib/navigation";
 import type { MemberStatus, PayrollVaultStatus, TeamMember, User } from "@/lib/types";
 import { motion } from "framer-motion";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Search, Upload } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -50,6 +52,8 @@ export function EmployeesDirectory({ user }: { user: User }) {
   const [vaultStatus, setVaultStatus] = useState<PayrollVaultStatus | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<MemberStatus | "all">("all");
 
   const load = useCallback(async () => {
     setError("");
@@ -90,6 +94,19 @@ export function EmployeesDirectory({ user }: { user: User }) {
     [members],
   );
 
+  const filteredMembers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return members.filter((m) => {
+      if (statusFilter !== "all" && m.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        m.name.toLowerCase().includes(q) ||
+        m.email.toLowerCase().includes(q) ||
+        (m.team_name?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [members, search, statusFilter]);
+
   if (loading) {
     return <Spinner label="Loading employees…" />;
   }
@@ -127,6 +144,30 @@ export function EmployeesDirectory({ user }: { user: User }) {
         />
 
         {error ? <Alert variant="error">{error}</Alert> : null}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Input
+              placeholder="Search by name, email, or team…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <FormField label="Status">
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as MemberStatus | "all")}
+              className="min-w-[140px]"
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="invited">Invited</option>
+              <option value="suspended">Suspended</option>
+            </Select>
+          </FormField>
+        </div>
 
         {showImport && canCreate ? (
           <div className="ui-card rounded-xl p-4">
@@ -168,7 +209,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {members.map((member, index) => (
+              {filteredMembers.map((member, index) => (
                 <motion.tr
                   key={member.id}
                   initial={{ opacity: 0 }}
@@ -184,7 +225,11 @@ export function EmployeesDirectory({ user }: { user: User }) {
                     </Link>
                     <p className="text-xs text-zinc-500">{member.email}</p>
                   </td>
-                  <td className="px-3 py-3 capitalize">{member.role.replace("_", " ")}</td>
+                  <td className="px-3 py-3 capitalize">
+                    <Badge variant={member.role === "manager" ? "primary" : member.role === "admin" ? "violet" : "default"}>
+                      {member.role.replace("_", " ")}
+                    </Badge>
+                  </td>
                   <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.team_name ?? "—"}</td>
                   <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.manager_name ?? "—"}</td>
                   <td className="px-3 py-3">

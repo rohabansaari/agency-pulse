@@ -4,13 +4,14 @@ import { RoleBadge } from "@/components/dashboard/RoleBadge";
 import { navItemsForRole } from "@/lib/navigation";
 import type { NavItem } from "@/lib/navigation";
 import type { User, UserRole } from "@/lib/types";
+import { cn } from "@/lib/cn";
 import {
   BarChart3,
   Building2,
-  Camera,
   Calendar,
   CalendarClock,
-  ChevronDown,
+  Camera,
+  ChevronRight,
   Clock,
   DollarSign,
   FolderKanban,
@@ -22,7 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState, type ComponentType } from "react";
+import { useMemo, type ComponentType } from "react";
 
 interface DashboardSidebarProps {
   user: User;
@@ -49,37 +50,46 @@ const ICONS: Record<string, ComponentType<{ className?: string; strokeWidth?: nu
   Screenshots: Camera,
 };
 
-type NavGroup = {
-  id: string;
-  label: string;
-  items: NavItem[];
-};
+type NavGroup = { id: string; label: string; items: NavItem[] };
 
-const GROUP_LABELS: Record<string, string[]> = {
-  overview: ["Dashboard", "Platform"],
-  workspace: ["Teams", "My Teams", "Projects", "My Projects", "Employees"],
-  operations: ["Time Tracking", "Leave", "Leave Management", "Overtime Management", "Payroll"],
-  insights: ["Reports", "Settings"],
+const GROUPS: Record<UserRole, { id: string; label: string; labels: string[] }[]> = {
+  super_admin: [{ id: "main", label: "Platform", labels: ["Platform"] }],
+  admin: [
+    { id: "overview", label: "Overview", labels: ["Dashboard"] },
+    { id: "people", label: "People", labels: ["Employees", "Teams"] },
+    { id: "work", label: "Work", labels: ["Projects", "Time Tracking", "Screenshots"] },
+    { id: "ops", label: "Operations", labels: ["Leave Management", "Overtime Management", "Payroll"] },
+    { id: "insights", label: "Insights", labels: ["Reports", "Settings"] },
+  ],
+  sub_admin: [
+    { id: "overview", label: "Overview", labels: ["Dashboard"] },
+    { id: "people", label: "People", labels: ["Employees", "Teams"] },
+    { id: "work", label: "Work", labels: ["Projects", "Screenshots"] },
+    { id: "ops", label: "Operations", labels: ["Leave Management", "Overtime Management"] },
+    { id: "insights", label: "Insights", labels: ["Reports"] },
+  ],
+  manager: [
+    { id: "overview", label: "Overview", labels: ["Dashboard"] },
+    { id: "work", label: "Work", labels: ["Time Tracking", "My Teams", "Projects", "Screenshots"] },
+    { id: "people", label: "People", labels: ["Leave"] },
+    { id: "insights", label: "Insights", labels: ["Reports"] },
+  ],
+  employee: [
+    { id: "overview", label: "Overview", labels: ["Dashboard"] },
+    { id: "work", label: "Work", labels: ["Time Tracking", "My Projects", "Screenshots"] },
+    { id: "people", label: "Time off", labels: ["Leave"] },
+  ],
 };
 
 function groupNavItems(items: NavItem[], role: UserRole): NavGroup[] {
-  if (role === "employee" || role === "manager" || role === "super_admin") {
-    return [{ id: "main", label: "Menu", items }];
-  }
-
-  const groups: NavGroup[] = [];
-  for (const [id, labels] of Object.entries(GROUP_LABELS)) {
-    const groupItems = items.filter((item) => labels.includes(item.label));
-    if (groupItems.length > 0) {
-      groups.push({
-        id,
-        label: id === "overview" ? "Overview" : id === "workspace" ? "Workspace" : id === "operations" ? "Operations" : "Admin",
-        items: groupItems,
-      });
-    }
-  }
-
-  return groups.length > 0 ? groups : [{ id: "main", label: "Menu", items }];
+  const config = GROUPS[role];
+  return config
+    .map(({ id, label, labels }) => ({
+      id,
+      label,
+      items: items.filter((item) => labels.includes(item.label)),
+    }))
+    .filter((g) => g.items.length > 0);
 }
 
 export function DashboardSidebar({
@@ -91,7 +101,6 @@ export function DashboardSidebar({
   const pathname = usePathname();
   const items = navItemsForRole(user.role);
   const groups = useMemo(() => groupNavItems(items, user.role), [items, user.role]);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   function isActive(item: NavItem): boolean {
     return (
@@ -102,84 +111,72 @@ export function DashboardSidebar({
     );
   }
 
-  function toggleGroup(id: string): void {
-    setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
-
   const homeHref = user.role === "super_admin" ? "/platform" : "/dashboard";
-  const productLabel = user.role === "super_admin" ? "Platform" : "Workforce";
 
   return (
     <div className="flex h-full min-h-screen flex-col">
-      <div className="shrink-0 border-b border-zinc-200/80 px-4 py-4 dark:border-zinc-800">
-        <Link href={homeHref} className="flex items-center gap-2.5" onClick={onNavigate}>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
+      <div className="shrink-0 border-b border-[var(--sidebar-border)] px-4 py-4">
+        <Link href={homeHref} className="flex items-center gap-3" onClick={onNavigate}>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)] text-xs font-bold text-white shadow-sm">
             AP
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            <p className="truncate text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
               AgencyPulse
             </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{productLabel}</p>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Workforce platform</p>
           </div>
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-3 px-3 py-3">
-        {groups.map((group) => {
-          const isCollapsed = collapsed[group.id] ?? false;
-          const showToggle = groups.length > 1 && group.id !== "overview";
-
-          return (
-            <div key={group.id}>
-              {showToggle ? (
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.id)}
-                  className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-[11px] font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
-                >
-                  {group.label}
-                  <ChevronDown
-                    className={`h-3.5 w-3.5 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
-                  />
-                </button>
-              ) : null}
-
-              {!isCollapsed ? (
-                <div className="space-y-0.5">
-                  {group.items.map((item) => {
-                    const active = isActive(item);
-                    const Icon = ICONS[item.label];
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={onNavigate}
-                        className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
-                          active
-                            ? "bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-900/50"
-                            : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100"
-                        }`}
-                      >
-                        {Icon ? <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} /> : null}
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : null}
+      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+        {groups.map((group) => (
+          <div key={group.id}>
+            {groups.length > 1 ? (
+              <p className="mb-1.5 px-2.5 text-[10px] font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">
+                {group.label}
+              </p>
+            ) : null}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const active = isActive(item);
+                const Icon = ICONS[item.label];
+                return (
+                  <Link
+                    key={`${group.id}-${item.label}-${item.href}`}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-all",
+                      active
+                        ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-text)] shadow-sm"
+                        : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100",
+                    )}
+                  >
+                    {Icon ? (
+                      <Icon
+                        className={cn(
+                          "h-4 w-4 shrink-0 transition-colors",
+                          active ? "text-[var(--sidebar-active-text)]" : "text-zinc-400 group-hover:text-zinc-600",
+                        )}
+                        strokeWidth={active ? 2 : 1.75}
+                      />
+                    ) : null}
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {active ? <ChevronRight className="h-3 w-3 shrink-0 opacity-60" /> : null}
+                  </Link>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </nav>
 
-      <div className="shrink-0 border-t border-zinc-200/80 p-3 dark:border-zinc-800">
-        <div className="mb-2 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
-          <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
-            {user.name}
-          </p>
-          <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{user.email}</p>
-          <RoleBadge role={user.role} className="mt-1" />
+      <div className="shrink-0 border-t border-[var(--sidebar-border)] p-3">
+        <div className="mb-2 rounded-lg bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800/40">
+          <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{user.name}</p>
+          <p className="truncate text-xs text-zinc-500">{user.email}</p>
+          <RoleBadge role={user.role} className="mt-1.5" />
         </div>
         <button
           type="button"
@@ -188,7 +185,7 @@ export function DashboardSidebar({
           className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-60 dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
         >
           <LogOut className="h-4 w-4" />
-          {loggingOut ? "Signing out..." : "Logout"}
+          {loggingOut ? "Signing out…" : "Sign out"}
         </button>
       </div>
     </div>
