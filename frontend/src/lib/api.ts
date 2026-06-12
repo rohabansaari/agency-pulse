@@ -79,6 +79,7 @@ async function apiFetch<T>(
   const organizationId = tenant ? getOrganizationId() : null;
 
   const response = await fetch(`${API_BASE}${path}`, {
+    cache: "no-store",
     ...rest,
     headers: {
       "Content-Type": "application/json",

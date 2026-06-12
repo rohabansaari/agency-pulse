@@ -239,4 +239,65 @@ class SuperAdminTest extends TestCase
         $this->assertDatabaseMissing('organizations', ['id' => $organizationId]);
         $this->assertDatabaseMissing('users', ['id' => $tenantAdmin->id]);
     }
+
+    public function test_super_admin_delete_removes_all_tenant_users(): void
+    {
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+        $tenantAdmin = User::factory()->admin()->create();
+        $manager = User::factory()->manager()->create([
+            'organization_id' => $tenantAdmin->organization_id,
+        ]);
+        $employee = User::factory()->create([
+            'organization_id' => $tenantAdmin->organization_id,
+        ]);
+        $organizationId = $tenantAdmin->organization_id;
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->patchJson('/api/v1/platform/organizations/'.$organizationId, [
+            'status' => 'suspended',
+        ])->assertOk();
+
+        $this->deleteJson('/api/v1/platform/organizations/'.$organizationId)
+            ->assertOk();
+
+        $this->assertDatabaseMissing('organizations', ['id' => $organizationId]);
+        $this->assertDatabaseMissing('users', ['id' => $tenantAdmin->id]);
+        $this->assertDatabaseMissing('users', ['id' => $manager->id]);
+        $this->assertDatabaseMissing('users', ['id' => $employee->id]);
+
+        $this->getJson('/api/v1/platform/organizations')
+            ->assertOk()
+            ->assertJsonPath('organizations', []);
+    }
+
+    public function test_platform_dashboard_purges_orphaned_tenant_users(): void
+    {
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+        $tenantAdmin = User::factory()->admin()->create();
+        $employee = User::factory()->create([
+            'organization_id' => $tenantAdmin->organization_id,
+        ]);
+        $organizationId = $tenantAdmin->organization_id;
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->patchJson('/api/v1/platform/organizations/'.$organizationId, [
+            'status' => 'suspended',
+        ])->assertOk();
+
+        $this->deleteJson('/api/v1/platform/organizations/'.$organizationId)
+            ->assertOk();
+
+        $this->assertDatabaseMissing('organizations', ['id' => $organizationId]);
+        $this->assertDatabaseMissing('users', ['id' => $tenantAdmin->id]);
+        $this->assertDatabaseMissing('users', ['id' => $employee->id]);
+
+        $this->getJson('/api/v1/platform/dashboard')
+            ->assertOk()
+            ->assertJsonPath('organizations_total', 0)
+            ->assertJsonPath('tenant_users_total', 0);
+    }
 }

@@ -40,6 +40,7 @@ export default function PlatformPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [rowActionId, setRowActionId] = useState<number | null>(null);
   const [rowMessage, setRowMessage] = useState("");
+  const [rowMessageIsError, setRowMessageIsError] = useState(false);
 
   const load = useCallback(async () => {
     setError("");
@@ -156,11 +157,13 @@ export default function PlatformPage() {
 
     setRowActionId(organization.id);
     setRowMessage("");
+    setRowMessageIsError(false);
     try {
       await updatePlatformOrganization(organization.id, { status: "suspended" });
-      setRowMessage(`"${organization.name}" suspended.`);
+      setRowMessage(`"${organization.name}" suspended. Use Delete to remove it from the platform.`);
       await load();
     } catch (err) {
+      setRowMessageIsError(true);
       setRowMessage(
         err instanceof ApiError
           ? formatApiErrors(err.errors) || err.message
@@ -174,11 +177,13 @@ export default function PlatformPage() {
   async function handleReactivate(organization: PlatformOrganization) {
     setRowActionId(organization.id);
     setRowMessage("");
+    setRowMessageIsError(false);
     try {
       await updatePlatformOrganization(organization.id, { status: "active" });
       setRowMessage(`"${organization.name}" reactivated.`);
       await load();
     } catch (err) {
+      setRowMessageIsError(true);
       setRowMessage(
         err instanceof ApiError
           ? formatApiErrors(err.errors) || err.message
@@ -200,15 +205,18 @@ export default function PlatformPage() {
 
     setRowActionId(organization.id);
     setRowMessage("");
+    setRowMessageIsError(false);
     try {
       await deletePlatformOrganization(organization.id);
-      setRowMessage(`"${organization.name}" deleted.`);
+      setOrganizations((current) => current.filter((org) => org.id !== organization.id));
+      setRowMessage(`"${organization.name}" permanently deleted.`);
       await load();
     } catch (err) {
+      setRowMessageIsError(true);
       setRowMessage(
         err instanceof ApiError
           ? formatApiErrors(err.errors) || err.message
-          : "Failed to delete organization.",
+          : "Failed to delete organization. Suspend the organization first, then click Delete.",
       );
     } finally {
       setRowActionId(null);
@@ -248,7 +256,13 @@ export default function PlatformPage() {
         ) : null}
 
         {rowMessage ? (
-          <p className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200">
+          <p
+            className={
+              rowMessageIsError
+                ? "rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300"
+                : "rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200"
+            }
+          >
             {rowMessage}
           </p>
         ) : null}
@@ -319,7 +333,9 @@ export default function PlatformPage() {
           <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
             <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Registered organizations</h2>
             <p className="text-xs text-zinc-500">
-              {organizations.length} organization{organizations.length === 1 ? "" : "s"} on the platform
+              {organizations.length} organization{organizations.length === 1 ? "" : "s"} on the platform.
+              Suspending keeps a tenant visible — use <span className="font-medium">Delete</span> (after suspend)
+              to remove it permanently.
             </p>
           </div>
           <table className="min-w-full text-left text-sm">

@@ -122,8 +122,70 @@ class PlatformOrganizationService
         }
 
         DB::transaction(function () use ($organization) {
+            $organizationId = $organization->id;
+
+            $userIds = OrganizationMember::query()
+                ->where('organization_id', $organizationId)
+                ->pluck('user_id')
+                ->merge(
+                    User::query()
+                        ->where('organization_id', $organizationId)
+                        ->pluck('id')
+                )
+                ->unique()
+                ->values();
+
+            foreach ($userIds as $userId) {
+                $user = User::query()->find($userId);
+
+                if (! $user || $user->isSuperAdmin()) {
+                    continue;
+                }
+
+                $user->tokens()->delete();
+                $user->delete();
+            }
+
             $organization->delete();
         });
+
+        $this->purgeOrphanedTenantUsers();
+    }
+
+    public function purgeOrphanedTenantUsers(): int
+    {
+        $validOrganizationIds = Organization::query()->pluck('id');
+
+        $orphanedUsers = User::query()
+            ->where('role', '!=', UserRole::SuperAdmin)
+            ->where(function ($query) use ($validOrganizationIds) {
+                $query->whereNull('organization_id');
+
+                if ($validOrganizationIds->isNotEmpty()) {
+                    $query->orWhereNotIn('organization_id', $validOrganizationIds);
+                } else {
+                    $query->orWhereNotNull('organization_id');
+                }
+            })
+            ->get();
+
+        $removed = 0;
+
+        foreach ($orphanedUsers as $user) {
+            $user->tokens()->delete();
+            $user->delete();
+            $removed++;
+        }
+
+        return $removed;
+    }
+
+    public function tenantUsersTotal(): int
+    {
+        return User::query()
+            ->where('role', '!=', UserRole::SuperAdmin)
+            ->whereIn('organization_id', Organization::query()->select('id'))
+            ->count();
     }
 
     public function resolvePrimaryAdmin(Organization $organization): ?User

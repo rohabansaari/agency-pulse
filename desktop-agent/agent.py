@@ -29,7 +29,7 @@ MAX_IMAGE_WIDTH = 1600
 JPEG_QUALITY = 60
 MAX_RETRIES = 3
 RETRY_DELAYS_SECONDS = (2, 4, 8)
-DEFAULT_API_BASE_URL = "https://agency-pulse-api.onrender.com/api/v1"
+DEFAULT_API_BASE_URL = "https://agencypulse-api.onrender.com/api/v1"
 PROTOCOL = "agencypulse"
 
 CONFIG_DIR = Path.home() / ".agencypulse"
@@ -247,7 +247,52 @@ def headers(config: dict) -> dict:
     }
 
 
+def default_api_base_url() -> str:
+    configured = os.environ.get("AGENCYPULSE_API_URL", "").strip()
+    if configured:
+        return normalize_api_base_url(configured)
+    return DEFAULT_API_BASE_URL
+
+
+def normalize_api_base_url(raw: str) -> str:
+    url = raw.strip().rstrip("/")
+    if url.endswith("/api/v1"):
+        return url
+    if url.endswith("/api"):
+        return f"{url}/v1"
+    return f"{url}/api/v1"
+
+
+def verify_api_reachable(api_base_url: str) -> str | None:
+    health_url = f"{api_base_url.rstrip('/')}/health"
+    try:
+        response = requests.get(
+            health_url,
+            headers={"Accept": "application/json"},
+            timeout=30,
+        )
+    except requests.RequestException as error:
+        return f"Cannot reach AgencyPulse API at {health_url}: {error}"
+
+    if response.status_code == 404:
+        return (
+            "API health check returned 404. The API URL is probably wrong — use the same URL "
+            "as the website (for example https://agencypulse-api.onrender.com/api/v1)."
+        )
+
+    if response.status_code >= 400:
+        return f"API health check failed ({response.status_code}) at {health_url}."
+
+    return None
+
+
 def parse_api_error(response: requests.Response) -> str:
+    if response.status_code == 404:
+        return (
+            "API endpoint not found (404). Check the API URL — it must match your web app "
+            f"(currently calling {response.url})."
+        )
+
     try:
         body = response.json()
     except ValueError:
@@ -329,12 +374,12 @@ def prompt_login_gui(config: dict) -> dict:
     from tkinter import messagebox, ttk
 
     result: dict = {}
-    default_api = config.get("api_base_url") or DEFAULT_API_BASE_URL
+    default_api = normalize_api_base_url(config.get("api_base_url") or default_api_base_url())
 
     root = tk.Tk()
     root.title("AgencyPulse Desktop Agent")
     root.resizable(False, False)
-    root.geometry("420x240")
+    root.geometry("420x300")
 
     frame = ttk.Frame(root, padding=16)
     frame.pack(fill="both", expand=True)
@@ -347,6 +392,10 @@ def prompt_login_gui(config: dict) -> dict:
         text="Sign in once on this PC. The agent runs automatically after that.",
     ).pack(anchor="w", pady=(4, 12))
 
+    ttk.Label(frame, text="API URL").pack(anchor="w")
+    api_var = tk.StringVar(value=default_api)
+    ttk.Entry(frame, textvariable=api_var, width=52).pack(fill="x", pady=(0, 8))
+
     ttk.Label(frame, text="Email").pack(anchor="w")
     email_var = tk.StringVar()
     ttk.Entry(frame, textvariable=email_var, width=52).pack(fill="x", pady=(0, 8))
@@ -356,12 +405,17 @@ def prompt_login_gui(config: dict) -> dict:
     ttk.Entry(frame, textvariable=password_var, show="*", width=52).pack(fill="x", pady=(0, 12))
 
     def submit() -> None:
-        api_base_url = default_api.rstrip("/")
+        api_base_url = normalize_api_base_url(api_var.get().strip() or default_api_base_url())
         email = email_var.get().strip()
         password = password_var.get().strip()
 
         if not email or not password:
             messagebox.showerror("AgencyPulse Agent", "Email and password are required.")
+            return
+
+        health_error = verify_api_reachable(api_base_url)
+        if health_error:
+            messagebox.showerror("AgencyPulse Agent", health_error)
             return
 
         try:
@@ -388,34 +442,21 @@ def prompt_login_gui(config: dict) -> dict:
         if not token or not organization_id or not user_id:
             messagebox.showerror(
                 "AgencyPulse Agent",
-                "Login response missing token, organization, or user.",
+                "Login response missing token, organization, or user. "
+                "Use an employee or manager account (not super admin).",
             )
             return
 
-        candidate = {
-            **config,
-            "api_base_url": api_base_url,
-            "token": token,
-            "organization_id": int(organization_id),
-            "user_id": int(user_id),
-            "device_id": config.get("device_id") or str(uuid.uuid4()),
-        }
-
-        try:
-            me_response = requests.get(
-                f"{api_base_url}/auth/me",
-                headers=headers(candidate),
-                timeout=30,
-            )
-        except requests.RequestException as error:
-            messagebox.showerror("AgencyPulse Agent", f"Could not verify login: {error}")
-            return
-
-        if me_response.status_code >= 400:
-            messagebox.showerror("AgencyPulse Agent", parse_api_error(me_response))
-            return
-
-        result.update(candidate)
+        result.update(
+            {
+                **config,
+                "api_base_url": api_base_url,
+                "token": token,
+                "organization_id": int(organization_id),
+                "user_id": int(user_id),
+                "device_id": config.get("device_id") or str(uuid.uuid4()),
+            }
+        )
         root.destroy()
 
     ttk.Button(frame, text="Sign in", command=submit).pack(anchor="e")
@@ -430,6 +471,8 @@ def prompt_login_gui(config: dict) -> dict:
 
 def ensure_config() -> dict:
     config = load_config()
+    if config.get("api_base_url"):
+        config["api_base_url"] = normalize_api_base_url(str(config["api_base_url"]))
     config = run_first_run_setup(config)
 
     if not config.get("device_id"):
