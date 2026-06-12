@@ -37,6 +37,10 @@ import type {
   OnboardingStatus,
   PaginatedResponse,
   ScreenshotRecord,
+  PayrollComponent,
+  PayrollComponentType,
+  PayrollComponentValueMode,
+  SalaryType,
 } from "./types";
 
 const API_BASE =
@@ -346,6 +350,9 @@ export async function createEmployee(data: {
   email: string;
   password: string;
   role: UserRole;
+  salary_type: SalaryType;
+  hourly_rate?: number;
+  monthly_salary?: number;
   payroll_pin?: string;
   payroll_pin_confirmation?: string;
 }): Promise<TeamMember> {
@@ -702,6 +709,48 @@ export async function updatePayrollSettings(data: {
       payrollPin: true,
     },
   );
+}
+
+export async function fetchPayrollComponents(): Promise<PayrollComponent[]> {
+  return apiFetch<PayrollComponent[]>("/payroll/components", { payrollPin: true });
+}
+
+export async function createPayrollComponent(data: {
+  name: string;
+  type: PayrollComponentType;
+  value_mode: PayrollComponentValueMode;
+  value: number;
+  is_active?: boolean;
+}): Promise<{ message: string; component: PayrollComponent }> {
+  return apiFetch("/payroll/components", {
+    method: "POST",
+    body: JSON.stringify(data),
+    payrollPin: true,
+  });
+}
+
+export async function updatePayrollComponent(
+  id: number,
+  data: Partial<{
+    name: string;
+    type: PayrollComponentType;
+    value_mode: PayrollComponentValueMode;
+    value: number;
+    is_active: boolean;
+  }>,
+): Promise<{ message: string; component: PayrollComponent }> {
+  return apiFetch(`/payroll/components/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+    payrollPin: true,
+  });
+}
+
+export async function deletePayrollComponent(id: number): Promise<{ message: string }> {
+  return apiFetch(`/payroll/components/${id}`, {
+    method: "DELETE",
+    payrollPin: true,
+  });
 }
 
 export async function fetchEmployeeProfile(userId: number): Promise<EmployeeProfile> {

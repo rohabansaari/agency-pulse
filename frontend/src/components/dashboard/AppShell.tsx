@@ -3,7 +3,9 @@
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DesktopAgentBanner } from "@/components/screenshots/DesktopAgentBanner";
 import { useAuthSession } from "@/hooks/useAuthSession";
+import { PageTransition } from "@/components/motion/PageTransition";
 import type { User } from "@/lib/types";
+import { Menu } from "lucide-react";
 import Link from "next/link";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
@@ -82,9 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className="rounded-lg p-2 text-zinc-600 transition hover:bg-zinc-100 md:hidden dark:text-zinc-400 dark:hover:bg-zinc-800"
                 aria-label="Open navigation"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-                  <path d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <Menu className="h-5 w-5" />
               </button>
               <span className="text-sm font-semibold text-zinc-900 md:hidden dark:text-zinc-50">
                 AgencyPulse

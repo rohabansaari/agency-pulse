@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\PayrollComponentController;
 use App\Http\Controllers\Api\V1\PayrollSettingsController;
 use App\Http\Controllers\Api\V1\PayrollVaultController;
 use App\Http\Controllers\Api\V1\SalaryContractController;
@@ -16,6 +17,11 @@ Route::middleware(['rbac:admin', 'payroll.vault'])->group(function () {
 
     Route::get('/settings', [PayrollSettingsController::class, 'show']);
     Route::patch('/settings', [PayrollSettingsController::class, 'update']);
+
+    Route::get('/components', [PayrollComponentController::class, 'index']);
+    Route::post('/components', [PayrollComponentController::class, 'store']);
+    Route::patch('/components/{component}', [PayrollComponentController::class, 'update']);
+    Route::delete('/components/{component}', [PayrollComponentController::class, 'destroy']);
 
     Route::get('/salary-contracts/{user}/status', [SalaryContractController::class, 'status']);
     Route::post('/salary-contracts/{user}', [SalaryContractController::class, 'store']);

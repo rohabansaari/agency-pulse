@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #fafafa;
+  --foreground: #09090b;
   --card: #ffffff;
-  --border: #e2e8f0;
-  --muted: #64748b;
-  --accent: #2563eb;
+  --border: #e4e4e7;
+  --muted: #71717a;
+  --accent: #18181b;
   --success: #16a34a;
-  --app-sidebar-width: 16rem;
+  --app-sidebar-width: 15rem;
+  --space-page: 1.5rem;
+  --space-section: 1.5rem;
+  --radius-card: 0.75rem;
 }
 
 @theme inline {
@@ -137,10 +140,10 @@ body {
 }
 
 .ui-card {
-  border-radius: 0.75rem;
+  border-radius: var(--radius-card);
   border: 1px solid var(--border);
   background: var(--card);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
 }
 
 /* Tables grow with the page — no nested horizontal scroll containers */

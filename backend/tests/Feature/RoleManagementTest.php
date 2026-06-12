@@ -174,6 +174,10 @@ class RoleManagementTest extends TestCase
                 'email' => 'manager@example.com',
                 'password' => 'Password1!',
                 'role' => UserRole::Manager->value,
+                'salary_type' => 'monthly',
+                'monthly_salary' => 5000,
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
             ])
             ->assertCreated()
             ->assertJsonPath('member.role', UserRole::Manager->value);
@@ -191,8 +195,29 @@ class RoleManagementTest extends TestCase
                 'email' => 'ops@example.com',
                 'password' => 'Password1!',
                 'role' => UserRole::SubAdmin->value,
+                'salary_type' => 'monthly',
+                'monthly_salary' => 6000,
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
             ])
             ->assertCreated()
             ->assertJsonPath('member.role', UserRole::SubAdmin->value);
+    }
+
+    public function test_admin_cannot_change_admin_account_status(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $otherAdmin = User::factory()->admin()->create(['organization_id' => $admin->organization_id]);
+        $membership = OrganizationMember::query()
+            ->where('user_id', $otherAdmin->id)
+            ->firstOrFail();
+
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson("/api/v1/team/{$membership->id}", [
+                'status' => 'suspended',
+            ])
+            ->assertForbidden();
     }
 }

@@ -584,6 +584,21 @@ export interface OrganizationPayrollSettings {
   updated_at?: string | null;
 }
 
+export type PayrollComponentType = "deduction" | "increment";
+export type PayrollComponentValueMode = "percentage" | "fixed";
+
+export interface PayrollComponent {
+  id: number;
+  name: string;
+  type: PayrollComponentType;
+  value_mode: PayrollComponentValueMode;
+  value: string | null;
+  is_active: boolean;
+  financial_data_masked?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface PayrollRunEmployeeRecord {
   id: number;
   payroll_run_id: number;

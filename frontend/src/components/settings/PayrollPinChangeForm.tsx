@@ -1,10 +1,10 @@
 "use client";
 
 import { ApiError, changePayrollPin, formatApiErrors } from "@/lib/api";
+import { Alert } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
+import { FormField, PasswordInput } from "@/components/ui/Input";
 import { FormEvent, useState } from "react";
-
-const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
 
 export function PayrollPinChangeForm() {
   const [currentPin, setCurrentPin] = useState("");
@@ -18,6 +18,12 @@ export function PayrollPinChangeForm() {
     event.preventDefault();
     setError("");
     setSuccess("");
+
+    if (newPin !== confirmPin) {
+      setError("New PIN and confirmation do not match.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -43,61 +49,43 @@ export function PayrollPinChangeForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
-      {success ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
-          {success}
-        </p>
-      ) : null}
+      {error ? <Alert variant="error">{error}</Alert> : null}
+      {success ? <Alert variant="success">{success}</Alert> : null}
       <div className="grid gap-4 sm:grid-cols-3">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Current PIN</span>
-          <input
+        <FormField label="Current payroll PIN" required>
+          <PasswordInput
             required
-            type="password"
             inputMode="numeric"
             pattern="\d{4,8}"
             value={currentPin}
             onChange={(e) => setCurrentPin(e.target.value)}
-            className={inputClass}
+            autoComplete="off"
           />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">New PIN</span>
-          <input
+        </FormField>
+        <FormField label="New payroll PIN" required hint="4–8 digits">
+          <PasswordInput
             required
-            type="password"
             inputMode="numeric"
             pattern="\d{4,8}"
             value={newPin}
             onChange={(e) => setNewPin(e.target.value)}
-            className={inputClass}
+            autoComplete="new-password"
           />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Confirm new PIN</span>
-          <input
+        </FormField>
+        <FormField label="Confirm new PIN" required>
+          <PasswordInput
             required
-            type="password"
             inputMode="numeric"
             pattern="\d{4,8}"
             value={confirmPin}
             onChange={(e) => setConfirmPin(e.target.value)}
-            className={inputClass}
+            autoComplete="new-password"
           />
-        </label>
+        </FormField>
       </div>
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-      >
+      <Button type="submit" disabled={submitting || !currentPin}>
         {submitting ? "Updating…" : "Update payroll PIN"}
-      </button>
+      </Button>
     </form>
   );
 }

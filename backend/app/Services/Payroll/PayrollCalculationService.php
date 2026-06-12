@@ -15,6 +15,7 @@ use App\Models\OrganizationPayrollSettings;
 use App\Models\TimeEntry;
 
 use App\Services\Payroll\Deductions\PayrollDeductionEngine;
+use App\Services\Payroll\PayrollComponentService;
 
 use App\Services\Tenant\TenantContext;
 
@@ -34,7 +35,9 @@ class PayrollCalculationService
 
         private readonly PayrollSettingsService $payrollSettings,
 
-        private readonly PayrollDeductionEngine $deductionEngine
+        private readonly PayrollDeductionEngine $deductionEngine,
+
+        private readonly PayrollComponentService $payrollComponents,
 
     ) {}
 
@@ -563,9 +566,13 @@ class PayrollCalculationService
 
             ]);
 
-            $bonuses = 0.0;
+            $componentTotals = $this->payrollComponents->totalsForGross($gross, $settings->organization_id);
 
-            $net = round($gross - $deductions->totalDeductions() + $bonuses, 2);
+            $bonuses = $componentTotals['increments'];
+
+            $totalDeductions = round($deductions->totalDeductions() + $componentTotals['deductions'], 2);
+
+            $net = round($gross - $totalDeductions + $bonuses, 2);
 
 
 
@@ -615,7 +622,7 @@ class PayrollCalculationService
 
                 'social_security_snapshot' => number_format($deductions->socialSecurity, 2, '.', ''),
 
-                'custom_deduction_snapshot' => number_format($deductions->customDeduction, 2, '.', ''),
+                'custom_deduction_snapshot' => number_format($deductions->customDeduction + $componentTotals['deductions'], 2, '.', ''),
 
                 'bonuses_snapshot' => number_format($bonuses, 2, '.', ''),
 

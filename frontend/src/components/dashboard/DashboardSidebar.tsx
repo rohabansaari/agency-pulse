@@ -4,9 +4,25 @@ import { RoleBadge } from "@/components/dashboard/RoleBadge";
 import { navItemsForRole } from "@/lib/navigation";
 import type { NavItem } from "@/lib/navigation";
 import type { User, UserRole } from "@/lib/types";
+import {
+  BarChart3,
+  Building2,
+  Camera,
+  Calendar,
+  CalendarClock,
+  ChevronDown,
+  Clock,
+  DollarSign,
+  FolderKanban,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Users,
+  UsersRound,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 
 interface DashboardSidebarProps {
   user: User;
@@ -15,92 +31,22 @@ interface DashboardSidebarProps {
   onNavigate?: () => void;
 }
 
-const ICONS: Record<string, ReactNode> = {
-  Dashboard: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-  ),
-  "Time Tracking": (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 3" />
-    </svg>
-  ),
-  Projects: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <path d="M3 7h18M3 12h18M3 17h18" />
-    </svg>
-  ),
-  "My Projects": (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-    </svg>
-  ),
-  Teams: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-    </svg>
-  ),
-  "My Teams": (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-    </svg>
-  ),
-  Employees: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-    </svg>
-  ),
-  Leave: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  ),
-  "Leave Management": (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
-    </svg>
-  ),
-  "Overtime Management": (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 3" />
-    </svg>
-  ),
-  Payroll: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-    </svg>
-  ),
-  Reports: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <path d="M4 19V5M10 19V9M16 19v-6M22 19V3" />
-    </svg>
-  ),
-  Settings: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-    </svg>
-  ),
-  Platform: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M3 9h18M9 21V9" />
-    </svg>
-  ),
+const ICONS: Record<string, ComponentType<{ className?: string; strokeWidth?: number }>> = {
+  Dashboard: LayoutDashboard,
+  "Time Tracking": Clock,
+  Projects: FolderKanban,
+  "My Projects": FolderKanban,
+  Teams: UsersRound,
+  "My Teams": UsersRound,
+  Employees: Users,
+  Leave: Calendar,
+  "Leave Management": CalendarClock,
+  "Overtime Management": Clock,
+  Payroll: DollarSign,
+  Reports: BarChart3,
+  Settings: Settings,
+  Platform: Building2,
+  Screenshots: Camera,
 };
 
 type NavGroup = {
@@ -193,15 +139,9 @@ export function DashboardSidebar({
                   className="mb-1 flex w-full items-center justify-between rounded-md px-2 py-1 text-[11px] font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
                 >
                   {group.label}
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+                  <ChevronDown
                     className={`h-3.5 w-3.5 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
-                  >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
+                  />
                 </button>
               ) : null}
 
@@ -209,6 +149,7 @@ export function DashboardSidebar({
                 <div className="space-y-0.5">
                   {group.items.map((item) => {
                     const active = isActive(item);
+                    const Icon = ICONS[item.label];
                     return (
                       <Link
                         key={item.href}
@@ -220,9 +161,7 @@ export function DashboardSidebar({
                             : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100"
                         }`}
                       >
-                        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-current">
-                          {ICONS[item.label]}
-                        </span>
+                        {Icon ? <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} /> : null}
                         <span className="truncate">{item.label}</span>
                       </Link>
                     );
@@ -248,6 +187,7 @@ export function DashboardSidebar({
           disabled={loggingOut}
           className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-60 dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
         >
+          <LogOut className="h-4 w-4" />
           {loggingOut ? "Signing out..." : "Logout"}
         </button>
       </div>

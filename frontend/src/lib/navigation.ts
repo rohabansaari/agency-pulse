@@ -116,12 +116,16 @@ export function canChangeEmployeeRoles(role: UserRole): boolean {
   return role === "admin";
 }
 
-export const CREATION_ROLES: UserRole[] = ["employee", "manager", "sub_admin", "admin"];
+export const CREATION_ROLES: UserRole[] = ["employee", "manager", "admin"];
 export const MUTABLE_ROLES: UserRole[] = ["employee", "manager"];
 export const IMMUTABLE_ROLES: UserRole[] = ["admin", "sub_admin"];
 
 export function isMutableMemberRole(role: UserRole): boolean {
   return MUTABLE_ROLES.includes(role);
+}
+
+export function canEditMemberStatus(memberRole: UserRole): boolean {
+  return !IMMUTABLE_ROLES.includes(memberRole);
 }
 
 export function canChangeMemberRole(viewerRole: UserRole, memberRole: UserRole, isSelf: boolean): boolean {

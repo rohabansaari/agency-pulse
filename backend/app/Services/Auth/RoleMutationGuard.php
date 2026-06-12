@@ -59,4 +59,11 @@ final class RoleMutationGuard
     {
         return in_array($role, self::MUTABLE_ROLES, true);
     }
+
+    public static function assertStatusChangeAllowed(OrganizationMember $member): void
+    {
+        if (in_array($member->role, self::IMMUTABLE_ROLES, true)) {
+            throw new HttpException(403, 'Admin and sub admin accounts cannot be activated or deactivated.');
+        }
+    }
 }

@@ -5,8 +5,8 @@ import { ApiError, resetEmployeePassword, updateTeamMember, formatApiErrors } fr
 import {
   canChangeMemberRole,
   canEditEmployeeStatus,
+  canEditMemberStatus,
   canManageOrgEmployees,
-  isPrivilegedMember,
   MUTABLE_ROLES,
   ROLE_LABELS,
 } from "@/lib/navigation";
@@ -35,8 +35,8 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
   const canResetPassword = canManageOrgEmployees(viewer.role) && member.role === "employee";
   const canEdit = canEditEmployeeStatus(viewer.role);
   const isSelf = viewer.id === member.user_id;
-  const isProtectedFromSubAdmin = isPrivilegedMember(member.role);
-  const canEditThis = canEdit && (viewer.role === "admin" || !isProtectedFromSubAdmin);
+  const canEditStatus = canEdit && canEditMemberStatus(member.role);
+  const canEditThis = canEditStatus && (viewer.role === "admin" || member.role !== "admin");
   const canChangeThisRole = canChangeMemberRole(viewer.role, member.role, isSelf);
 
   async function saveUpdate(payload: Partial<{ name: string; role: UserRole; status: MemberStatus }>) {
@@ -109,7 +109,7 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
                 Change role
               </button>
             ) : null}
-            {canEditThis ? (
+            {canEditStatus ? (
               <button
                 type="button"
                 className="block w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
@@ -119,7 +119,7 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
                   setOpen(false);
                 }}
               >
-                Activate / deactivate
+                Update status
               </button>
             ) : null}
             {canResetPassword ? (

@@ -148,6 +148,8 @@ export function TeamManager({ user }: { user: User }) {
         email: createEmail,
         password: createPassword,
         role: "employee",
+        salary_type: "hourly",
+        hourly_rate: 25,
         payroll_pin: vaultStatus?.requires_pin_on_employee_create
           ? createPayrollPin
           : undefined,
