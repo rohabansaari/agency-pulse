@@ -40,7 +40,7 @@ use Illuminate\Validation\ValidationException;
 
 
 
-class ProjectAssignmentController extends Controller
+class ProjectAssignmentController extends TenantAppController
 
 {
 

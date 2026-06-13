@@ -10,7 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
-class SalaryAdvanceController extends Controller
+class SalaryAdvanceController extends TenantAppController
 {
     public function __construct(
         private readonly SalaryAdvanceService $advances

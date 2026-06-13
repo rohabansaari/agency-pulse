@@ -11,9 +11,11 @@ fi
 echo "Discovering packages..."
 php artisan package:discover --ansi
 
+echo "Clearing cached bootstrap artifacts..."
+php artisan optimize:clear
+
 echo "Caching Laravel configuration..."
 php artisan config:cache
-php artisan route:clear
 
 echo "Running migrations..."
 php artisan migrate --force --no-interaction
@@ -25,7 +27,7 @@ echo "Ensuring platform super admin exists..."
 php artisan super-admin:ensure --no-interaction
 
 echo "Starting Laravel scheduler in background (screenshot retention purge)..."
-(while true; do php artisan schedule:run --no-interaction; sleep 60; done) &
+(while true; do php artisan schedule:run --no-interaction >> storage/logs/scheduler.log 2>&1; sleep 60; done) &
 
 echo "Starting API on port ${PORT:-10000}..."
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"

@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-class LeaveBalanceController extends Controller
+class LeaveBalanceController extends TenantAppController
 {
     public function __construct(
         private readonly LeaveBalanceService $leaveBalances

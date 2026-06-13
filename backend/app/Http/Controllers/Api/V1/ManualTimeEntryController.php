@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
 
-class ManualTimeEntryController extends Controller
+class ManualTimeEntryController extends TenantAppController
 {
     public function __construct(
         private readonly ManualTimeEntryService $manualTime

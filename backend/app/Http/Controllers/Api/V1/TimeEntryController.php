@@ -22,7 +22,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
-class TimeEntryController extends Controller
+class TimeEntryController extends TenantAppController
 {
     public function __construct(
         private readonly ProjectAccessService $projectAccess,

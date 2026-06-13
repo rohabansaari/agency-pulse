@@ -12,7 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-class SalaryContractController extends Controller
+class SalaryContractController extends TenantAppController
 {
     public function __construct(
         private readonly AdminPayrollService $adminPayroll,

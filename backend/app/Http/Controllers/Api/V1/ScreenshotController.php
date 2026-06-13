@@ -21,7 +21,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
-class ScreenshotController extends Controller
+class ScreenshotController extends TenantAppController
 {
     public function __construct(
         private readonly ScreenshotStorageService $storage,

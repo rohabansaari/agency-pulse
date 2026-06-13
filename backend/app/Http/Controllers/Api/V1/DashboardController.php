@@ -21,7 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Support\ReportDateRange;
 
-class DashboardController extends Controller
+class DashboardController extends TenantAppController
 {
     public function __construct(
         private readonly ReportingService $reporting,

@@ -25,7 +25,7 @@ use Illuminate\Validation\ValidationException;
 
 
 
-class ReportController extends Controller
+class ReportController extends TenantAppController
 
 {
 

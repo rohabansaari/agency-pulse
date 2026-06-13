@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
 
-class LeaveTimeEntryController extends Controller
+class LeaveTimeEntryController extends TenantAppController
 {
     public function __construct(
         private readonly LeaveTimeEntryService $leaveTime

@@ -28,7 +28,7 @@ use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class TeamController extends Controller
+class TeamController extends TenantAppController
 {
     public function __construct(
         private readonly MembershipRoleSync $membershipRoleSync,

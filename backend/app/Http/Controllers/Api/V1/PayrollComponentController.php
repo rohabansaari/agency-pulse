@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
 
-class PayrollComponentController extends Controller
+class PayrollComponentController extends TenantAppController
 {
     public function __construct(
         private readonly PayrollComponentService $components,

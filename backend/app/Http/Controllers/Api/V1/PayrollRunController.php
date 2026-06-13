@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
-class PayrollRunController extends Controller
+class PayrollRunController extends TenantAppController
 {
     public function __construct(
         private readonly PayrollRunService $payrollRuns,

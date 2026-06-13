@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class OnboardingController extends Controller
+class OnboardingController extends TenantController
 {
     public function __construct(
         private readonly OnboardingService $onboarding,

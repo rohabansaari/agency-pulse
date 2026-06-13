@@ -32,7 +32,7 @@ use Illuminate\Validation\ValidationException;
 
 
 
-class ProjectController extends Controller
+class ProjectController extends TenantAppController
 {
     public function __construct(
         private readonly ProjectAccessService $projectAccess

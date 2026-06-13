@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-class PayrollSettingsController extends Controller
+class PayrollSettingsController extends TenantAppController
 {
     public function __construct(
         private readonly PayrollSettingsService $payrollSettings,

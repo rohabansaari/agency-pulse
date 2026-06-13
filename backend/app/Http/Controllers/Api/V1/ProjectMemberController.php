@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\ValidationException;
 
-class ProjectMemberController extends Controller
+class ProjectMemberController extends TenantAppController
 {
     public function index(Request $request, Project $project): AnonymousResourceCollection
     {

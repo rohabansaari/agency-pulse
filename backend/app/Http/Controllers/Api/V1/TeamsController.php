@@ -48,7 +48,7 @@ use Illuminate\Validation\ValidationException;
 
 
 
-class TeamsController extends Controller
+class TeamsController extends TenantAppController
 {
     public function __construct(
         private readonly ProjectAccessService $projectAccess
