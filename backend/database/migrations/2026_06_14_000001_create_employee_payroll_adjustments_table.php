@@ -25,7 +25,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->index(['organization_id', 'user_id', 'is_active']);
+            $table->index(['organization_id', 'user_id', 'is_active'], 'epa_org_user_active_idx');
         });
     }
 

@@ -58,8 +58,8 @@ class OnboardingService
                 'website' => $organization->website,
             ],
             'pin_configured' => $pinConfigured,
-            'requirements_met' => collect($stepStates)->firstWhere('step', 1)?['completed'] === true
-                && collect($stepStates)->firstWhere('step', 2)?['completed'] === true,
+            'requirements_met' => data_get(collect($stepStates)->firstWhere('step', 1), 'completed') === true
+                && data_get(collect($stepStates)->firstWhere('step', 2), 'completed') === true,
             'skipped_steps' => $this->skippedSteps($organization),
             'follow_up_steps' => $organization->onboarding_completed
                 ? collect($stepStates)
