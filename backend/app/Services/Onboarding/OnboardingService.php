@@ -58,13 +58,14 @@ class OnboardingService
                 'website' => $organization->website,
             ],
             'pin_configured' => $pinConfigured,
-            'requirements_met' => $stepStates[1]['completed'] && $stepStates[2]['completed'],
+            'requirements_met' => collect($stepStates)->firstWhere('step', 1)?['completed'] === true
+                && collect($stepStates)->firstWhere('step', 2)?['completed'] === true,
             'skipped_steps' => $this->skippedSteps($organization),
             'follow_up_steps' => $organization->onboarding_completed
                 ? collect($stepStates)
                     ->filter(fn (array $state) => ! $state['completed'])
-                    ->keys()
-                    ->map(fn (int|string $step) => (int) $step)
+                    ->pluck('step')
+                    ->map(fn (int $step) => $step)
                     ->values()
                     ->all()
                 : [],
@@ -107,7 +108,7 @@ class OnboardingService
             ];
         }
 
-        return $states;
+        return array_values($states);
     }
 
     /**
@@ -260,15 +261,12 @@ class OnboardingService
 
     private function completionPercent(Organization $organization, ?bool $pinConfigured = null): int
     {
-        if ($organization->onboarding_completed) {
-            $states = $this->stepStates($organization, $pinConfigured);
-            $completed = collect($states)->where('completed', true)->count();
-
-            return $completed >= self::TOTAL_STEPS ? 100 : (int) round(($completed / self::TOTAL_STEPS) * 100);
-        }
-
         $states = $this->stepStates($organization, $pinConfigured);
         $completed = collect($states)->where('completed', true)->count();
+
+        if ($organization->onboarding_completed && $completed >= self::TOTAL_STEPS) {
+            return 100;
+        }
 
         return (int) round(($completed / self::TOTAL_STEPS) * 100);
     }

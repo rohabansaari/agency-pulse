@@ -15,6 +15,7 @@ import {
   updateOnboardingStep,
 } from "@/lib/api";
 import { clearToken, getToken } from "@/lib/auth";
+import { normalizeStepStates } from "@/lib/onboarding";
 import type { OnboardingStatus, UserRole } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { FormField, Input, Select } from "@/components/ui/Input";
@@ -273,7 +274,7 @@ export function OnboardingWizard() {
   }
 
   const displayPercent = status?.completion_percent ?? 0;
-  const stepStates = status?.step_states ?? [];
+  const stepStates = normalizeStepStates(status?.step_states);
   const current = STEPS.find((item) => item.id === step) ?? STEPS[0];
 
   return (

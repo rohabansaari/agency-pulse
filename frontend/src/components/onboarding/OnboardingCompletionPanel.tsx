@@ -5,6 +5,7 @@ import {
   updateOnboardingStepCompletion,
 } from "@/lib/api";
 import type { OnboardingStatus, OnboardingStepState } from "@/lib/types";
+import { normalizeStepStates } from "@/lib/onboarding";
 import { useAppUser } from "@/components/dashboard/AppShell";
 import { Card } from "@/components/ui/Card";
 import { motion } from "framer-motion";
@@ -42,7 +43,7 @@ export function OnboardingCompletionPanel() {
   if (user.role !== "admin") return null;
   if (!status?.onboarding_completed) return null;
 
-  const steps = status.step_states ?? [];
+  const steps = normalizeStepStates(status.step_states);
   const incomplete = steps.filter((s) => !s.completed);
 
   if (incomplete.length === 0) return null;
