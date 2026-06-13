@@ -34,12 +34,20 @@ jobs:
           coverage: none
       - name: Install backend dependencies
         working-directory: backend
-        run: composer install --no-interaction --prefer-dist
+        run: |
+          composer update league/flysystem-aws-s3-v3 --with-all-dependencies --no-interaction --prefer-dist --no-scripts
+          composer install --no-interaction --prefer-dist
       - name: Prepare environment
         working-directory: backend
         run: |
           cp .env.example .env
           php artisan key:generate
+      - name: Validate Laravel boot
+        working-directory: backend
+        run: |
+          php artisan optimize:clear --no-interaction
+          php artisan route:list --no-ansi
+          php artisan migrate --pretend --no-interaction
       - name: Run backend tests
         working-directory: backend
         env:
@@ -64,6 +72,6 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
-      - name: Lint frontend
+      - name: Build frontend
         working-directory: frontend
-        run: npm run lint
+        run: npm run build

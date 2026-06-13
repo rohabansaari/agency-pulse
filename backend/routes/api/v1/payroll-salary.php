@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\V1\SalaryContractController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('rbac:admin')->group(function () {
-    Route::get('/vault/status', [PayrollVaultController::class, 'status']);
+    // vault/status lives in payroll-vault.php (accessible during onboarding too)
     Route::post('/vault/change-pin', [PayrollVaultController::class, 'changePin']);
 });
 
