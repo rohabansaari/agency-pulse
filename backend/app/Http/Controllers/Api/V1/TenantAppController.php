@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 abstract class TenantAppController extends TenantController
 {
-    public function __construct()
+    public static function middleware(): array
     {
-        parent::__construct();
-        $this->middleware('onboarding.complete');
+        return [
+            ...parent::middleware(),
+            'onboarding.complete',
+        ];
     }
 }

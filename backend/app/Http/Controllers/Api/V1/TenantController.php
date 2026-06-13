@@ -3,11 +3,17 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controllers\HasMiddleware;
 
-abstract class TenantController extends Controller
+abstract class TenantController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    public static function middleware(): array
     {
-        $this->middleware(['auth:sanctum', 'block.super.admin', 'tenant', 'idempotency']);
+        return [
+            'auth:sanctum',
+            'block.super.admin',
+            'tenant',
+            'idempotency',
+        ];
     }
 }
