@@ -45,7 +45,7 @@ class PayrollVaultService
     /**
      * @return array<string, mixed>
      */
-    public function status(User $user): array
+    public function status(?User $user = null): array
     {
         $organization = TenantContext::get();
 

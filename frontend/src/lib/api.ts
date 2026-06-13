@@ -57,10 +57,36 @@ export class ApiError extends Error {
   status: number;
   errors?: Record<string, string[]>;
 
-  constructor(status: number, body: ApiValidationError) {
-    super(body.message ?? "Request failed");
+  constructor(status: number, body: ApiValidationError, fallbackMessage?: string) {
+    super(
+      body.message ||
+        fallbackMessage ||
+        `Request failed (${status})`,
+    );
     this.status = status;
     this.errors = body.errors;
+  }
+}
+
+function parseApiResponseBody(raw: string): ApiValidationError {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(trimmed) as ApiValidationError;
+  } catch {
+    const firstObject = trimmed.match(/\{[\s\S]*?\}/);
+    if (firstObject) {
+      try {
+        return JSON.parse(firstObject[0]) as ApiValidationError;
+      } catch {
+        return {};
+      }
+    }
+
+    return {};
   }
 }
 
@@ -100,8 +126,8 @@ async function apiFetch<T>(
     },
   });
 
-  const data = (await response.json().catch(() => ({}))) as T &
-    ApiValidationError;
+  const raw = await response.text();
+  const data = parseApiResponseBody(raw) as T & ApiValidationError;
 
   if (!response.ok) {
     throw new ApiError(response.status, data);

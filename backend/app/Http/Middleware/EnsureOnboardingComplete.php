@@ -19,10 +19,18 @@ class EnsureOnboardingComplete
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
+
+        if (! $user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
         $organization = TenantContext::get();
 
-        if (! $user || ! $organization instanceof Organization) {
-            return $next($request);
+        if (! $organization instanceof Organization) {
+            return response()->json([
+                'message' => 'Organization context required.',
+                'code' => 'TENANT_REQUIRED',
+            ], 403);
         }
 
         if (! $this->onboarding->requiresOnboarding($user, $organization)) {

@@ -13,7 +13,7 @@ php artisan package:discover --ansi
 
 echo "Caching Laravel configuration..."
 php artisan config:cache
-php artisan route:cache
+php artisan route:clear
 
 echo "Running migrations..."
 php artisan migrate --force --no-interaction
