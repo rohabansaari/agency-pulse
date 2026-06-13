@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('employee_leave_balances')) {
+            return;
+        }
+
         Schema::create('employee_leave_balances', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();

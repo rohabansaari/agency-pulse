@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('payroll_run_employee_records', 'advance_deduction_snapshot')) {
+            return;
+        }
+
         Schema::table('payroll_run_employee_records', function (Blueprint $table) {
             $table->decimal('advance_deduction_snapshot', 12, 2)->default(0)->after('bonuses_snapshot');
         });

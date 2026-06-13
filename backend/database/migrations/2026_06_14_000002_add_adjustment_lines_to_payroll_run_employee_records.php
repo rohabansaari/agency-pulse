@@ -8,8 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('payroll_run_employee_records', function (Blueprint $table) {
-            $table->json('adjustment_lines_snapshot')->nullable()->after('advance_deduction_snapshot');
+        if (Schema::hasColumn('payroll_run_employee_records', 'adjustment_lines_snapshot')) {
+            return;
+        }
+
+        $afterAdvance = Schema::hasColumn('payroll_run_employee_records', 'advance_deduction_snapshot');
+
+        Schema::table('payroll_run_employee_records', function (Blueprint $table) use ($afterAdvance) {
+            if ($afterAdvance) {
+                $table->json('adjustment_lines_snapshot')->nullable()->after('advance_deduction_snapshot');
+            } else {
+                $table->json('adjustment_lines_snapshot')->nullable();
+            }
         });
     }
 
