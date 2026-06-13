@@ -2,9 +2,11 @@
 
 import {
   ApiError,
+  createEmployeePayrollAdjustment,
   createPayrollComponent,
   deletePayrollComponent,
   fetchPayrollComponents,
+  fetchTeam,
   formatApiErrors,
   updatePayrollComponent,
 } from "@/lib/api";
@@ -14,8 +16,9 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { FormField, Input } from "@/components/ui/Input";
 import { Dropdown } from "@/components/ui/Dropdown";
+import { MultiSelect } from "@/components/ui/MultiSelect";
 import { Modal } from "@/components/ui/Modal";
-import type { PayrollComponent, PayrollComponentType, PayrollComponentValueMode } from "@/lib/types";
+import type { PayrollComponent, PayrollComponentType, PayrollComponentValueMode, TeamMember } from "@/lib/types";
 import { MinusCircle, Pencil, Plus, Trash2, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -26,6 +29,9 @@ type ComponentForm = {
   value_mode: PayrollComponentValueMode;
   value: string;
   is_active: boolean;
+  apply_scope: "all" | "selected";
+  employee_ids: string[];
+  effective_month: string;
 };
 
 const emptyForm = (): ComponentForm => ({
@@ -34,6 +40,9 @@ const emptyForm = (): ComponentForm => ({
   value_mode: "percentage",
   value: "",
   is_active: true,
+  apply_scope: "all",
+  employee_ids: [],
+  effective_month: "",
 });
 
 function formatValue(component: PayrollComponent): string {
@@ -143,6 +152,17 @@ export function PayrollComponentsPanel() {
   const [editing, setEditing] = useState<PayrollComponent | null>(null);
   const [form, setForm] = useState<ComponentForm>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [employees, setEmployees] = useState<TeamMember[]>([]);
+
+  const employeeOptions = useMemo(
+    () =>
+      employees.map((member) => ({
+        value: String(member.user_id),
+        label: member.name,
+        description: member.email,
+      })),
+    [employees],
+  );
 
   const load = useCallback(async () => {
     setError("");
@@ -162,6 +182,13 @@ export function PayrollComponentsPanel() {
   useEffect(() => {
     void load();
   }, [load, financialUnlocked]);
+
+  useEffect(() => {
+    if (!modalOpen || editing) return;
+    void fetchTeam()
+      .then(setEmployees)
+      .catch(() => setEmployees([]));
+  }, [modalOpen, editing]);
 
   const deductions = useMemo(
     () => components.filter((c) => c.type === "deduction"),
@@ -188,6 +215,9 @@ export function PayrollComponentsPanel() {
       value_mode: component.value_mode,
       value: component.value ?? "",
       is_active: component.is_active,
+      apply_scope: "all",
+      employee_ids: [],
+      effective_month: "",
     });
     setModalOpen(true);
     setError("");
@@ -207,10 +237,32 @@ export function PayrollComponentsPanel() {
       is_active: form.is_active,
     };
 
+    const effectiveMonth = form.effective_month
+      ? `${form.effective_month}-01`
+      : undefined;
+
     try {
       if (editing) {
         await updatePayrollComponent(editing.id, payload);
         setSuccess("Component updated.");
+      } else if (form.apply_scope === "selected") {
+        if (form.employee_ids.length === 0) {
+          setError("Select at least one employee.");
+          setSaving(false);
+          return;
+        }
+
+        await Promise.all(
+          form.employee_ids.map((userId) =>
+            createEmployeePayrollAdjustment(Number(userId), {
+              ...payload,
+              effective_month: effectiveMonth,
+            }),
+          ),
+        );
+        setSuccess(
+          `Applied to ${form.employee_ids.length} employee${form.employee_ids.length === 1 ? "" : "s"}.`,
+        );
       } else {
         await createPayrollComponent(payload);
         setSuccess("Component created.");
@@ -377,6 +429,56 @@ export function PayrollComponentsPanel() {
               />
               Active
             </label>
+            {!editing ? (
+              <>
+                <FormField label="Apply to" required>
+                  <Dropdown
+                    value={form.apply_scope}
+                    onChange={(v) =>
+                      setForm((f) => ({
+                        ...f,
+                        apply_scope: v as "all" | "selected",
+                        employee_ids: v === "all" ? [] : f.employee_ids,
+                      }))
+                    }
+                    options={[
+                      { value: "all", label: "All employees (organization-wide)" },
+                      { value: "selected", label: "Selected employees only" },
+                    ]}
+                  />
+                </FormField>
+                {form.apply_scope === "selected" ? (
+                  <>
+                    <FormField
+                      label="Employees"
+                      required
+                      hint="Select one, many, or use Select all"
+                    >
+                      <MultiSelect
+                        values={form.employee_ids}
+                        onChange={(employee_ids) => setForm((f) => ({ ...f, employee_ids }))}
+                        options={employeeOptions}
+                        placeholder="Choose employees…"
+                        selectAllLabel="Select all employees"
+                        searchable
+                      />
+                    </FormField>
+                    <FormField
+                      label="Effective month"
+                      hint="Leave empty to apply every payroll period"
+                    >
+                      <Input
+                        type="month"
+                        value={form.effective_month}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, effective_month: e.target.value }))
+                        }
+                      />
+                    </FormField>
+                  </>
+                ) : null}
+              </>
+            ) : null}
             <div className="flex gap-2 pt-2">
               <Button type="submit" disabled={saving}>
                 {saving ? "Saving…" : editing ? "Save changes" : "Create component"}

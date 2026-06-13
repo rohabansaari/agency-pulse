@@ -1,7 +1,8 @@
 "use client";
 
 import { Modal } from "@/components/ui/Modal";
-import { Select } from "@/components/ui/Input";
+import { Dropdown } from "@/components/ui/Dropdown";
+import { ActionMenu, ActionMenuItem } from "@/components/ui/ActionMenu";
 import { ApiError, resetEmployeePassword, updateTeamMember, formatApiErrors } from "@/lib/api";
 import {
   canChangeMemberRole,
@@ -12,10 +13,16 @@ import {
   ROLE_LABELS,
 } from "@/lib/navigation";
 import type { MemberStatus, TeamMember, User, UserRole } from "@/lib/types";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const ASSIGNABLE_ROLES: UserRole[] = MUTABLE_ROLES;
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "invited", label: "Invited" },
+  { value: "suspended", label: "Suspended" },
+];
 
 type EmployeeActionsMenuProps = {
   viewer: User;
@@ -24,7 +31,7 @@ type EmployeeActionsMenuProps = {
 };
 
 export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActionsMenuProps) {
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
   const [modal, setModal] = useState<"edit" | "role" | "status" | "password" | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [name, setName] = useState(member.name);
@@ -46,7 +53,6 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
     try {
       await updateTeamMember(member.id, payload);
       setModal(null);
-      setOpen(false);
       onUpdated();
     } catch (err) {
       setError(
@@ -60,85 +66,54 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
   }
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="rounded border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-600"
-      >
-        Actions ▾
-      </button>
-      {open ? (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-10 cursor-default"
-            aria-label="Close actions menu"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 z-20 mt-1 min-w-[160px] rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-            <Link
-              href={`/employees/${member.user_id}`}
-              className="block px-3 py-1.5 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
-              onClick={() => setOpen(false)}
-            >
-              View profile
-            </Link>
-            {canEditThis ? (
-              <button
-                type="button"
-                className="block w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                onClick={() => {
-                  setName(member.name);
-                  setModal("edit");
-                  setOpen(false);
-                }}
-              >
-                Edit profile
-              </button>
-            ) : null}
-            {canChangeThisRole ? (
-              <button
-                type="button"
-                className="block w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                onClick={() => {
-                  setSelectedRole(member.role);
-                  setModal("role");
-                  setOpen(false);
-                }}
-              >
-                Change role
-              </button>
-            ) : null}
-            {canEditStatus ? (
-              <button
-                type="button"
-                className="block w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                onClick={() => {
-                  setSelectedStatus(member.status);
-                  setModal("status");
-                  setOpen(false);
-                }}
-              >
-                Update status
-              </button>
-            ) : null}
-            {canResetPassword ? (
-              <button
-                type="button"
-                className="block w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                onClick={() => {
-                  setNewPassword("");
-                  setModal("password");
-                  setOpen(false);
-                }}
-              >
-                Reset password
-              </button>
-            ) : null}
-          </div>
-        </>
-      ) : null}
+    <>
+      <ActionMenu align="right">
+        <ActionMenuItem
+          onClick={() => router.push(`/employees/${member.user_id}`)}
+        >
+          View profile
+        </ActionMenuItem>
+        {canEditThis ? (
+          <ActionMenuItem
+            onClick={() => {
+              setName(member.name);
+              setModal("edit");
+            }}
+          >
+            Edit profile
+          </ActionMenuItem>
+        ) : null}
+        {canChangeThisRole ? (
+          <ActionMenuItem
+            onClick={() => {
+              setSelectedRole(member.role);
+              setModal("role");
+            }}
+          >
+            Change role
+          </ActionMenuItem>
+        ) : null}
+        {canEditStatus ? (
+          <ActionMenuItem
+            onClick={() => {
+              setSelectedStatus(member.status);
+              setModal("status");
+            }}
+          >
+            Update status
+          </ActionMenuItem>
+        ) : null}
+        {canResetPassword ? (
+          <ActionMenuItem
+            onClick={() => {
+              setNewPassword("");
+              setModal("password");
+            }}
+          >
+            Reset password
+          </ActionMenuItem>
+        ) : null}
+      </ActionMenu>
 
       {modal === "edit" ? (
         <Modal onClose={() => setModal(null)} title="Edit profile">
@@ -176,17 +151,14 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
               void saveUpdate({ role: selectedRole });
             }}
           >
-            <Select
+            <Dropdown
               value={selectedRole}
-              onChange={(event) => setSelectedRole(event.target.value as UserRole)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-            >
-              {ASSIGNABLE_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {ROLE_LABELS[role]}
-                </option>
-              ))}
-            </Select>
+              onChange={(v) => setSelectedRole(v as UserRole)}
+              options={ASSIGNABLE_ROLES.map((role) => ({
+                value: role,
+                label: ROLE_LABELS[role],
+              }))}
+            />
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <button
               type="submit"
@@ -208,15 +180,11 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
               void saveUpdate({ status: selectedStatus });
             }}
           >
-            <Select
+            <Dropdown
               value={selectedStatus}
-              onChange={(event) => setSelectedStatus(event.target.value as MemberStatus)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm capitalize dark:border-zinc-600 dark:bg-zinc-900"
-            >
-              <option value="active">Active</option>
-              <option value="invited">Invited</option>
-              <option value="suspended">Suspended</option>
-            </Select>
+              onChange={(v) => setSelectedStatus(v as MemberStatus)}
+              options={STATUS_OPTIONS}
+            />
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <button
               type="submit"
@@ -267,6 +235,6 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
           </form>
         </Modal>
       ) : null}
-    </div>
+    </>
   );
 }

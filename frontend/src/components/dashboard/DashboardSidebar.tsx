@@ -116,7 +116,7 @@ export function DashboardSidebar({
   const homeHref = user.role === "super_admin" ? "/platform" : "/dashboard";
 
   return (
-    <div className="flex h-full min-h-screen flex-col">
+    <div className="app-sidebar-inner">
       <div className="shrink-0 px-4 py-5">
         <Link href={homeHref} className="flex items-center gap-3" onClick={onNavigate}>
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--primary)] text-xs font-bold text-[var(--primary-foreground)] shadow-sm">
@@ -129,7 +129,7 @@ export function DashboardSidebar({
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-6 px-3 py-2">
+      <nav className="app-sidebar-nav space-y-6 px-3 py-2">
         {groups.map((group) => (
           <div key={group.id}>
             {groups.length > 1 ? (

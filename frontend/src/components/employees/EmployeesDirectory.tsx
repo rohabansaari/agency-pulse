@@ -8,7 +8,8 @@ import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { Alert, Spinner } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { FormField, Input, Select } from "@/components/ui/Input";
+import { FormField, Input } from "@/components/ui/Input";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
   ApiError,
@@ -31,11 +32,11 @@ import { Plus, Search, Upload } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const STATUS_STYLES: Record<MemberStatus, string> = {
-  active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  invited: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  suspended: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
-};
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "invited", label: "Invited" },
+  { value: "suspended", label: "Suspended" },
+];
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
@@ -156,16 +157,16 @@ export function EmployeesDirectory({ user }: { user: User }) {
             />
           </div>
           <FormField label="Status">
-            <Select
+            <Dropdown
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as MemberStatus | "all")}
+              onChange={(v) => setStatusFilter(v as MemberStatus | "all")}
+              options={[
+                { value: "all", label: "All statuses" },
+                ...STATUS_OPTIONS,
+              ]}
               className="min-w-[140px]"
-            >
-              <option value="all">All statuses</option>
-              <option value="active">Active</option>
-              <option value="invited">Invited</option>
-              <option value="suspended">Suspended</option>
-            </Select>
+              size="sm"
+            />
           </FormField>
         </div>
 
@@ -189,7 +190,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
           canSelectRole={canChangeEmployeeRoles(user.role)}
         />
 
-        <div className="ui-table-wrap ui-card overflow-hidden rounded-xl">
+        <div className="ui-table-wrap ui-card rounded-xl">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/50">
               <tr>
@@ -234,28 +235,35 @@ export function EmployeesDirectory({ user }: { user: User }) {
                   <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.manager_name ?? "—"}</td>
                   <td className="px-3 py-3">
                     {canEditStatus && canEditMemberStatus(member.role) ? (
-                      <Select
+                      <Dropdown
+                        size="sm"
+                        className="w-[118px]"
                         value={member.status}
-                        onChange={async (event) => {
+                        onChange={async (value) => {
                           try {
                             await updateTeamMember(member.id, {
-                              status: event.target.value as MemberStatus,
+                              status: value as MemberStatus,
                             });
                             await load();
                           } catch (err) {
                             setError(err instanceof ApiError ? err.message : "Status update failed.");
                           }
                         }}
-                        className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs capitalize dark:border-zinc-700 dark:bg-zinc-950"
-                      >
-                        <option value="active">active</option>
-                        <option value="invited">invited</option>
-                        <option value="suspended">suspended</option>
-                      </Select>
+                        options={STATUS_OPTIONS}
+                      />
                     ) : (
-                      <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${STATUS_STYLES[member.status]}`}>
+                      <Badge
+                        variant={
+                          member.status === "active"
+                            ? "success"
+                            : member.status === "invited"
+                              ? "primary"
+                              : "danger"
+                        }
+                        className="capitalize"
+                      >
                         {member.status}
-                      </span>
+                      </Badge>
                     )}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-zinc-600">{formatDate(member.joined_at)}</td>

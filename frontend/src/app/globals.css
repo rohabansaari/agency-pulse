@@ -144,15 +144,30 @@ body {
   font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
-/* Layout: single page scroll only — no nested scroll containers */
+/* Layout: page scroll; sidebar nav scrolls independently */
 .app-layout,
-.app-main-with-sidebar,
-.app-sidebar nav {
+.app-main-with-sidebar {
   overflow: visible;
 }
 
 .app-sidebar {
   overflow: hidden;
+}
+
+.app-sidebar-inner {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.app-sidebar-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .app-layout {
@@ -273,6 +288,7 @@ body {
 
 .ui-table-wrap {
   width: 100%;
+  overflow-x: auto;
 }
 
 .ui-table-wrap table {

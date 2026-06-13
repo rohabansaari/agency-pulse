@@ -43,7 +43,12 @@ function useDropdownPosition(
   open: boolean,
   triggerRef: React.RefObject<HTMLButtonElement | null>,
 ) {
-  const [style, setStyle] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [style, setStyle] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    transform?: string;
+  } | null>(null);
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
@@ -55,8 +60,23 @@ function useDropdownPosition(
       const el = triggerRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
+      const gap = 6;
+      const menuHeight = 260;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUp = spaceBelow < menuHeight && rect.top > spaceBelow;
+
+      if (openUp) {
+        setStyle({
+          top: rect.top + window.scrollY - gap,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+          transform: "translateY(-100%)",
+        });
+        return;
+      }
+
       setStyle({
-        top: rect.bottom + window.scrollY + 6,
+        top: rect.bottom + window.scrollY + gap,
         left: rect.left + window.scrollX,
         width: rect.width,
       });
@@ -193,6 +213,7 @@ export function Dropdown({
           top: position.top,
           left: position.left,
           width: position.width,
+          transform: position.transform,
           zIndex: 9999,
         }}
         className="origin-top"
