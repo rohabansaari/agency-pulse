@@ -29,10 +29,12 @@ const LEAVE_TYPE_OPTIONS = [
 
 export function LeaveRequestForm({
   role,
+  forSelf = false,
   onSubmitted,
   compact = false,
 }: {
   role: UserRole;
+  forSelf?: boolean;
   onSubmitted?: () => void;
   compact?: boolean;
 }) {
@@ -89,7 +91,7 @@ export function LeaveRequestForm({
       }
     }
 
-    const minDate = role === "employee" ? todayDdMmYyyy() : null;
+    const minDate = role === "employee" || (role === "manager" && forSelf) ? todayDdMmYyyy() : null;
     if (minDate) {
       if (isBeforeDdMmYyyy(startDate, minDate)) {
         return PAST_DATE_ERROR;
@@ -113,7 +115,7 @@ export function LeaveRequestForm({
       return;
     }
 
-    if ((role === "manager" || role === "admin" || role === "sub_admin") && !userId) {
+    if ((role === "manager" || role === "admin" || role === "sub_admin") && !forSelf && !userId) {
       setError("Select an employee.");
       return;
     }
@@ -127,10 +129,10 @@ export function LeaveRequestForm({
     setSubmitting(true);
     try {
       const payload =
-        role === "employee"
+        role === "employee" || (role === "manager" && forSelf)
           ? useRange
-            ? { start_date: startDate, end_date: endDate, reason: reason.trim(), leave_category: leaveCategory }
-            : { date: startDate, reason: reason.trim(), leave_category: leaveCategory }
+            ? { start_date: startDate, end_date: endDate, reason: reason.trim(), leave_category: leaveCategory, ...(forSelf ? { for_self: true } : {}) }
+            : { date: startDate, reason: reason.trim(), leave_category: leaveCategory, ...(forSelf ? { for_self: true } : {}) }
           : useRange
             ? {
                 user_id: Number(userId),
@@ -184,8 +186,8 @@ export function LeaveRequestForm({
     );
   }
 
-  const showEmployeePicker = role === "manager" || role === "admin" || role === "sub_admin";
-  const minLeaveDate = role === "employee" ? todayDdMmYyyy() : undefined;
+  const showEmployeePicker = !forSelf && (role === "manager" || role === "admin" || role === "sub_admin");
+  const minLeaveDate = role === "employee" || (role === "manager" && forSelf) ? todayDdMmYyyy() : undefined;
 
   function handleStartDateChange(value: string) {
     setStartDate(value);
@@ -293,6 +295,8 @@ export function LeaveRequestForm({
       >
         {submitting
           ? "Submitting…"
+          : forSelf
+            ? "Submit leave request"
           : role === "employee"
             ? "Submit leave request"
             : role === "admin"

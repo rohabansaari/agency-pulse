@@ -149,12 +149,15 @@ export function AdminAdvancePage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [pendingItems, all] = await Promise.all([
-        fetchPendingSalaryAdvances(),
-        fetchSalaryAdvances(),
-      ]);
+      const pendingItems = await fetchPendingSalaryAdvances();
       setPending(pendingItems);
-      setHistory(all.filter((r) => r.status !== "pending"));
+
+      try {
+        const all = await fetchSalaryAdvances();
+        setHistory(all.filter((r) => r.status !== "pending"));
+      } catch {
+        setHistory([]);
+      }
     } finally {
       setLoading(false);
     }

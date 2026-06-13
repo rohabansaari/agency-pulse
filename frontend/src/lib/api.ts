@@ -647,6 +647,7 @@ export async function requestLeave(data: {
   user_id?: number;
   team_id?: number;
   require_approval?: boolean;
+  for_self?: boolean;
 }): Promise<{ message: string; entries: TimeEntry[] }> {
   return apiFetch<{ message: string; entries: TimeEntry[] }>("/time/leave", {
     method: "POST",

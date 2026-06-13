@@ -142,7 +142,11 @@ class LeaveTimeEntryService
             ]);
         })->unique('id')->values()->all();
 
+        $balance = $this->leaveBalances->balanceForUser($manager);
+
         return [
+            'can_request_self' => true,
+            'leave_balance' => $this->balancePayload($balance),
             'teams' => $teams->map(fn (Team $t) => $this->teamPayload($t))->values()->all(),
             'team_members' => $members,
         ];
@@ -199,6 +203,50 @@ class LeaveTimeEntryService
             source: TimeEntrySource::Employee,
             status: TimeEntryStatus::Pending,
             managerId: $team->manager_id,
+            leaveCategory: $category,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return Collection<int, TimeEntry>
+     */
+    public function requestByManagerSelf(User $manager, array $data): Collection
+    {
+        if ($manager->currentRole() !== UserRole::Manager) {
+            throw ValidationException::withMessages([
+                'authorization' => ['Only managers can request leave for themselves through this flow.'],
+            ]);
+        }
+
+        [$startDate, $endDate] = $this->parseDateRange($data);
+        $this->ensureEmployeeLeaveDatesNotInPast($startDate);
+        $this->assertDateRangeModifiable($startDate, $endDate);
+
+        $requestedDays = $startDate->copy()->startOfDay()->diffInDays($endDate->copy()->startOfDay()) + 1;
+        $category = LeaveCategory::from($data['leave_category'] ?? LeaveCategory::Annual->value);
+        $balance = $this->leaveBalances->balanceForUser($manager);
+
+        if ($balance->remainingDaysForCategory($category) < $requestedDays) {
+            throw ValidationException::withMessages([
+                'start_date' => [
+                    'Insufficient '.$category->label().' balance. You have '
+                    .$balance->remainingDaysForCategory($category).' days remaining.',
+                ],
+            ]);
+        }
+
+        $team = $this->resolveEmployeeTeam($manager);
+
+        return $this->createLeaveEntries(
+            employee: $manager,
+            team: $team,
+            startDate: $startDate,
+            endDate: $endDate,
+            reason: $data['reason'],
+            source: TimeEntrySource::Manager,
+            status: TimeEntryStatus::Pending,
+            managerId: null,
             leaveCategory: $category,
         );
     }
@@ -394,15 +442,17 @@ class LeaveTimeEntryService
     {
         $memberIds = $this->managedTeamMemberIds($manager);
 
-        if ($memberIds->isEmpty()) {
-            return collect();
-        }
-
         return TimeEntry::query()
             ->leaveEntries()
             ->with(['user', 'team', 'assignedManager', 'approver'])
             ->where('organization_id', TenantContext::id())
-            ->whereIn('user_id', $memberIds)
+            ->where(function ($query) use ($manager, $memberIds) {
+                $query->where('user_id', $manager->id);
+
+                if ($memberIds->isNotEmpty()) {
+                    $query->orWhereIn('user_id', $memberIds);
+                }
+            })
             ->orderByDesc('start_time')
             ->get();
     }
@@ -507,7 +557,7 @@ class LeaveTimeEntryService
      */
     private function createLeaveEntries(
         User $employee,
-        Team $team,
+        ?Team $team,
         Carbon $startDate,
         Carbon $endDate,
         string $reason,
@@ -532,7 +582,7 @@ class LeaveTimeEntryService
                 'user_id' => $employee->id,
                 'organization_id' => TenantContext::id(),
                 'type' => TimeEntryType::Leave,
-                'team_id' => $team->id,
+                'team_id' => $team?->id,
                 'manager_id' => $managerId,
                 'project_id' => null,
                 'start_time' => $cursor->copy(),

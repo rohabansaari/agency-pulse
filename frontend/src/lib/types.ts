@@ -259,9 +259,11 @@ export interface PersonalTimeReport {
 
 export interface LeaveContext {
   can_request?: boolean;
+  can_request_self?: boolean;
   reason?: string | null;
   team?: { id: number; name: string } | null;
   manager?: { id: number; name: string } | null;
+  leave_balance?: LeaveBalance;
   can_manage?: boolean;
   employees?: { id: number; name: string }[];
   teams?: { id: number; name: string }[];

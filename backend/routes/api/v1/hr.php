@@ -5,8 +5,9 @@ use App\Http\Controllers\Api\V1\LeaveBalanceController;
 use App\Http\Controllers\Api\V1\SalaryAdvanceController;
 use Illuminate\Support\Facades\Route;
 
+Route::middleware('rbac:employee,manager,admin')->get('/advances', [SalaryAdvanceController::class, 'index']);
+
 Route::middleware('rbac:employee,manager')->group(function () {
-    Route::get('/advances', [SalaryAdvanceController::class, 'index']);
     Route::post('/advances', [SalaryAdvanceController::class, 'store']);
 });
 

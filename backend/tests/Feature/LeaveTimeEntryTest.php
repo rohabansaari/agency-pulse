@@ -490,4 +490,50 @@ class LeaveTimeEntryTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1);
     }
+
+    public function test_manager_can_request_leave_for_self_pending_admin_approval(): void
+    {
+        $manager = User::factory()->manager()->create();
+
+        Sanctum::actingAs($manager);
+
+        $this->withHeaders($this->headers($manager))
+            ->postJson('/api/v1/time/leave', [
+                'date' => $this->displayDate(Carbon::today()),
+                'reason' => 'Personal day',
+                'leave_category' => 'annual',
+                'for_self' => true,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('entries.0.status', TimeEntryStatus::Pending->value)
+            ->assertJsonPath('entries.0.user_id', $manager->id);
+    }
+
+    public function test_admin_sees_manager_self_leave_in_pending_queue(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $manager = User::factory()->manager()->create([
+            'organization_id' => $admin->organization_id,
+        ]);
+
+        TimeEntry::create([
+            'user_id' => $manager->id,
+            'organization_id' => $admin->organization_id,
+            'type' => TimeEntryType::Leave,
+            'duration' => UtilizationCalculator::SECONDS_PER_WORK_DAY,
+            'is_paid' => true,
+            'source' => TimeEntrySource::Manager,
+            'status' => TimeEntryStatus::Pending,
+            'start_time' => Carbon::today(),
+            'end_time' => Carbon::today()->addHours(8),
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/time/leave/pending')
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.user_id', $manager->id);
+    }
 }

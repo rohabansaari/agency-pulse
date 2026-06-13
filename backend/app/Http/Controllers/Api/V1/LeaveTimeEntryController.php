@@ -57,6 +57,18 @@ class LeaveTimeEntryController extends TenantAppController
         }
 
         if ($role === UserRole::Manager) {
+            if ($request->boolean('for_self')) {
+                $validated = $request->validate($this->leaveStoreRules());
+                $entries = $this->leaveTime->requestByManagerSelf($request->user(), $validated);
+
+                return response()->json([
+                    'message' => 'Leave request submitted for admin approval.',
+                    'entries' => LeaveTimeEntryResource::collection(
+                        $this->loadLeaveEntries($entries->pluck('id')->all(), ['team', 'assignedManager'])
+                    ),
+                ], 201);
+            }
+
             $validated = $request->validate([
                 ...$this->leaveStoreRules(),
                 'user_id' => ['required', 'integer', 'exists:users,id'],
