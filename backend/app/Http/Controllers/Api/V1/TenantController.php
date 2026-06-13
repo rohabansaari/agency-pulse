@@ -3,17 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Routing\Controllers\HasMiddleware;
 
-abstract class TenantController extends Controller implements HasMiddleware
+/**
+ * Base for organization-scoped API controllers.
+ * Middleware is applied at the route level in routes/api/v1.php.
+ */
+abstract class TenantController extends Controller
 {
-    public static function middleware(): array
-    {
-        return [
-            'auth:sanctum',
-            'block.super.admin',
-            'tenant',
-            'idempotency',
-        ];
-    }
 }
