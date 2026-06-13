@@ -2,6 +2,7 @@
 
 import type { LeaveStatusFilter } from "@/components/leave/LeaveStatusFilter";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
+import { Select } from "@/components/ui/Input";
 import { LEAVE_EXPORT_COLUMNS } from "@/lib/export-columns";
 import {
   ApiError,
@@ -151,7 +152,7 @@ export function LeaveHistory({
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {adminEditable ? (
-                  <select
+                  <Select
                     value={entry.status}
                     disabled={savingId === entry.id}
                     onChange={(event) =>
@@ -165,7 +166,7 @@ export function LeaveHistory({
                     <option value="pending">pending</option>
                     <option value="approved">approved</option>
                     <option value="rejected">rejected</option>
-                  </select>
+                  </Select>
                 ) : (
                   <StatusBadge status={entry.status} />
                 )}

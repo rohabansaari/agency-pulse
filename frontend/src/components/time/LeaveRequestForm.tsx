@@ -14,6 +14,7 @@ import {
   todayDdMmYyyy,
 } from "@/lib/dates";
 import type { LeaveContext, UserRole } from "@/lib/types";
+import { Select } from "@/components/ui/Input";
 import { useCallback, useEffect, useState } from "react";
 
 const PAST_DATE_ERROR = "Past dates are not allowed for leave requests";
@@ -197,7 +198,7 @@ export function LeaveRequestForm({
           <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
             Employee *
           </span>
-          <select
+          <Select
             required
             value={userId}
             onChange={(event) => setUserId(event.target.value)}
@@ -214,7 +215,7 @@ export function LeaveRequestForm({
                     {member.name} ({member.team_name})
                   </option>
                 ))}
-          </select>
+          </Select>
         </label>
       ) : null}
 

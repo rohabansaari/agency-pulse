@@ -12,41 +12,34 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
   return (
     <div className="auth-shell">
       <div className="auth-hero">
-        <div className="auth-hero-glow" style={{ top: "10%", left: "10%" }} />
-        <div
-          className="auth-hero-glow"
-          style={{ bottom: "15%", right: "5%", animationDelay: "2s" }}
-        />
         <div className="relative z-10 max-w-lg">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white shadow-md">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)] text-sm font-bold text-[var(--primary-foreground)] shadow-sm">
               AP
             </span>
-            AgencyPulse
+            <span className="text-heading text-base text-[var(--foreground)]">AgencyPulse</span>
           </Link>
-          <h1 className="mt-10 text-4xl font-bold tracking-tight text-[var(--foreground)]">
+          <h1 className="text-display mt-12 text-4xl text-[var(--foreground)]">
             Workforce intelligence for modern agencies
           </h1>
-          <p className="mt-4 text-lg leading-relaxed text-[var(--muted)]">
-            Track time, manage teams, run payroll, and keep your people aligned — all in one
-            premium platform built for how agencies actually work.
+          <p className="mt-5 text-lg leading-relaxed text-[var(--muted)]">
+            Track time, manage teams, run payroll, and keep your people aligned — built for how
+            agencies actually work.
           </p>
-          <ul className="mt-8 space-y-3 text-sm text-[var(--muted)]">
-            <li className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-              Real-time time tracking & screenshots
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-              Payroll, leave & advance salary in one place
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-pink-500" />
-              Role-based access for every team member
-            </li>
+          <ul className="mt-10 space-y-4 text-sm text-[var(--muted)]">
+            {[
+              { color: "var(--accent-emerald)", text: "Real-time time tracking & screenshots" },
+              { color: "var(--primary)", text: "Payroll, leave & advance salary" },
+              { color: "var(--accent-coral)", text: "Role-based team management" },
+            ].map((item) => (
+              <li key={item.text} className="flex items-center gap-3">
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: item.color }}
+                />
+                {item.text}
+              </li>
+            ))}
           </ul>
         </div>
       </div>
@@ -54,19 +47,15 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
       <div className="flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16">
         <div className="mx-auto w-full max-w-md">
           <div className="mb-8 lg:hidden">
-            <Link href="/" className="text-sm font-semibold text-indigo-600">
+            <Link href="/" className="text-heading text-sm text-[var(--primary)]">
               AgencyPulse
             </Link>
           </div>
-          <div className="rounded-2xl border border-[var(--border)] bg-white/80 p-8 shadow-lg backdrop-blur-sm dark:bg-zinc-900/80">
-            <h2 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              {title}
-            </h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">{subtitle}</p>
+          <div className="ui-card-elevated p-8">
+            <h2 className="text-display text-2xl text-[var(--foreground)]">{title}</h2>
+            <p className="mt-2 text-body-muted">{subtitle}</p>
             <div className="mt-8">{children}</div>
-            {footer ? (
-              <div className="mt-6 text-center text-sm text-[var(--muted)]">{footer}</div>
-            ) : null}
+            {footer ? <div className="mt-6 text-center text-sm text-[var(--muted)]">{footer}</div> : null}
           </div>
         </div>
       </div>
@@ -75,20 +64,11 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
 }
 
 /** @deprecated Use AuthShell instead */
-export function AuthCard({
-  title,
-  subtitle,
-  children,
-  footer,
-}: {
+export function AuthCard(props: {
   title: string;
   subtitle: string;
   children: ReactNode;
   footer?: ReactNode;
 }) {
-  return (
-    <AuthShell title={title} subtitle={subtitle} footer={footer}>
-      {children}
-    </AuthShell>
-  );
+  return <AuthShell {...props} />;
 }

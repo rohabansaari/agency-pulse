@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { todayDdMmYyyy } from "@/lib/dates";
 import type { SalaryType, TeamMember } from "@/lib/types";
+import { Select } from "@/components/ui/Input";
 import { useCallback, useEffect, useState } from "react";
 
 export function SalaryManagementPanel() {
@@ -117,7 +118,7 @@ export function SalaryManagementPanel() {
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">Employee</span>
-            <select
+            <Select
               required
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : "")}
@@ -129,7 +130,7 @@ export function SalaryManagementPanel() {
                   {member.name} ({member.email})
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           {selectedEmployee ? (
@@ -146,14 +147,14 @@ export function SalaryManagementPanel() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">Salary type</span>
-              <select
+              <Select
                 value={salaryType}
                 onChange={(e) => setSalaryType(e.target.value as SalaryType)}
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
               >
                 <option value="hourly">Hourly</option>
                 <option value="monthly">Monthly</option>
-              </select>
+              </Select>
             </label>
             {salaryType === "hourly" ? (
               <label className="block text-sm">

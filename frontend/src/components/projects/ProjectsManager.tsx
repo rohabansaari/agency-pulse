@@ -5,6 +5,7 @@ import { ProjectReportPanel } from "@/components/projects/ProjectReportPanel";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { PROJECTS_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { Modal } from "@/components/ui/Modal";
+import { Select } from "@/components/ui/Input";
 import {
   ApiError,
   createProject,
@@ -138,7 +139,7 @@ function ProjectFormFields({
           <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Status
           </label>
-          <select
+          <Select
             value={status}
             onChange={(e) => setStatus(e.target.value as ProjectStatus)}
             className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm dark:border-zinc-600 dark:bg-zinc-950"
@@ -148,7 +149,7 @@ function ProjectFormFields({
                 {opt.charAt(0).toUpperCase() + opt.slice(1)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-2">

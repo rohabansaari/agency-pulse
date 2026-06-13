@@ -16,6 +16,7 @@ import {
 
 import type { ManualTimeContext, ManualTimeProjectOption, UserRole } from "@/lib/types";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Select } from "@/components/ui/Input";
 import { ddMmYyyyToIso, todayDdMmYyyy } from "@/lib/dates";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -524,7 +525,7 @@ export function ManualTimeEntryForm({
 
           </span>
 
-          <select
+          <Select
 
             required
 
@@ -546,7 +547,7 @@ export function ManualTimeEntryForm({
 
             ))}
 
-          </select>
+          </Select>
 
         </label>
 
@@ -564,7 +565,7 @@ export function ManualTimeEntryForm({
 
           </span>
 
-          <select
+          <Select
 
             required
 
@@ -588,7 +589,7 @@ export function ManualTimeEntryForm({
 
             ))}
 
-          </select>
+          </Select>
 
         </label>
 
@@ -604,7 +605,7 @@ export function ManualTimeEntryForm({
 
             </span>
 
-            <select
+            <Select
 
               required
 
@@ -626,7 +627,7 @@ export function ManualTimeEntryForm({
 
               ))}
 
-            </select>
+            </Select>
 
           </label>
 

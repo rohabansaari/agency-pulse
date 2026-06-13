@@ -35,10 +35,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="app-layout flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <div className="flex flex-col items-center gap-3">
-          <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-blue-600 dark:border-zinc-700 dark:border-t-blue-400" />
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</p>
+      <div className="app-layout flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <span className="h-9 w-9 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+          <p className="text-sm text-[var(--muted)]">Loading workspace…</p>
         </div>
       </div>
     );
@@ -46,15 +46,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (error || !user) {
     return (
-      <div className="app-layout flex items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
-        <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-sm text-red-600 dark:text-red-400">
-            {error || "Something went wrong."}
-          </p>
-          <Link
-            href="/login"
-            className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
-          >
+      <div className="app-layout flex items-center justify-center px-4">
+        <div className="ui-card-elevated max-w-sm p-8 text-center">
+          <p className="text-sm text-[var(--danger)]">{error || "Something went wrong."}</p>
+          <Link href="/login" className="mt-4 inline-block text-sm font-semibold text-[var(--primary)]">
             Back to login
           </Link>
         </div>
@@ -66,46 +61,42 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={session}>
-      <div className="app-layout min-h-screen bg-zinc-50 dark:bg-zinc-950">
-        <aside className="app-sidebar hidden border-r border-zinc-200/80 bg-white md:block dark:border-zinc-800 dark:bg-zinc-900">
-          <DashboardSidebar
-            user={user}
-            onLogout={handleLogout}
-            loggingOut={loggingOut}
-          />
+      <div className="app-layout min-h-screen">
+        <aside className="app-sidebar hidden border-r border-[var(--sidebar-border)] md:block">
+          <DashboardSidebar user={user} onLogout={handleLogout} loggingOut={loggingOut} />
         </aside>
 
         <div className="app-main-with-sidebar flex min-h-screen flex-col">
-          <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-zinc-200/80 bg-white/95 px-4 py-3 backdrop-blur md:px-6 dark:border-zinc-800 dark:bg-zinc-900/95">
+          <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--card)]/90 px-4 py-3 backdrop-blur-md md:px-6">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(true)}
-                className="rounded-lg p-2 text-zinc-600 transition hover:bg-zinc-100 md:hidden dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className="rounded-xl p-2 text-[var(--muted)] transition hover:bg-[var(--sidebar-hover)] md:hidden"
                 aria-label="Open navigation"
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <span className="text-sm font-semibold text-zinc-900 md:hidden dark:text-zinc-50">
-                AgencyPulse
-              </span>
+              <span className="text-heading text-sm md:hidden">AgencyPulse</span>
             </div>
             <button
               type="button"
               onClick={handleLogout}
               disabled={loggingOut}
-              className="text-xs font-medium text-zinc-500 hover:text-zinc-900 md:hidden dark:text-zinc-400"
+              className="text-xs font-medium text-[var(--muted)] hover:text-[var(--foreground)] md:hidden"
             >
-              {loggingOut ? "..." : "Logout"}
+              {loggingOut ? "…" : "Logout"}
             </button>
           </header>
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="mx-auto w-full max-w-7xl">
-              {user.role === "employee" || user.role === "manager" ? (
-                <DesktopAgentBanner user={user} />
-              ) : null}
-              {children}
+              <PageTransition>
+                {user.role === "employee" || user.role === "manager" ? (
+                  <DesktopAgentBanner user={user} />
+                ) : null}
+                {children}
+              </PageTransition>
             </div>
           </main>
         </div>
@@ -114,13 +105,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             aria-label="Close navigation"
-            className="fixed inset-0 z-40 bg-zinc-900/50 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-40 bg-[var(--foreground)]/20 backdrop-blur-sm md:hidden"
             onClick={() => setMobileNavOpen(false)}
           />
         ) : null}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-zinc-200 bg-white shadow-xl transition-transform duration-300 ease-out md:hidden dark:border-zinc-800 dark:bg-zinc-900 ${
+          className={`fixed inset-y-0 left-0 z-50 w-[var(--app-sidebar-width)] max-w-[85vw] border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] shadow-2xl transition-transform duration-300 ease-out md:hidden ${
             mobileNavOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
           }`}
           aria-hidden={!mobileNavOpen}

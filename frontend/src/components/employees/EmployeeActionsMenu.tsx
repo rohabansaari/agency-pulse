@@ -1,6 +1,7 @@
 "use client";
 
 import { Modal } from "@/components/ui/Modal";
+import { Select } from "@/components/ui/Input";
 import { ApiError, resetEmployeePassword, updateTeamMember, formatApiErrors } from "@/lib/api";
 import {
   canChangeMemberRole,
@@ -175,7 +176,7 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
               void saveUpdate({ role: selectedRole });
             }}
           >
-            <select
+            <Select
               value={selectedRole}
               onChange={(event) => setSelectedRole(event.target.value as UserRole)}
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
@@ -185,7 +186,7 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
                   {ROLE_LABELS[role]}
                 </option>
               ))}
-            </select>
+            </Select>
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <button
               type="submit"
@@ -207,7 +208,7 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
               void saveUpdate({ status: selectedStatus });
             }}
           >
-            <select
+            <Select
               value={selectedStatus}
               onChange={(event) => setSelectedStatus(event.target.value as MemberStatus)}
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm capitalize dark:border-zinc-600 dark:bg-zinc-900"
@@ -215,7 +216,7 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
               <option value="active">Active</option>
               <option value="invited">Invited</option>
               <option value="suspended">Suspended</option>
-            </select>
+            </Select>
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <button
               type="submit"

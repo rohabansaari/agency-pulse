@@ -1,12 +1,12 @@
 "use client";
 
+import { DatePicker } from "@/components/ui/DatePicker";
+import { cn } from "@/lib/cn";
 import {
   compareDdMmYyyy,
   formatDateDdMmYyyy,
   isValidDdMmYyyy,
-  todayDdMmYyyy,
 } from "@/lib/dates";
-import { DatePicker } from "@/components/ui/DatePicker";
 import { useEffect, useState } from "react";
 
 export type ReportDateRange = {
@@ -69,6 +69,7 @@ export function ReportDateRangeFilter({
   const [draftStart, setDraftStart] = useState(value.start_date);
   const [draftEnd, setDraftEnd] = useState(value.end_date);
   const [error, setError] = useState("");
+  const [activePreset, setActivePreset] = useState<string | null>(null);
 
   useEffect(() => {
     setDraftStart(value.start_date);
@@ -77,6 +78,7 @@ export function ReportDateRangeFilter({
 
   function applyPreset(preset: Preset) {
     setError("");
+    setActivePreset(preset);
     onChange(presetDateRange(preset));
   }
 
@@ -85,24 +87,23 @@ export function ReportDateRangeFilter({
       setError("Invalid date format.");
       return;
     }
-
     if (compareDdMmYyyy(draftEnd, draftStart) < 0) {
       setError("End before start.");
       return;
     }
-
     setError("");
+    setActivePreset(null);
     onChange({ start_date: draftStart, end_date: draftEnd });
   }
 
   return (
-    <div className={`flex flex-col items-end gap-1 ${className}`}>
-      <div className="flex flex-wrap items-center justify-end gap-1.5">
+    <div className={cn("flex flex-col gap-2", className)}>
+      <div className="flex flex-wrap items-center gap-2">
         {(
           [
             ["today", "Today"],
-            ["week", "Week"],
-            ["month", "Month"],
+            ["week", "This week"],
+            ["month", "This month"],
           ] as const
         ).map(([preset, label]) => (
           <button
@@ -110,37 +111,31 @@ export function ReportDateRangeFilter({
             type="button"
             disabled={disabled}
             onClick={() => applyPreset(preset)}
-            className="rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-xs font-semibold transition",
+              activePreset === preset
+                ? "bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm"
+                : "border border-[var(--border)] bg-[var(--card)] text-[var(--muted)] hover:border-[var(--primary)]/30 hover:text-[var(--foreground)]",
+            )}
           >
             {label}
           </button>
         ))}
-        <DatePicker
-          hideLabel
-          value={draftStart}
-          onChange={setDraftStart}
-          disabled={disabled}
-          compact
-        />
-        <span className="text-[11px] text-zinc-400">–</span>
-        <DatePicker
-          hideLabel
-          value={draftEnd}
-          onChange={setDraftEnd}
-          minDate={draftStart}
-          disabled={disabled}
-          compact
-        />
+        <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-2 py-1">
+          <DatePicker hideLabel value={draftStart} onChange={setDraftStart} disabled={disabled} compact />
+          <span className="text-xs text-[var(--muted-foreground)]">→</span>
+          <DatePicker hideLabel value={draftEnd} onChange={setDraftEnd} minDate={draftStart} disabled={disabled} compact />
+        </div>
         <button
           type="button"
           disabled={disabled}
           onClick={applyCustom}
-          className="rounded-md bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className="rounded-lg bg-[var(--foreground)] px-3 py-1.5 text-xs font-semibold text-[var(--background)] transition hover:opacity-90 disabled:opacity-50"
         >
           Apply
         </button>
       </div>
-      {error ? <p className="text-[11px] text-red-600 dark:text-red-400">{error}</p> : null}
+      {error ? <p className="text-xs text-[var(--danger)]">{error}</p> : null}
     </div>
   );
 }

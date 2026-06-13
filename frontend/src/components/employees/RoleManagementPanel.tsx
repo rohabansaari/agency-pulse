@@ -9,6 +9,7 @@ import {
   ROLE_LABELS,
 } from "@/lib/navigation";
 import type { User, UserRole } from "@/lib/types";
+import { Select } from "@/components/ui/Input";
 import { useState } from "react";
 
 type RoleManagementPanelProps = {
@@ -76,7 +77,7 @@ export function RoleManagementPanel({
           <div className="flex flex-wrap items-end gap-2">
             <div>
               <label className="mb-1 block text-xs text-zinc-500">Change role</label>
-              <select
+              <Select
                 value={selectedRole}
                 onChange={(event) => setSelectedRole(event.target.value as UserRole)}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
@@ -86,7 +87,7 @@ export function RoleManagementPanel({
                     {ROLE_LABELS[role]}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <button
               type="button"

@@ -1,11 +1,12 @@
 "use client";
 
+import { SelectFromChildren } from "@/components/ui/Dropdown";
 import { cn } from "@/lib/cn";
 import { Eye, EyeOff } from "lucide-react";
-import { useState, type InputHTMLAttributes } from "react";
+import { useState, type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
 
 const baseClass =
-  "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500";
+  "w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3.5 py-2.5 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(baseClass, className)} {...props} />;
@@ -29,7 +30,7 @@ export function PasswordInput({
         tabIndex={-1}
         aria-label={visible ? "Hide password" : "Show password"}
         onClick={() => setVisible((v) => !v)}
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--foreground)]"
       >
         {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
@@ -37,11 +38,26 @@ export function PasswordInput({
   );
 }
 
-export function Select({ className, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({
+  className,
+  children,
+  value,
+  onChange,
+  disabled,
+  id,
+  ...props
+}: SelectHTMLAttributes<HTMLSelectElement>) {
+  void props;
   return (
-    <select className={cn(baseClass, className)} {...props}>
+    <SelectFromChildren
+      id={id}
+      value={value === undefined || Array.isArray(value) ? "" : String(value)}
+      onChange={onChange}
+      disabled={disabled}
+      className={className}
+    >
       {children}
-    </select>
+    </SelectFromChildren>
   );
 }
 
@@ -55,9 +71,9 @@ export function Label({
   required?: boolean;
 }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+    <label htmlFor={htmlFor} className="text-label mb-2 block">
       {children}
-      {required ? <span className="ml-0.5 text-red-500">*</span> : null}
+      {required ? <span className="ml-0.5 text-[var(--accent-coral)]">*</span> : null}
     </label>
   );
 }
@@ -81,7 +97,7 @@ export function FormField({
         {label}
       </Label>
       {children}
-      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-xs text-[var(--muted)]">{hint}</p> : null}
     </div>
   );
 }

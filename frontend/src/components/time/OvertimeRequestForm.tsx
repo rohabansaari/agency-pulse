@@ -8,6 +8,7 @@ import {
 } from "@/lib/api";
 import type { UserRole } from "@/lib/types";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Select } from "@/components/ui/Input";
 import { ddMmYyyyToIso, todayDdMmYyyy } from "@/lib/dates";
 import { useCallback, useEffect, useState } from "react";
 
@@ -215,7 +216,7 @@ export function OvertimeRequestForm({
         </label>
         <label className="block text-sm sm:col-span-2">
           <span className="font-medium text-zinc-600 dark:text-zinc-400">Project</span>
-          <select
+          <Select
             required
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
@@ -227,7 +228,7 @@ export function OvertimeRequestForm({
                 {project.client_name ? ` — ${project.client_name}` : ""}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="block text-sm sm:col-span-2">
           <span className="font-medium text-zinc-600 dark:text-zinc-400">Reason</span>

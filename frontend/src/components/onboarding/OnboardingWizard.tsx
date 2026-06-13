@@ -362,12 +362,12 @@ export function OnboardingWizard() {
                     <input required value={orgName} onChange={(e) => setOrgName(e.target.value)} className={inputClass} />
                   </Field>
                   <Field label="Timezone">
-                    <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={inputClass}>
+                    <Select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={inputClass}>
                       <option value="">Optional</option>
                       {TIMEZONES.map((tz) => (
                         <option key={tz} value={tz}>{tz}</option>
                       ))}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label="Website">
                     <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" className={inputClass} />
@@ -409,17 +409,17 @@ export function OnboardingWizard() {
                         <input required type="number" min="0" step="0.01" value={employeeSalary} onChange={(e) => setEmployeeSalary(e.target.value)} className={inputClass} />
                       </Field>
                       <Field label="Salary type *">
-                        <select value={employeeSalaryType} onChange={(e) => setEmployeeSalaryType(e.target.value as "monthly" | "hourly")} className={inputClass}>
+                        <Select value={employeeSalaryType} onChange={(e) => setEmployeeSalaryType(e.target.value as "monthly" | "hourly")} className={inputClass}>
                           <option value="monthly">Monthly</option>
                           <option value="hourly">Hourly</option>
-                        </select>
+                        </Select>
                       </Field>
                       <Field label="Role" className="sm:col-span-2">
-                        <select value={employeeRole} onChange={(e) => setEmployeeRole(e.target.value as UserRole)} className={inputClass}>
+                        <Select value={employeeRole} onChange={(e) => setEmployeeRole(e.target.value as UserRole)} className={inputClass}>
                           {ROLE_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>{option.label}</option>
                           ))}
-                        </select>
+                        </Select>
                       </Field>
                       <div className="sm:col-span-2">
                         <button type="submit" disabled={submitting} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">

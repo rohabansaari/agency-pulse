@@ -14,6 +14,7 @@ import { ManualTimeEntryForm } from "@/components/time/ManualTimeEntryForm";
 import { OvertimeRequestForm } from "@/components/time/OvertimeRequestForm";
 import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
+import { Select } from "@/components/ui/Input";
 import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { wakeDesktopAgent } from "@/lib/desktop-agent";
 import type { Project, TimeEntry, User } from "@/lib/types";
@@ -558,7 +559,7 @@ export function TimeTracker({ user }: { user?: User }) {
           {/* Project selector */}
           {!activeTimer ? (
             <div className="mt-6">
-              <select
+              <Select
                 id="project-select"
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
@@ -571,7 +572,7 @@ export function TimeTracker({ user }: { user?: User }) {
                     {projectLabel(project)}
                   </option>
                 ))}
-              </select>
+              </Select>
               {projectsNotice ? (
                 <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                   {projectsNotice}

@@ -3,6 +3,7 @@
 
 
 import { Modal } from "@/components/ui/Modal";
+import { Select } from "@/components/ui/Input";
 
 import {
 
@@ -550,7 +551,7 @@ export function TeamManager({ user }: { user: User }) {
 
                   {canEditMembers && member.user_id !== user.id ? (
 
-                    <select
+                    <Select
 
                       value={member.role}
 
@@ -570,7 +571,7 @@ export function TeamManager({ user }: { user: User }) {
 
                       <option value="admin">Admin</option>
 
-                    </select>
+                    </Select>
 
                   ) : (
 

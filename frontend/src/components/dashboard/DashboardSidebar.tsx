@@ -5,13 +5,13 @@ import { navItemsForRole } from "@/lib/navigation";
 import type { NavItem } from "@/lib/navigation";
 import type { User, UserRole } from "@/lib/types";
 import { cn } from "@/lib/cn";
+import { motion } from "framer-motion";
 import {
   BarChart3,
   Building2,
   Calendar,
   CalendarClock,
   Camera,
-  ChevronRight,
   Clock,
   DollarSign,
   FolderKanban,
@@ -20,6 +20,7 @@ import {
   Settings,
   Users,
   UsersRound,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -44,6 +45,7 @@ const ICONS: Record<string, ComponentType<{ className?: string; strokeWidth?: nu
   "Leave Management": CalendarClock,
   "Overtime Management": Clock,
   Payroll: DollarSign,
+  "Advance Salary": Wallet,
   Reports: BarChart3,
   Settings: Settings,
   Platform: Building2,
@@ -58,7 +60,7 @@ const GROUPS: Record<UserRole, { id: string; label: string; labels: string[] }[]
     { id: "overview", label: "Overview", labels: ["Dashboard"] },
     { id: "people", label: "People", labels: ["Employees", "Teams"] },
     { id: "work", label: "Work", labels: ["Projects", "Time Tracking", "Screenshots"] },
-    { id: "ops", label: "Operations", labels: ["Leave Management", "Overtime Management", "Payroll"] },
+    { id: "ops", label: "Operations", labels: ["Leave Management", "Overtime Management", "Payroll", "Advance Salary"] },
     { id: "insights", label: "Insights", labels: ["Reports", "Settings"] },
   ],
   sub_admin: [
@@ -71,13 +73,13 @@ const GROUPS: Record<UserRole, { id: string; label: string; labels: string[] }[]
   manager: [
     { id: "overview", label: "Overview", labels: ["Dashboard"] },
     { id: "work", label: "Work", labels: ["Time Tracking", "My Teams", "Projects", "Screenshots"] },
-    { id: "people", label: "People", labels: ["Leave"] },
+    { id: "people", label: "People", labels: ["Leave", "Advance Salary"] },
     { id: "insights", label: "Insights", labels: ["Reports"] },
   ],
   employee: [
     { id: "overview", label: "Overview", labels: ["Dashboard"] },
     { id: "work", label: "Work", labels: ["Time Tracking", "My Projects", "Screenshots"] },
-    { id: "people", label: "Time off", labels: ["Leave"] },
+    { id: "people", label: "Time off", labels: ["Leave", "Advance Salary"] },
   ],
 };
 
@@ -115,27 +117,23 @@ export function DashboardSidebar({
 
   return (
     <div className="flex h-full min-h-screen flex-col">
-      <div className="shrink-0 border-b border-[var(--sidebar-border)] px-4 py-4">
+      <div className="shrink-0 px-4 py-5">
         <Link href={homeHref} className="flex items-center gap-3" onClick={onNavigate}>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)] text-xs font-bold text-white shadow-sm">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--primary)] text-xs font-bold text-[var(--primary-foreground)] shadow-sm">
             AP
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              AgencyPulse
-            </p>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Workforce platform</p>
+            <p className="text-heading truncate text-sm text-[var(--foreground)]">AgencyPulse</p>
+            <p className="text-[11px] text-[var(--sidebar-muted)]">Workforce platform</p>
           </div>
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-2">
         {groups.map((group) => (
           <div key={group.id}>
             {groups.length > 1 ? (
-              <p className="mb-1.5 px-2.5 text-[10px] font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">
-                {group.label}
-              </p>
+              <p className="text-label mb-2 px-3">{group.label}</p>
             ) : null}
             <div className="space-y-0.5">
               {group.items.map((item) => {
@@ -147,23 +145,32 @@ export function DashboardSidebar({
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-all",
+                      "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] transition-all duration-150",
                       active
-                        ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-text)] shadow-sm"
-                        : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100",
+                        ? "bg-[var(--sidebar-active-bg)] font-semibold text-[var(--sidebar-active-text)] shadow-sm"
+                        : "font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--foreground)]",
                     )}
                   >
-                    {Icon ? (
-                      <Icon
-                        className={cn(
-                          "h-4 w-4 shrink-0 transition-colors",
-                          active ? "text-[var(--sidebar-active-text)]" : "text-zinc-400 group-hover:text-zinc-600",
-                        )}
-                        strokeWidth={active ? 2 : 1.75}
+                    {active ? (
+                      <motion.span
+                        layoutId="sidebar-active-indicator"
+                        className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--sidebar-active-accent)]"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
                       />
                     ) : null}
+                    {Icon ? (
+                      <span
+                        className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+                          active
+                            ? "bg-[var(--primary-muted)] text-[var(--sidebar-active-accent)]"
+                            : "bg-transparent text-[var(--sidebar-muted)] group-hover:bg-[var(--sidebar-hover)] group-hover:text-[var(--foreground)]",
+                        )}
+                      >
+                        <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.25 : 1.75} />
+                      </span>
+                    ) : null}
                     <span className="flex-1 truncate">{item.label}</span>
-                    {active ? <ChevronRight className="h-3 w-3 shrink-0 opacity-60" /> : null}
                   </Link>
                 );
               })}
@@ -173,16 +180,16 @@ export function DashboardSidebar({
       </nav>
 
       <div className="shrink-0 border-t border-[var(--sidebar-border)] p-3">
-        <div className="mb-2 rounded-lg bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800/40">
-          <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{user.name}</p>
-          <p className="truncate text-xs text-zinc-500">{user.email}</p>
-          <RoleBadge role={user.role} className="mt-1.5" />
+        <div className="mb-2 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 py-3">
+          <p className="truncate text-sm font-semibold text-[var(--foreground)]">{user.name}</p>
+          <p className="truncate text-xs text-[var(--muted)]">{user.email}</p>
+          <RoleBadge role={user.role} className="mt-2" />
         </div>
         <button
           type="button"
           onClick={onLogout}
           disabled={loggingOut}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-zinc-600 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-60 dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--muted)] transition hover:bg-[var(--accent-coral-soft)] hover:text-[var(--danger)] disabled:opacity-60"
         >
           <LogOut className="h-4 w-4" />
           {loggingOut ? "Signing out…" : "Sign out"}

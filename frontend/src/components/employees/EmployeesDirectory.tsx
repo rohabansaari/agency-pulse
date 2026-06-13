@@ -234,7 +234,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
                   <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.manager_name ?? "—"}</td>
                   <td className="px-3 py-3">
                     {canEditStatus && canEditMemberStatus(member.role) ? (
-                      <select
+                      <Select
                         value={member.status}
                         onChange={async (event) => {
                           try {
@@ -251,7 +251,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
                         <option value="active">active</option>
                         <option value="invited">invited</option>
                         <option value="suspended">suspended</option>
-                      </select>
+                      </Select>
                     ) : (
                       <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${STATUS_STYLES[member.status]}`}>
                         {member.status}
