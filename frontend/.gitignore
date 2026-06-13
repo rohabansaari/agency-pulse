@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Desktop agent is distributed as a zip only (never commit a loose .exe here)
+/public/downloads/AgencyPulseAgent.exe

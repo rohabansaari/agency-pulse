@@ -36,11 +36,16 @@ export function DesktopAgentBanner({ user }: { user: User }) {
           >
             Download {AGENT_DOWNLOAD_FILENAME}
           </a>
-          , extract the file, then run <span className="font-mono text-xs">AgencyPulseAgent.exe</span>
+          , extract the <span className="font-mono text-xs">AgencyPulseAgent</span> folder,
+          then run <span className="font-mono text-xs">AgencyPulseAgent.exe</span>
         </li>
         <li>Sign in once when prompted — setup finishes automatically</li>
         <li>{AGENT_SETUP_STEPS[2]}</li>
       </ol>
+      <p className="mt-3 text-xs text-amber-900/80 dark:text-amber-200/80">
+        Windows may warn about an unknown publisher — this is expected for an unsigned
+        internal app. Choose &quot;More info&quot; → &quot;Run anyway&quot; if prompted.
+      </p>
     </div>
   );
 }

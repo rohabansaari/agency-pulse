@@ -5,11 +5,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/downloads/:path*",
+        source: "/downloads/:path*.zip",
         headers: [
           {
             key: "Content-Type",
             value: "application/zip",
+          },
+          {
+            key: "Content-Disposition",
+            value: 'attachment; filename="AgencyPulseAgent.zip"',
           },
           {
             key: "X-Content-Type-Options",

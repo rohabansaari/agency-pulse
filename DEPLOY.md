@@ -153,11 +153,9 @@ cd desktop-agent
 .\build.ps1
 ```
 
-Share `dist\AgencyPulseAgent.zip` with employees and managers (place in `frontend/public/downloads/` or host on CDN). Each employee:
+Share `dist\AgencyPulseAgent.zip` with employees and managers (place in `frontend/public/downloads/` or host on CDN). Each employee extracts the **AgencyPulseAgent** folder and double-clicks `AgencyPulseAgent.exe` inside it.
 
-```powershell
-# Extract AgencyPulseAgent.exe from the zip, then double-click it and sign in once.
-```
+**Antivirus note:** The agent is unsigned PyInstaller software that captures screenshots and adds a Startup entry. Windows Defender may flag it as a false positive. Rebuild with `desktop-agent/build.bat` and see `desktop-agent/README.md` for mitigations and optional code signing.
 
 After that, starting the web timer auto-wakes the agent. See `desktop-agent/README.md`.
 
