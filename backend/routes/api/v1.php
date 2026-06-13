@@ -17,4 +17,4 @@ Route::middleware(['auth:sanctum', 'super.admin'])->prefix('platform')->group(
     base_path('routes/api/v1/platform.php')
 );
 
-Route::group(base_path('routes/api/v1/tenant.php'));
+require base_path('routes/api/v1/tenant.php');
