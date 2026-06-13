@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { MoneyAmount } from "@/components/ui/MoneyAmount";
 import { Alert } from "@/components/ui/EmptyState";
 import { FormField, Input } from "@/components/ui/Input";
 import {
@@ -123,7 +124,7 @@ export function EmployeeAdvancePage() {
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] p-4"
               >
                 <div>
-                  <p className="font-medium">${req.amount}</p>
+                  <MoneyAmount amount={req.amount} size="md" />
                   {req.reason ? <p className="mt-1 text-sm text-[var(--muted)]">{req.reason}</p> : null}
                   <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                     {req.created_at ? new Date(req.created_at).toLocaleDateString() : ""}
@@ -207,7 +208,7 @@ export function AdminAdvancePage() {
               >
                 <div>
                   <p className="font-medium">{req.user?.name ?? `User #${req.user_id}`}</p>
-                  <p className="text-lg font-semibold text-indigo-600">${req.amount}</p>
+                  <MoneyAmount amount={req.amount} size="lg" />
                   {req.reason ? <p className="mt-1 text-sm text-[var(--muted)]">{req.reason}</p> : null}
                 </div>
                 <div className="flex gap-2">
@@ -252,7 +253,9 @@ export function AdminAdvancePage() {
                 {history.map((req) => (
                   <tr key={req.id} className="border-b border-[var(--border-subtle)]">
                     <td className="px-3 py-3">{req.user?.name}</td>
-                    <td className="px-3 py-3">${req.amount}</td>
+                    <td className="px-3 py-3">
+                      <MoneyAmount amount={req.amount} size="sm" />
+                    </td>
                     <td className="px-3 py-3">
                       <Badge variant={STATUS_VARIANT[req.status] ?? "default"}>
                         {req.status_label}

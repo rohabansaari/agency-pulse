@@ -16,6 +16,7 @@ use App\Models\TimeEntry;
 
 use App\Services\Payroll\Deductions\PayrollDeductionEngine;
 use App\Services\Payroll\PayrollComponentService;
+use App\Services\Payroll\EmployeePayrollAdjustmentService;
 use App\Services\Payroll\SalaryAdvanceService;
 
 use App\Services\Tenant\TenantContext;
@@ -41,6 +42,8 @@ class PayrollCalculationService
         private readonly PayrollComponentService $payrollComponents,
 
         private readonly SalaryAdvanceService $salaryAdvances,
+
+        private readonly EmployeePayrollAdjustmentService $employeeAdjustments,
 
     ) {}
 
@@ -319,7 +322,7 @@ class PayrollCalculationService
 
         $linesResult = $this->buildSnapshotLines($entries, $periodStart, $periodEnd, $settings);
 
-        $employeeRecords = $this->buildEmployeeRecords($entries, $overtimeRequests, $settings, $periodEnd);
+        $employeeRecords = $this->buildEmployeeRecords($entries, $overtimeRequests, $settings, $periodStart, $periodEnd);
 
 
 
@@ -473,6 +476,8 @@ class PayrollCalculationService
 
         OrganizationPayrollSettings $settings,
 
+        Carbon $periodStart,
+
         Carbon $periodEnd
 
     ): array {
@@ -571,13 +576,73 @@ class PayrollCalculationService
 
             $componentTotals = $this->payrollComponents->totalsForGross($gross, $settings->organization_id);
 
-            $bonuses = $componentTotals['increments'];
+            $employeeAdjTotals = $this->employeeAdjustments->totalsForGross(
+                $userId,
+                $gross,
+                $periodStart,
+                $periodEnd,
+                $settings->organization_id
+            );
+
+            $bonuses = $componentTotals['increments'] + $employeeAdjTotals['increments'];
 
             $advanceDeduction = $this->salaryAdvances->pendingDeductionTotal($userId, $settings->organization_id);
 
-            $totalDeductions = round($deductions->totalDeductions() + $componentTotals['deductions'] + $advanceDeduction, 2);
+            $employeeDeductions = $componentTotals['deductions'] + $employeeAdjTotals['deductions'];
+
+            $totalDeductions = round(
+                $deductions->totalDeductions() + $employeeDeductions + $advanceDeduction,
+                2
+            );
 
             $net = round($gross - $totalDeductions + $bonuses, 2);
+
+            $adjustmentLines = array_merge($componentTotals['lines'], $employeeAdjTotals['lines']);
+
+            if ($advanceDeduction > 0) {
+                $adjustmentLines[] = [
+                    'name' => 'Advance salary',
+                    'type' => 'deduction',
+                    'amount' => round($advanceDeduction, 2),
+                    'source' => 'advance',
+                ];
+            }
+
+            if ($deductions->incomeTax > 0) {
+                $adjustmentLines[] = [
+                    'name' => 'Income tax',
+                    'type' => 'deduction',
+                    'amount' => round($deductions->incomeTax, 2),
+                    'source' => 'statutory',
+                ];
+            }
+
+            if ($deductions->eobi > 0) {
+                $adjustmentLines[] = [
+                    'name' => 'EOBI',
+                    'type' => 'deduction',
+                    'amount' => round($deductions->eobi, 2),
+                    'source' => 'statutory',
+                ];
+            }
+
+            if ($deductions->socialSecurity > 0) {
+                $adjustmentLines[] = [
+                    'name' => 'Social security',
+                    'type' => 'deduction',
+                    'amount' => round($deductions->socialSecurity, 2),
+                    'source' => 'statutory',
+                ];
+            }
+
+            if ($deductions->customDeduction > 0) {
+                $adjustmentLines[] = [
+                    'name' => 'Custom deduction',
+                    'type' => 'deduction',
+                    'amount' => round($deductions->customDeduction, 2),
+                    'source' => 'statutory',
+                ];
+            }
 
 
 
@@ -627,11 +692,13 @@ class PayrollCalculationService
 
                 'social_security_snapshot' => number_format($deductions->socialSecurity, 2, '.', ''),
 
-                'custom_deduction_snapshot' => number_format($deductions->customDeduction + $componentTotals['deductions'], 2, '.', ''),
+                'custom_deduction_snapshot' => number_format($employeeDeductions, 2, '.', ''),
 
                 'bonuses_snapshot' => number_format($bonuses, 2, '.', ''),
 
                 'advance_deduction_snapshot' => number_format($advanceDeduction, 2, '.', ''),
+
+                'adjustment_lines_snapshot' => $adjustmentLines,
 
                 'net_salary_snapshot' => number_format($net, 2, '.', ''),
 

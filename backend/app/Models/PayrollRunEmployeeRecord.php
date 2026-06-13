@@ -32,6 +32,7 @@ class PayrollRunEmployeeRecord extends Model
         'custom_deduction_snapshot',
         'bonuses_snapshot',
         'advance_deduction_snapshot',
+        'adjustment_lines_snapshot',
         'net_salary_snapshot',
     ];
 
@@ -58,6 +59,7 @@ class PayrollRunEmployeeRecord extends Model
             'custom_deduction_snapshot' => 'decimal:2',
             'bonuses_snapshot' => 'decimal:2',
             'advance_deduction_snapshot' => 'decimal:2',
+            'adjustment_lines_snapshot' => 'array',
             'net_salary_snapshot' => 'decimal:2',
         ];
     }

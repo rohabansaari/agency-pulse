@@ -1,9 +1,13 @@
 "use client";
 
 import { RoleManagementPanel } from "@/components/employees/RoleManagementPanel";
+import { EmployeePayrollAdjustmentsPanel } from "@/components/employees/EmployeePayrollAdjustmentsPanel";
 import { RoleBadge } from "@/components/dashboard/RoleBadge";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { Input, FormField } from "@/components/ui/Input";
 import { ApiError, fetchEmployeeProfile, formatApiErrors, updateTeamMember } from "@/lib/api";
-import { canEditEmployeeStatus, isPrivilegedMember } from "@/lib/navigation";
+import { canEditEmployeeStatus, isOperationalAdmin, isPrivilegedMember } from "@/lib/navigation";
 import { formatDuration } from "@/lib/time";
 import type { EmployeeProfile, User } from "@/lib/types";
 import Link from "next/link";
@@ -69,14 +73,25 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/employees" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
-          ← Back to employees
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{profile.name}</h1>
-        <p className="text-sm text-zinc-500">{profile.email}</p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Employee profile"
+        title={profile.name}
+        description={profile.email}
+        actions={
+          <Link
+            href="/employees"
+            className="text-sm font-medium text-[var(--primary)] hover:underline"
+          >
+            ← Back to directory
+          </Link>
+        }
+      />
+
+      <EmployeePayrollAdjustmentsPanel
+        userId={profile.user_id}
+        canManage={isOperationalAdmin(viewer.role)}
+      />
 
       {profile.role === "manager" && profile.manager_metrics ? (
         <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">

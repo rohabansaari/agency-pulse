@@ -624,6 +624,7 @@ export interface PayrollRunEmployeeRecord {
   custom_deduction_snapshot: string | null;
   bonuses_snapshot: string | null;
   advance_deduction_snapshot?: string | null;
+  adjustment_lines_snapshot?: PayrollAdjustmentLine[] | null;
   net_salary_snapshot: string | null;
   financial_data_masked?: boolean;
 }
@@ -721,4 +722,25 @@ export interface LeaveBalance {
 export interface LeaveBalanceEntry {
   user: { id: number; name: string; email: string; role?: string };
   balance: LeaveBalance;
+}
+
+export type PayrollAdjustmentLine = {
+  name: string;
+  type: "increment" | "deduction";
+  amount: number;
+  source: "global" | "employee" | "advance" | "statutory";
+};
+
+export interface EmployeePayrollAdjustment {
+  id: number;
+  user_id: number;
+  name: string;
+  type: PayrollComponentType;
+  value_mode: PayrollComponentValueMode;
+  value: string | null;
+  effective_month: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }

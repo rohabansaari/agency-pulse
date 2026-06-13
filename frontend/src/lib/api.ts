@@ -44,6 +44,7 @@ import type {
   SalaryAdvanceRequest,
   LeaveBalance,
   LeaveBalanceEntry,
+  EmployeePayrollAdjustment,
 } from "./types";
 
 const API_BASE =
@@ -1104,4 +1105,55 @@ export async function resetLeaveBalance(
   userId: number,
 ): Promise<{ message: string; balance: LeaveBalance }> {
   return apiFetch(`/hr/leave-balances/${userId}/reset`, { method: "POST" });
+}
+
+export async function fetchEmployeePayrollAdjustments(
+  userId: number,
+): Promise<EmployeePayrollAdjustment[]> {
+  return apiFetch<EmployeePayrollAdjustment[]>(`/hr/payroll-adjustments/${userId}`);
+}
+
+export async function createEmployeePayrollAdjustment(
+  userId: number,
+  data: {
+    name: string;
+    type: PayrollComponentType;
+    value_mode: PayrollComponentValueMode;
+    value: number;
+    effective_month?: string;
+    notes?: string;
+    is_active?: boolean;
+  },
+): Promise<{ message: string; adjustment: EmployeePayrollAdjustment }> {
+  return apiFetch(`/payroll/adjustments/${userId}`, {
+    method: "POST",
+    body: JSON.stringify(data),
+    payrollPin: true,
+  });
+}
+
+export async function updateEmployeePayrollAdjustment(
+  id: number,
+  data: Partial<{
+    name: string;
+    type: PayrollComponentType;
+    value_mode: PayrollComponentValueMode;
+    value: number;
+    effective_month: string | null;
+    notes: string | null;
+    is_active: boolean;
+  }>,
+): Promise<{ message: string; adjustment: EmployeePayrollAdjustment }> {
+  return apiFetch(`/payroll/adjustments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+    payrollPin: true,
+  });
+}
+
+export async function deleteEmployeePayrollAdjustment(id: number): Promise<{ message: string }> {
+  return apiFetch(`/payroll/adjustments/${id}`, {
+    method: "DELETE",
+    payrollPin: true,
+  });
 }

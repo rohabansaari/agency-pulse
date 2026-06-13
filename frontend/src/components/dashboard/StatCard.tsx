@@ -34,17 +34,15 @@ export function StatCard({
       className={`rounded-xl border p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5 ${accentStyles[accent]}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
-          {label}
-        </p>
+        <p className="text-label">{label}</p>
         {Icon ? (
-          <Icon className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" strokeWidth={1.75} />
+          <Icon className="h-4 w-4 shrink-0 text-[var(--muted)]" strokeWidth={1.75} />
         ) : null}
       </div>
-      <p className="mt-2 font-mono text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums sm:text-[1.75rem] dark:text-zinc-50">
+      <p className="text-numeric mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-[1.75rem]">
         {value}
       </p>
-      {sub ? <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{sub}</p> : null}
+      {sub ? <p className="mt-1 text-xs text-[var(--muted)]">{sub}</p> : null}
     </motion.div>
   );
 }

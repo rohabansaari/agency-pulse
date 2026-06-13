@@ -123,7 +123,7 @@ export function ScreenshotViewer({ shots, index, onClose, onNavigate }: Screensh
               <p className="text-label">Screenshot details</p>
               <p className="text-heading mt-1 text-lg">{shot.user_name ?? `User #${shot.user_id}`}</p>
             </div>
-            <dl className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
+            <dl className="space-y-4 px-5 py-4 text-sm">
               <div>
                 <dt className="text-label">Captured</dt>
                 <dd className="mt-1 font-medium text-[var(--foreground)]">{formatCapturedAt(shot.captured_at)}</dd>

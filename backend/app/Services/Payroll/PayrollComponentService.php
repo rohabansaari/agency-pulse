@@ -51,12 +51,16 @@ class PayrollComponentService
     }
 
     /**
-     * @return array{deductions: float, increments: float}
+     * @return array{
+     *     deductions: float,
+     *     increments: float,
+     *     lines: list<array{name: string, type: string, amount: float, source: string}>
+     * }
      */
     public function totalsForGross(float $gross, ?int $organizationId = null): array
     {
         if ($gross <= 0) {
-            return ['deductions' => 0.0, 'increments' => 0.0];
+            return ['deductions' => 0.0, 'increments' => 0.0, 'lines' => []];
         }
 
         $organizationId ??= TenantContext::id();
@@ -68,6 +72,7 @@ class PayrollComponentService
 
         $deductions = 0.0;
         $increments = 0.0;
+        $lines = [];
 
         foreach ($components as $component) {
             $amount = $this->amountForComponent($gross, $component);
@@ -77,11 +82,21 @@ class PayrollComponentService
             } else {
                 $increments += $amount;
             }
+
+            if ($amount > 0) {
+                $lines[] = [
+                    'name' => $component->name,
+                    'type' => $component->type->value,
+                    'amount' => round($amount, 2),
+                    'source' => 'global',
+                ];
+            }
         }
 
         return [
             'deductions' => round($deductions, 2),
             'increments' => round($increments, 2),
+            'lines' => $lines,
         ];
     }
 

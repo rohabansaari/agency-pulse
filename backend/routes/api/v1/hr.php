@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\EmployeePayrollAdjustmentController;
 use App\Http\Controllers\Api\V1\LeaveBalanceController;
 use App\Http\Controllers\Api\V1\SalaryAdvanceController;
 use Illuminate\Support\Facades\Route;
@@ -22,3 +23,8 @@ Route::middleware('rbac:admin,sub_admin')->group(function () {
     Route::patch('/leave-balances/{user}', [LeaveBalanceController::class, 'updateLimit']);
     Route::post('/leave-balances/{user}/reset', [LeaveBalanceController::class, 'reset']);
 });
+
+Route::middleware('rbac:admin,sub_admin,manager,employee')->get(
+    '/payroll-adjustments/{user}',
+    [EmployeePayrollAdjustmentController::class, 'index']
+);

@@ -129,7 +129,7 @@ export function DashboardSidebar({
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-2">
+      <nav className="flex-1 space-y-6 px-3 py-2">
         {groups.map((group) => (
           <div key={group.id}>
             {groups.length > 1 ? (

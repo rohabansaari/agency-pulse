@@ -30,6 +30,9 @@ import {
   ReportDateRangeFilter,
   type ReportDateRange,
 } from "@/components/reports/ReportDateRangeFilter";
+import { MoneyAmount } from "@/components/ui/MoneyAmount";
+import { PayrollBreakdown } from "@/components/payroll/PayrollBreakdown";
+import { formatPKR } from "@/lib/currency";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 const STATUS_STYLES: Record<PayrollRunStatus, string> = {
@@ -113,36 +116,37 @@ export function AdminPayrollPage() {
 
   function renderEmployeeRecords(records: PayrollRunEmployeeRecord[] | undefined) {
     if (!records?.length) {
-      return <p className="text-sm text-zinc-500">No employee payroll records.</p>;
+      return <p className="text-sm text-[var(--muted)]">No employee payroll records.</p>;
     }
 
     return (
-      <table className="min-w-full text-left text-xs">
-        <thead>
-          <tr className="text-zinc-500">
-            <th className="px-2 py-1 font-medium">Employee</th>
-            <th className="px-2 py-1 font-medium">Worked hrs</th>
-            <th className="px-2 py-1 font-medium">Overtime hrs</th>
-            <th className="px-2 py-1 font-medium">Type</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          {records.map((record) => (
-            <tr key={record.id}>
-              <td className="px-2 py-2 text-zinc-800 dark:text-zinc-200">
-                {record.user_name ?? `User #${record.user_id}`}
-              </td>
-              <td className="px-2 py-2 font-mono">
-                {formatDuration(record.regular_hours_seconds ?? record.payable_hours_seconds)}
-              </td>
-              <td className="px-2 py-2 font-mono">
-                {formatDuration(record.overtime_hours_seconds ?? 0)}
-              </td>
-              <td className="px-2 py-2 capitalize text-zinc-600">{record.salary_type}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {records.map((record) => {
+          const masked = record.financial_data_masked || !financialUnlocked;
+          return (
+            <div key={record.id} className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-heading text-sm font-semibold">
+                  {record.user_name ?? `User #${record.user_id}`}
+                </p>
+                <span className="text-xs capitalize text-[var(--muted)]">{record.salary_type}</span>
+              </div>
+              <p className="text-xs text-[var(--muted)]">
+                Worked {formatDuration(record.regular_hours_seconds ?? record.payable_hours_seconds)}
+                {record.overtime_hours_seconds
+                  ? ` · OT ${formatDuration(record.overtime_hours_seconds)}`
+                  : ""}
+              </p>
+              <PayrollBreakdown
+                gross={record.gross_salary_snapshot}
+                net={record.net_salary_snapshot}
+                lines={record.adjustment_lines_snapshot}
+                masked={masked}
+              />
+            </div>
+          );
+        })}
+      </div>
     );
   }
 
@@ -186,8 +190,8 @@ export function AdminPayrollPage() {
           total_hours: formatDuration(record.payable_hours_seconds),
           overtime_hours: formatDuration(record.overtime_hours_seconds ?? 0),
           deductions: String(deductions),
-          gross_pay: masked ? "—" : (record.gross_salary_snapshot ?? "—"),
-          net_pay: masked ? "—" : (record.net_salary_snapshot ?? "—"),
+          gross_pay: masked ? "—" : formatPKR(record.gross_salary_snapshot),
+          net_pay: masked ? "—" : formatPKR(record.net_salary_snapshot),
           payroll_status: run.status,
         });
 

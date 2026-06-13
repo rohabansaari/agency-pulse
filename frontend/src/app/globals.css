@@ -1,52 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  /* Warm ivory / sand surfaces */
-  --background: #f6f4f0;
-  --foreground: #1c1b19;
-  --card: #fdfcfa;
+  /* Deep graphite + warm ivory surfaces */
+  --background: #f3f1ec;
+  --foreground: #1a1917;
+  --card: #faf9f6;
   --card-elevated: #ffffff;
-  --border: #e3dfd6;
-  --border-subtle: #ece8e1;
-  --muted: #6e6b66;
-  --muted-foreground: #9a968f;
+  --border: #ddd8cf;
+  --border-subtle: #ebe6de;
+  --muted: #6b6560;
+  --muted-foreground: #9a948c;
 
-  /* Muted indigo accent — not generic blue */
-  --primary: #4f5d7a;
-  --primary-hover: #3d4a63;
-  --primary-foreground: #faf9f7;
-  --primary-muted: #e8ecf2;
+  /* Muted indigo accent */
+  --primary: #4a5568;
+  --primary-hover: #3d4654;
+  --primary-foreground: #faf9f6;
+  --primary-muted: #e4e8ee;
 
-  /* Emerald + coral accents */
+  /* Emerald, coral, copper */
   --accent-emerald: #2d6a4f;
   --accent-emerald-soft: #d8f3dc;
-  --accent-coral: #e07a5f;
+  --accent-coral: #c45c4a;
   --accent-coral-soft: #fde8e2;
-  --accent-sand: #f0ebe3;
+  --accent-copper: #b87333;
+  --accent-copper-soft: #f5e6d3;
+  --accent-sand: #ebe6de;
 
   --success: #2d6a4f;
   --warning: #b8860b;
   --danger: #c44536;
 
   /* Sidebar */
-  --sidebar-bg: #f0ebe3;
-  --sidebar-border: #ddd8cf;
-  --sidebar-active-bg: #fdfcfa;
-  --sidebar-active-text: #1c1b19;
-  --sidebar-active-accent: #4f5d7a;
-  --sidebar-hover: rgba(28, 27, 25, 0.04);
-  --sidebar-muted: #8a857c;
+  --sidebar-bg: #ebe6de;
+  --sidebar-border: #d4cec4;
+  --sidebar-active-bg: #faf9f6;
+  --sidebar-active-text: #1a1917;
+  --sidebar-active-accent: #4a5568;
+  --sidebar-hover: rgba(26, 25, 23, 0.05);
+  --sidebar-muted: #7a746c;
 
   --app-sidebar-width: 16rem;
   --radius-sm: 0.5rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.875rem;
   --radius-xl: 1.125rem;
-  --shadow-sm: 0 1px 2px rgb(28 27 25 / 0.04);
-  --shadow-md: 0 4px 16px rgb(28 27 25 / 0.07);
-  --shadow-lg: 0 12px 40px rgb(28 27 25 / 0.1);
-  --shadow-dropdown: 0 8px 30px rgb(28 27 25 / 0.12), 0 2px 8px rgb(28 27 25 / 0.06);
-  --gradient-surface: linear-gradient(180deg, #f6f4f0 0%, #f0ebe3 100%);
+  --shadow-sm: 0 1px 2px rgb(26 25 23 / 0.05);
+  --shadow-md: 0 4px 20px rgb(26 25 23 / 0.08);
+  --shadow-lg: 0 12px 40px rgb(26 25 23 / 0.12);
+  --shadow-dropdown: 0 12px 40px rgb(26 25 23 / 0.14), 0 2px 8px rgb(26 25 23 / 0.06);
+  --gradient-surface: linear-gradient(180deg, #f3f1ec 0%, #ebe6de 100%);
 }
 
 @theme inline {
@@ -54,7 +56,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-display: var(--font-display);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-numeric);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -133,6 +135,24 @@ body {
   color: var(--muted);
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+/* Premium numeric typography — fintech-grade clarity */
+.text-numeric {
+  font-family: var(--font-numeric), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Layout: single page scroll only — no nested scroll containers */
+.app-layout,
+.app-main-with-sidebar,
+.app-sidebar nav {
+  overflow: visible;
+}
+
+.app-sidebar {
+  overflow: hidden;
 }
 
 .app-layout {

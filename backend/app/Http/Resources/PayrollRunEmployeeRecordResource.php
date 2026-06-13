@@ -42,6 +42,8 @@ class PayrollRunEmployeeRecordResource extends JsonResource
             'social_security_snapshot' => $unlocked ? $this->social_security_snapshot : null,
             'custom_deduction_snapshot' => $unlocked ? $this->custom_deduction_snapshot : null,
             'bonuses_snapshot' => $unlocked ? $this->bonuses_snapshot : null,
+            'advance_deduction_snapshot' => $unlocked ? $this->advance_deduction_snapshot : null,
+            'adjustment_lines_snapshot' => $unlocked ? $this->adjustment_lines_snapshot : null,
             'net_salary_snapshot' => $unlocked ? $this->net_salary_snapshot : null,
             'financial_data_masked' => ! $unlocked,
         ];
