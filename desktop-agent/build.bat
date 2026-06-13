@@ -20,11 +20,12 @@ echo Building AgencyPulse Desktop Agent...
 %PY% -m pip install -r requirements.txt "pyinstaller>=6.10"
 if errorlevel 1 goto :error
 
+if exist "dist\AgencyPulseAgent.exe" del /f /q "dist\AgencyPulseAgent.exe"
 if exist "dist\AgencyPulseAgent" rmdir /s /q "dist\AgencyPulseAgent"
 if exist "dist\AgencyPulseAgent.zip" del /f /q "dist\AgencyPulseAgent.zip"
 
 %PY% -m PyInstaller ^
-  --onedir ^
+  --onefile ^
   --windowed ^
   --noupx ^
   --name AgencyPulseAgent ^
@@ -38,7 +39,7 @@ if exist "dist\AgencyPulseAgent.zip" del /f /q "dist\AgencyPulseAgent.zip"
 if errorlevel 1 goto :error
 
 echo Creating zip (avoids Chrome blocking direct .exe downloads)...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Compress-Archive -Force -Path 'dist\AgencyPulseAgent' -DestinationPath 'dist\AgencyPulseAgent.zip'"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Compress-Archive -Force -Path 'dist\AgencyPulseAgent.exe' -DestinationPath 'dist\AgencyPulseAgent.zip'"
 if errorlevel 1 goto :error
 
 if exist "..\frontend\public\downloads\" (
@@ -48,8 +49,8 @@ if exist "..\frontend\public\downloads\" (
 
 echo.
 echo Built: dist\AgencyPulseAgent.zip
-echo Inside: AgencyPulseAgent\AgencyPulseAgent.exe (+ dependencies)
-echo Employees: download zip, extract folder, run exe once and sign in.
+echo Inside: AgencyPulseAgent.exe
+echo Employees: download zip, extract exe, run once and sign in.
 goto :end
 
 :error

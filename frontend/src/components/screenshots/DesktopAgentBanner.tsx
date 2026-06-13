@@ -36,8 +36,8 @@ export function DesktopAgentBanner({ user }: { user: User }) {
           >
             Download {AGENT_DOWNLOAD_FILENAME}
           </a>
-          , extract the <span className="font-mono text-xs">AgencyPulseAgent</span> folder,
-          then run <span className="font-mono text-xs">AgencyPulseAgent.exe</span>
+          , extract <span className="font-mono text-xs">AgencyPulseAgent.exe</span>,
+          then double-click it
         </li>
         <li>Sign in once when prompted — setup finishes automatically</li>
         <li>{AGENT_SETUP_STEPS[2]}</li>

@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 
 Set-Location $PSScriptRoot
 
-$exe = Join-Path $PSScriptRoot "dist\AgencyPulseAgent\AgencyPulseAgent.exe"
+$exe = Join-Path $PSScriptRoot "dist\AgencyPulseAgent.exe"
 if (-not (Test-Path $exe)) {
     throw "Build the agent first: .\build.bat"
 }

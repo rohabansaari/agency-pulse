@@ -1,4 +1,4 @@
-# Build a Windows agent folder and zip for web download (no Python needed for employees)
+# Build a single Windows executable zip for web download (no Python needed for employees)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -6,6 +6,9 @@ Set-Location $PSScriptRoot
 
 python -m pip install -r requirements.txt "pyinstaller>=6.10"
 
+if (Test-Path "dist\AgencyPulseAgent.exe") {
+    Remove-Item "dist\AgencyPulseAgent.exe" -Force
+}
 if (Test-Path "dist\AgencyPulseAgent") {
     Remove-Item "dist\AgencyPulseAgent" -Recurse -Force
 }
@@ -14,7 +17,7 @@ if (Test-Path "dist\AgencyPulseAgent.zip") {
 }
 
 python -m PyInstaller `
-  --onedir `
+  --onefile `
   --windowed `
   --noupx `
   --name AgencyPulseAgent `
@@ -26,7 +29,7 @@ python -m PyInstaller `
   --clean `
   agent.py
 
-Compress-Archive -Force -Path "dist\AgencyPulseAgent" -DestinationPath "dist\AgencyPulseAgent.zip"
+Compress-Archive -Force -Path "dist\AgencyPulseAgent.exe" -DestinationPath "dist\AgencyPulseAgent.zip"
 
 if (Test-Path "..\frontend\public\downloads\") {
     Copy-Item "dist\AgencyPulseAgent.zip" "..\frontend\public\downloads\AgencyPulseAgent.zip" -Force
@@ -35,5 +38,5 @@ if (Test-Path "..\frontend\public\downloads\") {
 
 Write-Host ""
 Write-Host "Built: dist\AgencyPulseAgent.zip"
-Write-Host "Inside: AgencyPulseAgent\AgencyPulseAgent.exe (+ dependencies)"
-Write-Host "Employees: extract zip, run exe, sign in once - no --install needed."
+Write-Host "Inside: AgencyPulseAgent.exe"
+Write-Host "Employees: extract zip, double-click exe, sign in once - no --install needed."
