@@ -37,6 +37,8 @@ CONFIG_PATH = CONFIG_DIR / "agent-config.json"
 LOG_PATH = CONFIG_DIR / "agent.log"
 LOCK_PATH = CONFIG_DIR / "agent.lock"
 WAKE_PATH = CONFIG_DIR / "wake.signal"
+SHOW_UI_PATH = CONFIG_DIR / "show-ui.signal"
+QUIT_PATH = CONFIG_DIR / "quit.signal"
 
 _lock_handle = None
 T = TypeVar("T")
@@ -60,6 +62,74 @@ def notify_user(title: str, message: str) -> None:
             ctypes.windll.user32.MessageBoxW(0, message, title, 0x40)
         except Exception as error:
             log(f"Unable to show notification dialog: {error}")
+
+
+def is_protocol_wake() -> bool:
+    return any(arg.lower().startswith(f"{PROTOCOL}://") for arg in sys.argv[1:])
+
+
+def is_background_launch() -> bool:
+    return "--background" in [arg.lower() for arg in sys.argv[1:]]
+
+
+def is_interactive_launch() -> bool:
+    if is_background_launch() or is_protocol_wake():
+        return False
+    if "--quit" in [arg.lower() for arg in sys.argv[1:]]:
+        return False
+    return True
+
+
+def release_lock() -> None:
+    global _lock_handle
+
+    if _lock_handle is None:
+        return
+
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+
+            _lock_handle.seek(0)
+            msvcrt.locking(_lock_handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(_lock_handle.fileno(), fcntl.LOCK_UN)
+        _lock_handle.close()
+    except Exception as error:
+        log(f"Unable to release agent lock: {error}")
+    finally:
+        _lock_handle = None
+
+
+def prepare_tk_window(root, width: int, height: int) -> None:
+    root.update_idletasks()
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = max(0, (screen_width - width) // 2)
+    y = max(0, (screen_height - height) // 2)
+    root.geometry(f"{width}x{height}+{x}+{y}")
+    root.lift()
+    root.attributes("-topmost", True)
+    root.focus_force()
+    root.after(250, lambda: root.attributes("-topmost", False))
+
+
+def current_user_label(config: dict) -> str:
+    try:
+        response = requests.get(
+            f"{config['api_base_url']}/auth/me",
+            headers=headers(config),
+            timeout=15,
+        )
+        if response.ok:
+            user = response.json().get("user") or {}
+            return str(user.get("email") or user.get("name") or "your account")
+    except requests.RequestException:
+        pass
+
+    return "your account"
 
 
 def executable_path() -> Path:
@@ -134,6 +204,7 @@ def add_startup_shortcut() -> bool:
         "$shell = New-Object -ComObject WScript.Shell; "
         f"$s = $shell.CreateShortcut('{shortcut_path}'); "
         f"$s.TargetPath = '{target}'; "
+        f"$s.Arguments = '--background'; "
         f"$s.WorkingDirectory = '{target.parent}'; "
         "$s.Description = 'AgencyPulse screenshot agent'; "
         "$s.Save()"
@@ -214,6 +285,8 @@ def sleep_until(seconds: float) -> None:
     while time.time() < deadline:
         if WAKE_PATH.exists():
             WAKE_PATH.unlink(missing_ok=True)
+            return
+        if SHOW_UI_PATH.exists() or QUIT_PATH.exists():
             return
         time.sleep(min(0.5, max(0.0, deadline - time.time())))
 
@@ -383,6 +456,102 @@ def friendly_login_error(response: requests.Response) -> str:
     return "Sign in failed. Please try again."
 
 
+def prompt_interactive_launch_gui(config: dict) -> str:
+    import tkinter as tk
+
+    BG = "#f3f1ec"
+    CARD = "#faf9f6"
+    FOREGROUND = "#1a1917"
+    MUTED = "#6b6560"
+    BORDER = "#ddd8cf"
+    PRIMARY = "#4a5568"
+    PRIMARY_HOVER = "#3d4654"
+
+    choice = {"value": "continue"}
+    account = current_user_label(config)
+
+    root = tk.Tk()
+    root.title("AgencyPulse")
+    root.resizable(False, False)
+    root.configure(bg=BG)
+
+    outer = tk.Frame(root, bg=BG, padx=28, pady=28)
+    outer.pack(fill="both", expand=True)
+
+    card = tk.Frame(outer, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=28, pady=28)
+    card.pack(fill="both", expand=True)
+
+    tk.Label(
+        card,
+        text="AgencyPulse agent",
+        font=("Segoe UI", 18, "bold"),
+        fg=FOREGROUND,
+        bg=CARD,
+    ).pack(anchor="w")
+
+    tk.Label(
+        card,
+        text=f"Signed in as {account}.\nThe agent is already running in the background.",
+        font=("Segoe UI", 10),
+        fg=MUTED,
+        bg=CARD,
+        justify="left",
+    ).pack(anchor="w", pady=(10, 18))
+
+    def set_choice(value: str) -> None:
+        choice["value"] = value
+        root.destroy()
+
+    tk.Button(
+        card,
+        text="Continue in background",
+        command=lambda: set_choice("continue"),
+        font=("Segoe UI", 10, "bold"),
+        fg="#ffffff",
+        bg=PRIMARY,
+        activebackground=PRIMARY_HOVER,
+        relief="flat",
+        padx=16,
+        pady=9,
+        cursor="hand2",
+        borderwidth=0,
+    ).pack(fill="x", pady=(0, 10))
+
+    tk.Button(
+        card,
+        text="Sign in as a different user",
+        command=lambda: set_choice("relogin"),
+        font=("Segoe UI", 10),
+        fg=FOREGROUND,
+        bg="#ffffff",
+        activebackground="#ebe6de",
+        relief="solid",
+        bd=1,
+        padx=16,
+        pady=9,
+        cursor="hand2",
+    ).pack(fill="x", pady=(0, 10))
+
+    tk.Button(
+        card,
+        text="Quit agent",
+        command=lambda: set_choice("quit"),
+        font=("Segoe UI", 10),
+        fg="#c44536",
+        bg=CARD,
+        activebackground="#fde8e2",
+        relief="flat",
+        padx=16,
+        pady=8,
+        cursor="hand2",
+        borderwidth=0,
+    ).pack(fill="x")
+
+    prepare_tk_window(root, 460, 320)
+    root.mainloop()
+    return choice["value"]
+
+
 def prompt_login_gui(config: dict) -> dict:
     import tkinter as tk
     from tkinter import messagebox
@@ -404,8 +573,8 @@ def prompt_login_gui(config: dict) -> dict:
     root = tk.Tk()
     root.title("AgencyPulse")
     root.resizable(False, False)
-    root.geometry("480x520")
     root.configure(bg=BG)
+    prepare_tk_window(root, 480, 520)
 
     outer = tk.Frame(root, bg=BG, padx=28, pady=28)
     outer.pack(fill="both", expand=True)
@@ -591,7 +760,7 @@ def prompt_login_gui(config: dict) -> dict:
     return result
 
 
-def ensure_config() -> dict:
+def ensure_config(*, interactive: bool = False) -> dict:
     config = load_config()
     if config.get("api_base_url"):
         config["api_base_url"] = normalize_api_base_url(str(config["api_base_url"]))
@@ -601,12 +770,27 @@ def ensure_config() -> dict:
         config["device_id"] = str(uuid.uuid4())
         save_config(config)
 
+    has_valid_session = False
     if config.get("token") and config.get("organization_id"):
-        if validate_session(config):
-            log("Agent connected with saved credentials.")
-            return config
-        log("Saved session expired — sign in again.")
-        config = clear_auth(config)
+        has_valid_session = validate_session(config)
+        if not has_valid_session:
+            log("Saved session expired — sign in again.")
+            config = clear_auth(config)
+
+    if interactive:
+        if has_valid_session:
+            choice = prompt_interactive_launch_gui(config)
+            if choice == "continue":
+                log("Continuing with saved credentials.")
+                return config
+            if choice == "quit":
+                raise RuntimeError("Agent closed by user.")
+            config = clear_auth(config)
+        return prompt_login_gui(config)
+
+    if has_valid_session:
+        log("Agent connected with saved credentials.")
+        return config
 
     try:
         return prompt_login_gui(config)
@@ -823,8 +1007,8 @@ def handle_timer_state(
         session.last_capture_at = time.time() - (CAPTURE_INTERVAL_SECONDS - 60)
 
 
-def run_agent() -> None:
-    config = ensure_config()
+def run_agent(*, interactive: bool = False) -> None:
+    config = ensure_config(interactive=interactive)
     session = TimerSession()
     offline = False
     loop_index = 0
@@ -835,6 +1019,23 @@ def run_agent() -> None:
     )
 
     while True:
+        if QUIT_PATH.exists():
+            QUIT_PATH.unlink(missing_ok=True)
+            log("Quit signal received.")
+            break
+
+        if SHOW_UI_PATH.exists():
+            SHOW_UI_PATH.unlink(missing_ok=True)
+            log("Sign-in window requested.")
+            try:
+                config = ensure_config(interactive=True)
+            except RuntimeError as error:
+                log(str(error))
+                break
+            session.clear()
+            offline = False
+            continue
+
         loop_index += 1
         wake_received = WAKE_PATH.exists()
         if wake_received:
@@ -855,7 +1056,7 @@ def run_agent() -> None:
         except RuntimeError as error:
             log(str(error))
             config = clear_auth(config)
-            config = ensure_config()
+            config = ensure_config(interactive=interactive)
             session.clear()
             offline = False
             continue
@@ -873,6 +1074,14 @@ def admin_install() -> int:
 def main() -> int:
     args = [arg.lower() for arg in sys.argv[1:]]
 
+    if "--quit" in args:
+        QUIT_PATH.write_text("1", encoding="utf-8")
+        notify_user(
+            "AgencyPulse Agent",
+            "The desktop agent is shutting down.\n\nYou can now close or delete the agent folder.",
+        )
+        return 0
+
     if "--install" in args or "--register" in args:
         if not is_admin_mode():
             notify_user(
@@ -883,15 +1092,23 @@ def main() -> int:
             return 1
         return admin_install()
 
-    protocol_wake = any(arg.lower().startswith(f"{PROTOCOL}://") for arg in sys.argv[1:])
+    interactive = is_interactive_launch()
+    protocol_wake = is_protocol_wake()
 
     if not acquire_lock():
         signal_wake()
-        if not protocol_wake:
+        if interactive:
+            SHOW_UI_PATH.write_text("1", encoding="utf-8")
+            notify_user(
+                "AgencyPulse Agent",
+                "The agent is already running.\n\nOpening the sign-in window now.",
+            )
+        elif not protocol_wake:
             notify_user(
                 "AgencyPulse Agent",
                 "The desktop agent is already running in the background.\n\n"
-                "Start the timer on the website to begin screenshot capture.",
+                "Double-click AgencyPulseAgent.exe again to open sign-in, "
+                "or run AgencyPulseAgent.exe --quit to stop it.",
             )
         return 0
 
@@ -899,7 +1116,7 @@ def main() -> int:
         log("Launched from browser timer wake.")
 
     try:
-        run_agent()
+        run_agent(interactive=interactive)
     except KeyboardInterrupt:
         log("Agent stopped.")
         return 0
@@ -907,6 +1124,8 @@ def main() -> int:
         log(str(error))
         notify_user("AgencyPulse Agent", str(error))
         return 1
+    finally:
+        release_lock()
 
     return 0
 
