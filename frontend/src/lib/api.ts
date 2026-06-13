@@ -44,6 +44,7 @@ import type {
   SalaryAdvanceRequest,
   LeaveBalance,
   LeaveBalanceEntry,
+  LeaveCategory,
   EmployeePayrollAdjustment,
 } from "./types";
 
@@ -616,6 +617,7 @@ export async function requestLeave(data: {
   start_date?: string;
   end_date?: string;
   reason: string;
+  leave_category: LeaveCategory;
   user_id?: number;
   team_id?: number;
   require_approval?: boolean;
@@ -865,6 +867,16 @@ export async function updateOnboardingStep(step: number): Promise<{ status: Onbo
   });
 }
 
+export async function updateOnboardingStepCompletion(
+  step: number,
+  completed: boolean,
+): Promise<{ message: string; status: OnboardingStatus }> {
+  return apiFetch<{ message: string; status: OnboardingStatus }>("/onboarding/step-completion", {
+    method: "PATCH",
+    body: JSON.stringify({ step, completed }),
+  });
+}
+
 export async function skipOnboardingStep(step: number): Promise<{ status: OnboardingStatus }> {
   return apiFetch<{ status: OnboardingStatus }>("/onboarding/skip-step", {
     method: "POST",
@@ -1093,18 +1105,23 @@ export async function fetchLeaveBalances(): Promise<{ balances: LeaveBalanceEntr
 
 export async function updateLeaveLimit(
   userId: number,
-  annual_limit_days: number,
+  category: LeaveCategory,
+  limitDays: number,
 ): Promise<{ message: string; balance: LeaveBalance }> {
   return apiFetch(`/hr/leave-balances/${userId}`, {
     method: "PATCH",
-    body: JSON.stringify({ annual_limit_days }),
+    body: JSON.stringify({ category, limit_days: limitDays }),
   });
 }
 
 export async function resetLeaveBalance(
   userId: number,
+  category?: LeaveCategory,
 ): Promise<{ message: string; balance: LeaveBalance }> {
-  return apiFetch(`/hr/leave-balances/${userId}/reset`, { method: "POST" });
+  return apiFetch(`/hr/leave-balances/${userId}/reset`, {
+    method: "POST",
+    body: JSON.stringify(category ? { category } : {}),
+  });
 }
 
 export async function fetchEmployeePayrollAdjustments(

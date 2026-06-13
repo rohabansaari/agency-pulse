@@ -26,6 +26,7 @@ class TimeEntry extends Model
         'duration',
         'description',
         'is_paid',
+        'leave_category',
         'source',
         'status',
         'approved_by',

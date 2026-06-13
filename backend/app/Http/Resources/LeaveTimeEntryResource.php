@@ -31,6 +31,7 @@ class LeaveTimeEntryResource extends JsonResource
             'duration' => $this->duration,
             'description' => $this->description,
             'is_paid' => $this->is_paid,
+            'leave_category' => $this->leave_category ?? 'annual',
             'source' => $this->source?->value,
             'status' => $this->status->value,
             'approved_by' => $this->approved_by,

@@ -2,11 +2,13 @@
 
 namespace App\Services\Time;
 
+use App\Enums\LeaveCategory;
 use App\Enums\OrganizationMemberStatus;
 use App\Enums\TimeEntrySource;
 use App\Enums\TimeEntryStatus;
 use App\Enums\TimeEntryType;
 use App\Enums\UserRole;
+use App\Models\EmployeeLeaveBalance;
 use App\Models\OrganizationMember;
 use App\Models\Team;
 use App\Models\TeamMember;
@@ -64,11 +66,34 @@ class LeaveTimeEntryService
                 'id' => $team->manager->id,
                 'name' => $team->manager->name,
             ],
-            'leave_balance' => [
-                'annual_limit_days' => $balance->annual_limit_days,
-                'used_days' => (float) $balance->used_days,
-                'remaining_days' => $balance->remainingDays(),
+            'leave_balance' => $this->balancePayload($balance),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function balancePayload(EmployeeLeaveBalance $balance): array
+    {
+        return [
+            'medical' => [
+                'limit_days' => (int) ($balance->medical_limit_days ?? 10),
+                'used_days' => (float) ($balance->medical_used_days ?? 0),
+                'remaining_days' => $balance->remainingDaysForCategory(LeaveCategory::Medical),
             ],
+            'casual' => [
+                'limit_days' => (int) ($balance->casual_limit_days ?? 10),
+                'used_days' => (float) ($balance->casual_used_days ?? 0),
+                'remaining_days' => $balance->remainingDaysForCategory(LeaveCategory::Casual),
+            ],
+            'annual' => [
+                'limit_days' => $balance->annual_limit_days,
+                'used_days' => (float) $balance->used_days,
+                'remaining_days' => $balance->remainingDaysForCategory(LeaveCategory::Annual),
+            ],
+            'annual_limit_days' => $balance->annual_limit_days,
+            'used_days' => (float) $balance->used_days,
+            'remaining_days' => $balance->remainingDaysForCategory(LeaveCategory::Annual),
         ];
     }
 
@@ -154,10 +179,14 @@ class LeaveTimeEntryService
         $this->assertDateRangeModifiable($startDate, $endDate);
 
         $requestedDays = $startDate->copy()->startOfDay()->diffInDays($endDate->copy()->startOfDay()) + 1;
+        $category = LeaveCategory::from($data['leave_category'] ?? LeaveCategory::Annual->value);
         $balance = $this->leaveBalances->balanceForUser($employee);
-        if ($balance->remainingDays() < $requestedDays) {
+        if ($balance->remainingDaysForCategory($category) < $requestedDays) {
             throw ValidationException::withMessages([
-                'start_date' => ['Insufficient leave balance. You have '.$balance->remainingDays().' days remaining.'],
+                'start_date' => [
+                    'Insufficient '.$category->label().' balance. You have '
+                    .$balance->remainingDaysForCategory($category).' days remaining.',
+                ],
             ]);
         }
 
@@ -170,6 +199,7 @@ class LeaveTimeEntryService
             source: TimeEntrySource::Employee,
             status: TimeEntryStatus::Pending,
             managerId: $team->manager_id,
+            leaveCategory: $category,
         );
     }
 
@@ -198,6 +228,19 @@ class LeaveTimeEntryService
         $this->assertDateRangeModifiable($startDate, $endDate);
         $requireApproval = $data['require_approval'] ?? false;
         $status = $requireApproval ? TimeEntryStatus::Pending : TimeEntryStatus::Approved;
+        $category = LeaveCategory::from($data['leave_category'] ?? LeaveCategory::Annual->value);
+
+        if ($status === TimeEntryStatus::Approved) {
+            $requestedDays = $startDate->copy()->startOfDay()->diffInDays($endDate->copy()->startOfDay()) + 1;
+            $balance = $this->leaveBalances->balanceForUser($employee);
+            if ($balance->remainingDaysForCategory($category) < $requestedDays) {
+                throw ValidationException::withMessages([
+                    'start_date' => [
+                        'Insufficient '.$category->label().' balance for this employee.',
+                    ],
+                ]);
+            }
+        }
 
         return $this->createLeaveEntries(
             employee: $employee,
@@ -209,6 +252,7 @@ class LeaveTimeEntryService
             status: $status,
             managerId: $team->manager_id,
             approvedBy: $status === TimeEntryStatus::Approved ? $manager->id : null,
+            leaveCategory: $category,
         );
     }
 
@@ -237,6 +281,16 @@ class LeaveTimeEntryService
 
         [$startDate, $endDate] = $this->parseDateRange($data);
         $this->assertDateRangeModifiable($startDate, $endDate);
+        $category = LeaveCategory::from($data['leave_category'] ?? LeaveCategory::Annual->value);
+        $requestedDays = $startDate->copy()->startOfDay()->diffInDays($endDate->copy()->startOfDay()) + 1;
+        $balance = $this->leaveBalances->balanceForUser($employee);
+        if ($balance->remainingDaysForCategory($category) < $requestedDays) {
+            throw ValidationException::withMessages([
+                'start_date' => [
+                    'Insufficient '.$category->label().' balance for this employee.',
+                ],
+            ]);
+        }
 
         return $this->createLeaveEntries(
             employee: $employee,
@@ -248,6 +302,7 @@ class LeaveTimeEntryService
             status: TimeEntryStatus::Approved,
             managerId: $team->manager_id,
             approvedBy: $admin->id,
+            leaveCategory: $category,
         );
     }
 
@@ -418,7 +473,11 @@ class LeaveTimeEntryService
             'approved_at' => now(),
         ]);
 
-        $this->leaveBalances->consumeDays($entry->user, 1);
+        $this->leaveBalances->consumeDays(
+            $entry->user,
+            1,
+            LeaveCategory::from($entry->leave_category ?? LeaveCategory::Annual->value),
+        );
 
         return $entry->fresh(['user', 'team', 'approver', 'assignedManager']);
     }
@@ -456,6 +515,7 @@ class LeaveTimeEntryService
         TimeEntryStatus $status,
         ?int $managerId,
         ?int $approvedBy = null,
+        LeaveCategory $leaveCategory = LeaveCategory::Annual,
     ): Collection {
         if (empty(trim($reason))) {
             throw ValidationException::withMessages([
@@ -480,6 +540,7 @@ class LeaveTimeEntryService
                 'duration' => UtilizationCalculator::SECONDS_PER_WORK_DAY,
                 'description' => $reason,
                 'is_paid' => true,
+                'leave_category' => $leaveCategory->value,
                 'source' => $source,
                 'status' => $status,
                 'approved_by' => $approvedBy,
@@ -490,7 +551,7 @@ class LeaveTimeEntryService
         }
 
         if ($status === TimeEntryStatus::Approved) {
-            $this->leaveBalances->consumeDays($employee, $entries->count());
+            $this->leaveBalances->consumeDays($employee, $entries->count(), $leaveCategory);
         }
 
         return $entries;

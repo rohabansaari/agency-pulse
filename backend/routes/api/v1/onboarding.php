@@ -11,3 +11,4 @@ Route::post('/employees', [OnboardingController::class, 'storeEmployee']);
 Route::post('/employees/import', [OnboardingController::class, 'importEmployees']);
 Route::get('/employees/sample.csv', [OnboardingController::class, 'sampleCsv']);
 Route::post('/complete', [OnboardingController::class, 'complete']);
+Route::patch('/step-completion', [OnboardingController::class, 'updateStepCompletion']);

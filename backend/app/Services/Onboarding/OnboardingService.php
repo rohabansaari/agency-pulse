@@ -43,13 +43,14 @@ class OnboardingService
     {
         $organization = $this->refreshSkippedSteps($organization);
         $pinConfigured = $this->payrollVault->hasPayrollPin($organization);
-        $organizationComplete = filled($organization->name);
+        $stepStates = $this->stepStates($organization, $pinConfigured);
 
         return [
             'requires_onboarding' => $this->requiresOnboarding($user, $organization),
             'onboarding_completed' => (bool) $organization->onboarding_completed,
             'onboarding_step' => (int) ($organization->onboarding_step ?: 1),
-            'completion_percent' => $this->completionPercent($organization),
+            'completion_percent' => $this->completionPercent($organization, $pinConfigured),
+            'step_states' => $stepStates,
             'organization' => [
                 'name' => $organization->name,
                 'timezone' => $organization->timezone,
@@ -57,12 +58,56 @@ class OnboardingService
                 'website' => $organization->website,
             ],
             'pin_configured' => $pinConfigured,
-            'requirements_met' => $organizationComplete && $pinConfigured,
+            'requirements_met' => $stepStates[1]['completed'] && $stepStates[2]['completed'],
             'skipped_steps' => $this->skippedSteps($organization),
             'follow_up_steps' => $organization->onboarding_completed
-                ? $this->skippedSteps($organization)
+                ? collect($stepStates)
+                    ->filter(fn (array $state) => ! $state['completed'])
+                    ->keys()
+                    ->map(fn (int|string $step) => (int) $step)
+                    ->values()
+                    ->all()
                 : [],
         ];
+    }
+
+    /**
+     * @return array<int, array{step: int, title: string, required: bool, completed: bool, skipped: bool}>
+     */
+    public function stepStates(Organization $organization, ?bool $pinConfigured = null): array
+    {
+        $pinConfigured ??= $this->payrollVault->hasPayrollPin($organization);
+        $skipped = $this->skippedSteps($organization);
+        $titles = [
+            1 => 'Organization',
+            2 => 'Payroll PIN',
+            3 => 'Employees',
+            4 => 'Teams',
+            5 => 'Projects',
+        ];
+
+        $states = [];
+
+        foreach ($titles as $step => $title) {
+            $completed = match ($step) {
+                1 => filled($organization->name),
+                2 => $pinConfigured,
+                3 => ! in_array(3, $skipped, true) && $this->organizationHasWorkforceMembers($organization),
+                4 => ! in_array(4, $skipped, true) && Team::query()->where('organization_id', $organization->id)->exists(),
+                5 => ! in_array(5, $skipped, true) && Project::query()->where('organization_id', $organization->id)->exists(),
+                default => false,
+            };
+
+            $states[$step] = [
+                'step' => $step,
+                'title' => $title,
+                'required' => ! in_array($step, self::OPTIONAL_STEPS, true),
+                'completed' => $completed,
+                'skipped' => in_array($step, $skipped, true),
+            ];
+        }
+
+        return $states;
     }
 
     /**
@@ -122,6 +167,19 @@ class OnboardingService
         $organization->update(['onboarding_skipped_steps' => $skipped]);
 
         return $organization->fresh();
+    }
+
+    public function setStepCompletion(Organization $organization, int $step, bool $completed): Organization
+    {
+        if ($completed) {
+            return $this->markStepCompleted($organization, $step);
+        }
+
+        if (in_array($step, self::OPTIONAL_STEPS, true)) {
+            return $this->markStepSkipped($organization, $step);
+        }
+
+        return $organization;
     }
 
     public function tryMarkComplete(Organization $organization): Organization
@@ -200,14 +258,18 @@ class OnboardingService
         ));
     }
 
-    private function completionPercent(Organization $organization): int
+    private function completionPercent(Organization $organization, ?bool $pinConfigured = null): int
     {
         if ($organization->onboarding_completed) {
-            return 100;
+            $states = $this->stepStates($organization, $pinConfigured);
+            $completed = collect($states)->where('completed', true)->count();
+
+            return $completed >= self::TOTAL_STEPS ? 100 : (int) round(($completed / self::TOTAL_STEPS) * 100);
         }
 
-        $step = max(1, min(self::TOTAL_STEPS, (int) ($organization->onboarding_step ?: 1)));
+        $states = $this->stepStates($organization, $pinConfigured);
+        $completed = collect($states)->where('completed', true)->count();
 
-        return min(99, (int) round(($step / self::TOTAL_STEPS) * 100));
+        return (int) round(($completed / self::TOTAL_STEPS) * 100);
     }
 }

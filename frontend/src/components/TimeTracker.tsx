@@ -13,8 +13,10 @@ import { ManualTimeEntries } from "@/components/time/ManualTimeEntries";
 import { ManualTimeEntryForm } from "@/components/time/ManualTimeEntryForm";
 import { OvertimeRequestForm } from "@/components/time/OvertimeRequestForm";
 import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
+import { Button } from "@/components/ui/Button";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
-import { Select } from "@/components/ui/Input";
+import { TimerFocusPanel } from "@/components/time/TimerFocusPanel";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { wakeDesktopAgent } from "@/lib/desktop-agent";
 import type { Project, TimeEntry, User } from "@/lib/types";
@@ -269,6 +271,14 @@ export function TimeTracker({ user }: { user?: User }) {
     [entries],
   );
 
+  const projectOptions = useMemo(
+    () => [
+      { value: GENERAL_TIME_VALUE, label: "General time" },
+      ...projects.map((p) => ({ value: String(p.id), label: projectLabel(p) })),
+    ],
+    [projects],
+  );
+
   const timeExportRows = useMemo(
     () =>
       sortedEntries.map((entry) => ({
@@ -389,55 +399,31 @@ export function TimeTracker({ user }: { user?: User }) {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Time Tracking
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          {isEmployee || isManager
+      <PageHeader
+        title="Time Tracking"
+        description={
+          isEmployee || isManager
             ? "Start your timer — screenshots capture automatically every 5 minutes."
-            : "Track your work hours across projects"}
-        </p>
-        {(isEmployee || isManager) ? (
-          <div className="mt-4 flex gap-2">
-            <button
+            : "Track your work hours across projects"
+        }
+        actions={null}
+      />
+
+      {(isEmployee || isManager) ? (
+        <div className="flex flex-wrap gap-2">
+          {(["timer", ...(isEmployee ? (["manual"] as const) : []), "overtime"] as const).map((tabKey) => (
+            <Button
+              key={tabKey}
               type="button"
-              onClick={() => setTab("timer")}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                tab === "timer"
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-              }`}
+              size="sm"
+              variant={tab === tabKey ? "primary" : "secondary"}
+              onClick={() => setTab(tabKey as typeof tab)}
             >
-              Live timer
-            </button>
-            {isEmployee ? (
-              <button
-                type="button"
-                onClick={() => setTab("manual")}
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  tab === "manual"
-                    ? "bg-blue-600 text-white"
-                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-                }`}
-              >
-                Manual time
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setTab("overtime")}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                tab === "overtime"
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-              }`}
-            >
-              Overtime
-            </button>
-          </div>
-        ) : null}
-      </div>
+              {tabKey === "timer" ? "Live timer" : tabKey === "manual" ? "Manual time" : "Overtime"}
+            </Button>
+          ))}
+        </div>
+      ) : null}
 
       {isEmployee && tab === "overtime" ? (
         <div className="space-y-8">
@@ -507,130 +493,34 @@ export function TimeTracker({ user }: { user?: User }) {
         />
       </div>
 
-      {/* Timer centerpiece */}
-      <div
-        className={`rounded-2xl border bg-white p-8 shadow-sm transition-all duration-300 sm:p-10 dark:bg-zinc-900 ${
-          activeTimer
-            ? "border-green-200/80 shadow-green-100/50 dark:border-green-900/50 dark:shadow-green-950/20"
-            : "border-zinc-200/80 dark:border-zinc-800"
-        }`}
-      >
-        <div className="mx-auto max-w-lg text-center">
-          {/* Status indicator */}
-          <div className="mb-6 flex items-center justify-center gap-2">
-            {activeTimer ? (
-              <>
-                <span className="relative flex h-3 w-3">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500" />
-                </span>
-                <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                  Timer running
-                </span>
-              </>
-            ) : (
-              <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                Ready to track
-              </span>
-            )}
-          </div>
+      <TimerFocusPanel
+        isRunning={Boolean(activeTimer)}
+        displayTime={displayTime}
+        liveSeconds={activeTimer ? liveElapsed : totalDuration}
+        projectName={
+          activeProjectName ??
+          (selectedProjectId === GENERAL_TIME_VALUE
+            ? "General time"
+            : projects.find((p) => String(p.id) === selectedProjectId)?.name ?? "General time")
+        }
+        projectOptions={projectOptions}
+        selectedProjectId={selectedProjectId}
+        onProjectChange={setSelectedProjectId}
+        onStart={() => void handleStart()}
+        onStop={() => void handleStop()}
+        actionLoading={actionLoading}
+        projectsNotice={projectsNotice}
+        screenshotActive={Boolean(activeTimer)}
+      />
 
-          {/* Digital timer */}
-          <p
-            className={`font-mono text-6xl font-bold tracking-tight tabular-nums transition-colors duration-300 sm:text-7xl ${
-              activeTimer
-                ? "text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 dark:text-zinc-500"
-            }`}
-          >
-            {displayTime}
-          </p>
-
-          {/* Project name */}
-          <p className="mt-3 text-base font-medium text-zinc-700 dark:text-zinc-300">
-            {activeTimer
-              ? activeProjectName
-              : selectedProjectId === GENERAL_TIME_VALUE
-                ? "General time"
-                : projects.find((p) => String(p.id) === selectedProjectId)?.name ??
-                  "General time"}
-          </p>
-
-          {/* Project selector */}
-          {!activeTimer ? (
-            <div className="mt-6">
-              <Select
-                id="project-select"
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                disabled={actionLoading}
-                className="mx-auto w-full max-w-sm rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-              >
-                <option value={GENERAL_TIME_VALUE}>General time</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={String(project.id)}>
-                    {projectLabel(project)}
-                  </option>
-                ))}
-              </Select>
-              {projectsNotice ? (
-                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                  {projectsNotice}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-
-          {/* CTA */}
-          <div className="mt-8">
-            {activeTimer ? (
-              <button
-                type="button"
-                onClick={handleStop}
-                disabled={actionLoading}
-                className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-xl bg-red-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {actionLoading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Stopping...
-                  </>
-                ) : (
-                  "Stop Timer"
-                )}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleStart}
-                disabled={actionLoading}
-                className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-xl bg-green-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-green-700 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {actionLoading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Starting...
-                  </>
-                ) : (
-                  "Start Timer"
-                )}
-              </button>
-            )}
-          </div>
-
-          {/* Feedback */}
-          {successMessage ? (
-            <p className="animate-fade-in mt-4 text-sm font-medium text-green-600 dark:text-green-400">
-              {successMessage}
-            </p>
-          ) : null}
-          {error ? (
-            <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
-              {error}
-            </p>
-          ) : null}
-        </div>
-      </div>
+      {successMessage ? (
+        <p className="text-center text-sm font-medium text-[var(--accent-emerald)]">{successMessage}</p>
+      ) : null}
+      {error ? (
+        <p className="rounded-xl border border-[var(--accent-coral)]/30 bg-[var(--accent-coral-soft)] px-4 py-2.5 text-center text-sm text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
 
       {/* Activity timeline */}
       <div>

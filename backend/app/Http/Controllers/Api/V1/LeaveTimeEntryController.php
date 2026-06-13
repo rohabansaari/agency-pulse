@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\LeaveCategory;
 use App\Enums\TimeEntryStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
@@ -176,6 +177,7 @@ class LeaveTimeEntryController extends Controller
             'start_date' => ['required_without:date', 'regex:'.DisplayDate::INPUT_PATTERN],
             'end_date' => ['required_with:start_date', 'regex:'.DisplayDate::INPUT_PATTERN],
             'reason' => ['required', 'string', 'max:2000'],
+            'leave_category' => ['required', Rule::enum(LeaveCategory::class)],
         ];
     }
 

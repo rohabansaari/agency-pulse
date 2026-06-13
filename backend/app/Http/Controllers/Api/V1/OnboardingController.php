@@ -174,6 +174,27 @@ class OnboardingController extends Controller
         ]);
     }
 
+    public function updateStepCompletion(Request $request): JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $validated = $request->validate([
+            'step' => ['required', 'integer', 'min:1', 'max:5'],
+            'completed' => ['required', 'boolean'],
+        ]);
+
+        $organization = $this->onboarding->setStepCompletion(
+            TenantContext::get(),
+            (int) $validated['step'],
+            (bool) $validated['completed'],
+        );
+
+        return response()->json([
+            'message' => 'Onboarding step updated.',
+            'status' => $this->onboarding->status($request->user(), $organization),
+        ]);
+    }
+
     private function ensureAdmin(Request $request): void
     {
         if ($request->user()?->currentRole() !== UserRole::Admin) {

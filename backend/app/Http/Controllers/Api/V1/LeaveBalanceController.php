@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\LeaveCategory;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\LeaveBalanceResource;
 use App\Models\User;
 use App\Services\Time\LeaveBalanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class LeaveBalanceController extends Controller
 {
@@ -42,13 +44,15 @@ class LeaveBalanceController extends Controller
     public function updateLimit(Request $request, User $user): JsonResponse
     {
         $validated = $request->validate([
-            'annual_limit_days' => ['required', 'integer', 'min:0', 'max:365'],
+            'category' => ['required', Rule::enum(LeaveCategory::class)],
+            'limit_days' => ['required', 'integer', 'min:0', 'max:365'],
         ]);
 
         $balance = $this->leaveBalances->setLimit(
             $request->user(),
             $user,
-            $validated['annual_limit_days']
+            LeaveCategory::from($validated['category']),
+            $validated['limit_days'],
         );
 
         return response()->json([
@@ -59,7 +63,15 @@ class LeaveBalanceController extends Controller
 
     public function reset(Request $request, User $user): JsonResponse
     {
-        $balance = $this->leaveBalances->resetBalance($request->user(), $user);
+        $validated = $request->validate([
+            'category' => ['nullable', Rule::enum(LeaveCategory::class)],
+        ]);
+
+        $category = isset($validated['category'])
+            ? LeaveCategory::from($validated['category'])
+            : null;
+
+        $balance = $this->leaveBalances->resetBalance($request->user(), $user, $category);
 
         return response()->json([
             'message' => 'Leave balance reset.',

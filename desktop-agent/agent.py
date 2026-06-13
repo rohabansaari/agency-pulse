@@ -393,25 +393,25 @@ def prompt_login_gui(config: dict) -> dict:
     root = tk.Tk()
     root.title("AgencyPulse")
     root.resizable(False, False)
-    root.geometry("440x420")
-    root.configure(bg="#0f0e0d")
+    root.geometry("460x440")
+    root.configure(bg="#1c1917")
 
-    canvas = tk.Canvas(root, width=440, height=420, highlightthickness=0, bg="#0f0e0d")
+    canvas = tk.Canvas(root, width=460, height=440, highlightthickness=0, bg="#1c1917")
     canvas.pack(fill="both", expand=True)
 
-    canvas.create_rectangle(0, 0, 440, 420, fill="#0f0e0d", outline="")
-    canvas.create_oval(-40, -40, 200, 200, fill="#312e81", outline="")
-    canvas.create_oval(280, 260, 480, 460, fill="#581c87", outline="")
+    canvas.create_rectangle(0, 0, 460, 440, fill="#1c1917", outline="")
+    canvas.create_oval(-60, -60, 180, 180, fill="#2d6a4f", outline="")
+    canvas.create_oval(300, 280, 520, 500, fill="#4a5568", outline="")
 
-    card = tk.Frame(root, bg="#ffffff", padx=28, pady=28)
-    canvas.create_window(220, 210, window=card, width=360, height=340)
+    card = tk.Frame(root, bg="#faf9f6", padx=32, pady=32)
+    canvas.create_window(230, 220, window=card, width=380, height=340)
 
     logo = tk.Label(
         card,
         text="AP",
         font=("Segoe UI", 14, "bold"),
         fg="#ffffff",
-        bg="#6366f1",
+        bg="#2d6a4f",
         width=3,
         height=1,
     )
@@ -422,16 +422,16 @@ def prompt_login_gui(config: dict) -> dict:
         text="AgencyPulse",
         font=("Segoe UI", 11, "bold"),
         fg="#18181b",
-        bg="#ffffff",
+        bg="#faf9f6",
     )
     title.grid(row=0, column=1, sticky="w", padx=(8, 0))
 
     heading = tk.Label(
         card,
-        text="Sign in to continue",
+        text="Sign in to AgencyPulse",
         font=("Segoe UI", 16, "bold"),
         fg="#18181b",
-        bg="#ffffff",
+        bg="#faf9f6",
     )
     heading.grid(row=1, column=0, columnspan=2, sticky="w", pady=(20, 4))
 
@@ -440,7 +440,7 @@ def prompt_login_gui(config: dict) -> dict:
         text="Connect your desktop agent to your workspace.",
         font=("Segoe UI", 9),
         fg="#71717a",
-        bg="#ffffff",
+        bg="#faf9f6",
         wraplength=300,
         justify="left",
     )
@@ -451,12 +451,12 @@ def prompt_login_gui(config: dict) -> dict:
         card,
         textvariable=status_var,
         font=("Segoe UI", 9),
-        fg="#6366f1",
-        bg="#ffffff",
+        fg="#2d6a4f",
+        bg="#faf9f6",
     )
     status_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=(0, 8))
 
-    email_label = tk.Label(card, text="Email", font=("Segoe UI", 9), fg="#52525b", bg="#ffffff")
+    email_label = tk.Label(card, text="Email", font=("Segoe UI", 9), fg="#52525b", bg="#faf9f6")
     email_label.grid(row=4, column=0, columnspan=2, sticky="w")
     email_var = tk.StringVar()
     email_entry = tk.Entry(
@@ -466,12 +466,12 @@ def prompt_login_gui(config: dict) -> dict:
         relief="solid",
         bd=1,
         highlightthickness=1,
-        highlightcolor="#6366f1",
+        highlightcolor="#2d6a4f",
         highlightbackground="#e4e4e7",
     )
     email_entry.grid(row=5, column=0, columnspan=2, sticky="ew", ipady=6, pady=(4, 12))
 
-    password_label = tk.Label(card, text="Password", font=("Segoe UI", 9), fg="#52525b", bg="#ffffff")
+    password_label = tk.Label(card, text="Password", font=("Segoe UI", 9), fg="#52525b", bg="#faf9f6")
     password_label.grid(row=6, column=0, columnspan=2, sticky="w")
     password_var = tk.StringVar()
     password_entry = tk.Entry(
@@ -482,7 +482,7 @@ def prompt_login_gui(config: dict) -> dict:
         relief="solid",
         bd=1,
         highlightthickness=1,
-        highlightcolor="#6366f1",
+        highlightcolor="#2d6a4f",
         highlightbackground="#e4e4e7",
     )
     password_entry.grid(row=7, column=0, columnspan=2, sticky="ew", ipady=6, pady=(4, 16))
@@ -566,8 +566,8 @@ def prompt_login_gui(config: dict) -> dict:
         command=submit,
         font=("Segoe UI", 10, "bold"),
         fg="#ffffff",
-        bg="#6366f1",
-        activebackground="#4f46e5",
+        bg="#2d6a4f",
+        activebackground="#245a42",
         activeforeground="#ffffff",
         relief="flat",
         padx=16,

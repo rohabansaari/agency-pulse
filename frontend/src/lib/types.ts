@@ -38,6 +38,7 @@ export interface OnboardingStatus {
   onboarding_completed: boolean;
   onboarding_step: number;
   completion_percent: number;
+  step_states?: OnboardingStepState[];
   organization: {
     name: string;
     timezone: string | null;
@@ -49,6 +50,16 @@ export interface OnboardingStatus {
   skipped_steps?: number[];
   follow_up_steps?: number[];
 }
+
+export interface OnboardingStepState {
+  step: number;
+  title: string;
+  required: boolean;
+  completed: boolean;
+  skipped: boolean;
+}
+
+export type LeaveCategory = "medical" | "casual" | "annual";
 
 export interface CsvImportResult {
   row: number;
@@ -712,6 +723,12 @@ export interface SalaryAdvanceRequest {
 export interface LeaveBalance {
   id: number;
   user_id: number;
+  medical_limit_days: number;
+  medical_used_days: string;
+  medical_remaining_days: string;
+  casual_limit_days: number;
+  casual_used_days: string;
+  casual_remaining_days: string;
   annual_limit_days: number;
   used_days: string;
   remaining_days: string;

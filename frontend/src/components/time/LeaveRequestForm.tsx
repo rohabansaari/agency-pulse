@@ -13,12 +13,19 @@ import {
   isValidDdMmYyyy,
   todayDdMmYyyy,
 } from "@/lib/dates";
-import type { LeaveContext, UserRole } from "@/lib/types";
-import { Select } from "@/components/ui/Input";
+import type { LeaveCategory, LeaveContext, UserRole } from "@/lib/types";
+import { Dropdown } from "@/components/ui/Dropdown";
+import { FormField, Select } from "@/components/ui/Input";
 import { useCallback, useEffect, useState } from "react";
 
 const PAST_DATE_ERROR = "Past dates are not allowed for leave requests";
 const PAST_DATE_HINT = "Past date leave requests are not allowed";
+
+const LEAVE_TYPE_OPTIONS = [
+  { value: "medical", label: "Medical Leave" },
+  { value: "casual", label: "Casual Leave" },
+  { value: "annual", label: "Annual Leave" },
+];
 
 export function LeaveRequestForm({
   role,
@@ -40,6 +47,7 @@ export function LeaveRequestForm({
   const [startDate, setStartDate] = useState(todayDdMmYyyy());
   const [endDate, setEndDate] = useState(todayDdMmYyyy());
   const [reason, setReason] = useState("");
+  const [leaveCategory, setLeaveCategory] = useState<LeaveCategory>("annual");
 
   const loadContext = useCallback(async () => {
     setError("");
@@ -121,19 +129,21 @@ export function LeaveRequestForm({
       const payload =
         role === "employee"
           ? useRange
-            ? { start_date: startDate, end_date: endDate, reason: reason.trim() }
-            : { date: startDate, reason: reason.trim() }
+            ? { start_date: startDate, end_date: endDate, reason: reason.trim(), leave_category: leaveCategory }
+            : { date: startDate, reason: reason.trim(), leave_category: leaveCategory }
           : useRange
             ? {
                 user_id: Number(userId),
                 start_date: startDate,
                 end_date: endDate,
                 reason: reason.trim(),
+                leave_category: leaveCategory,
               }
             : {
                 user_id: Number(userId),
                 date: startDate,
                 reason: reason.trim(),
+                leave_category: leaveCategory,
               };
 
       const result = await requestLeave(payload);
@@ -190,8 +200,16 @@ export function LeaveRequestForm({
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       ) : null}
       {success ? (
-        <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+        <p className="text-sm text-[var(--accent-emerald)]">{success}</p>
       ) : null}
+
+      <FormField label="Leave type" required>
+        <Dropdown
+          value={leaveCategory}
+          onChange={(v) => setLeaveCategory(v as LeaveCategory)}
+          options={LEAVE_TYPE_OPTIONS}
+        />
+      </FormField>
 
       {showEmployeePicker ? (
         <label className="block text-sm">

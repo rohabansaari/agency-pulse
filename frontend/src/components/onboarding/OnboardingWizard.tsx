@@ -86,13 +86,17 @@ export function OnboardingWizard() {
 
   const loadStatus = useCallback(async () => {
     const next = await fetchOnboardingStatus();
+    if (next.onboarding_completed) {
+      router.replace("/dashboard");
+      return;
+    }
     setStatus(next);
     setOrgName(next.organization.name ?? "");
     setTimezone(next.organization.timezone ?? "");
     setLogoUrl(next.organization.logo_url ?? "");
     setWebsite(next.organization.website ?? "");
     setStep(next.onboarding_step || 1);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const token = getToken();
@@ -268,9 +272,8 @@ export function OnboardingWizard() {
     );
   }
 
-  const stepPercent = Math.round((step / STEPS.length) * 100);
-  const completionPercent = status?.completion_percent ?? stepPercent;
-  const displayPercent = Math.max(completionPercent, stepPercent);
+  const displayPercent = status?.completion_percent ?? 0;
+  const stepStates = status?.step_states ?? [];
   const current = STEPS.find((item) => item.id === step) ?? STEPS[0];
 
   return (
@@ -299,7 +302,8 @@ export function OnboardingWizard() {
         <nav className="mb-4 flex shrink-0 flex-wrap gap-1.5 sm:gap-2" aria-label="Onboarding steps">
           {STEPS.map((item) => {
             const active = item.id === step;
-            const done = item.id < step;
+            const state = stepStates.find((s) => s.step === item.id);
+            const done = state?.completed ?? item.id < step;
             return (
               <button
                 key={item.id}
@@ -310,10 +314,10 @@ export function OnboardingWizard() {
                 disabled={!done && !active}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition sm:px-3 sm:text-xs ${
                   active
-                    ? "border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-950 dark:text-blue-300"
+                    ? "border-[var(--primary)] bg-[var(--primary-muted)] text-[var(--primary)]"
                     : done
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                      : "border-zinc-200 bg-white text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900"
+                      ? "border-[var(--accent-emerald)]/40 bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]"
+                      : "border-[var(--border)] bg-[var(--card)] text-[var(--muted)]"
                 }`}
               >
                 <span>{item.id}</span>
@@ -513,14 +517,14 @@ function OnboardingProgressTrack({
         <span className="tabular-nums">{percent}% complete</span>
       </div>
       <div
-        className="relative h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+        className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--border)]"
         role="progressbar"
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
       >
         <div
-          className="absolute inset-y-0 left-0 rounded-full bg-blue-600 transition-all duration-300 ease-out dark:bg-blue-500"
+          className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent-emerald)] transition-all duration-500 ease-out"
           style={{ width: `${percent}%` }}
         />
       </div>
