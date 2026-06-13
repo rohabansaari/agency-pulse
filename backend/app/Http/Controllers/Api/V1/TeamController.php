@@ -137,6 +137,10 @@ class TeamController extends TenantAppController
     {
         $this->ensureUserInTenant($user);
 
+        if ($user->currentRole() === UserRole::Admin) {
+            abort(403, 'Admin passwords cannot be reset through this endpoint.');
+        }
+
         $validated = $request->validate([
             'new_password' => ['required', 'string', Password::defaults()],
         ]);

@@ -320,4 +320,23 @@ CSV;
             ->getJson('/api/v1/onboarding/status')
             ->assertForbidden();
     }
+
+    public function test_admin_can_upload_organization_logo(): void
+    {
+        $admin = $this->adminNeedingOnboarding();
+        Sanctum::actingAs($admin);
+
+        $response = $this->withHeaders($this->headers($admin))
+            ->post('/api/v1/onboarding/organization/logo', [
+                'logo' => UploadedFile::fake()->image('logo.png', 120, 120),
+            ])
+            ->assertOk();
+
+        $logoUrl = $response->json('logo_url');
+        $this->assertIsString($logoUrl);
+        $this->assertStringContainsString('organization-logos', $logoUrl);
+
+        $organization = Organization::query()->find($admin->organization_id);
+        $this->assertSame($logoUrl, $organization?->logo_url);
+    }
 }

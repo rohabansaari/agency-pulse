@@ -9,6 +9,7 @@ import {
   canEditEmployeeStatus,
   canEditMemberStatus,
   canManageOrgEmployees,
+  canResetMemberPassword,
   MUTABLE_ROLES,
   ROLE_LABELS,
 } from "@/lib/navigation";
@@ -40,7 +41,7 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const canResetPassword = canManageOrgEmployees(viewer.role) && member.role === "employee";
+  const canResetPassword = canManageOrgEmployees(viewer.role) && canResetMemberPassword(member.role);
   const canEdit = canEditEmployeeStatus(viewer.role);
   const isSelf = viewer.id === member.user_id;
   const canEditStatus = canEdit && canEditMemberStatus(member.role);

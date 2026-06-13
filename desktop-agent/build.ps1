@@ -11,6 +11,9 @@ python -m PyInstaller `
   --windowed `
   --name AgencyPulseAgent `
   --hidden-import=tkinter `
+  --hidden-import=mss `
+  --hidden-import=PIL.Image `
+  --hidden-import=requests `
   --clean `
   agent.py
 

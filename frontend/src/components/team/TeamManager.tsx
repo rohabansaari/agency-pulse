@@ -609,7 +609,7 @@ export function TeamManager({ user }: { user: User }) {
 
                       <div className="flex flex-wrap gap-2">
 
-                        {member.role === "employee" ? (
+                        {member.role === "employee" || member.role === "manager" || member.role === "sub_admin" ? (
 
                           <button
 
@@ -705,7 +705,7 @@ export function TeamManager({ user }: { user: User }) {
 
             <p className="text-sm text-zinc-500">
 
-              Set a new password for {resetTarget.email}. The employee will use this to log in.
+              Set a new password for {resetTarget.email}. They will use this to log in.
 
             </p>
 

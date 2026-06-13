@@ -159,8 +159,8 @@ export function canAccessPayroll(role: UserRole): boolean {
   return role === "admin";
 }
 
-export function isEmployee(role: UserRole): boolean {
-  return role === "employee";
+export function canResetMemberPassword(memberRole: UserRole): boolean {
+  return memberRole === "employee" || memberRole === "manager" || memberRole === "sub_admin";
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {

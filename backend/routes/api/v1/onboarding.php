@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/status', [OnboardingController::class, 'status']);
 Route::patch('/organization', [OnboardingController::class, 'updateOrganization']);
+Route::post('/organization/logo', [OnboardingController::class, 'uploadLogo']);
 Route::patch('/step', [OnboardingController::class, 'updateStep']);
 Route::post('/skip-step', [OnboardingController::class, 'skipStep']);
 Route::post('/employees', [OnboardingController::class, 'storeEmployee']);

@@ -11,6 +11,7 @@ use App\Services\Onboarding\OnboardingService;
 use App\Services\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -37,7 +38,7 @@ class OnboardingController extends TenantController
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'timezone' => ['nullable', 'string', 'max:100'],
-            'logo_url' => ['nullable', 'url', 'max:2048'],
+            'logo_url' => ['nullable', 'string', 'max:2048'],
             'website' => ['nullable', 'url', 'max:2048'],
         ]);
 
@@ -45,6 +46,39 @@ class OnboardingController extends TenantController
 
         return response()->json([
             'message' => 'Organization profile saved.',
+            'status' => $this->onboarding->status($request->user(), $organization),
+        ]);
+    }
+
+    public function uploadLogo(Request $request): JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $validated = $request->validate([
+            'logo' => ['required', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:2048'],
+        ]);
+
+        $organization = TenantContext::get();
+        $file = $validated['logo'];
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension());
+        $path = $file->storeAs(
+            'organization-logos',
+            "{$organization->id}.{$extension}",
+            'public'
+        );
+
+        $logoUrl = rtrim((string) config('app.url'), '/').Storage::disk('public')->url($path);
+
+        $organization = $this->onboarding->updateOrganization($organization, [
+            'name' => $organization->name,
+            'timezone' => $organization->timezone,
+            'logo_url' => $logoUrl,
+            'website' => $organization->website,
+        ]);
+
+        return response()->json([
+            'message' => 'Logo uploaded.',
+            'logo_url' => $logoUrl,
             'status' => $this->onboarding->status($request->user(), $organization),
         ]);
     }

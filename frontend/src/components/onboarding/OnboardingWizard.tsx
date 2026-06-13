@@ -1,6 +1,7 @@
 "use client";
 
 import { EmployeeCsvImport } from "@/components/onboarding/EmployeeCsvImport";
+import { LogoUploadField } from "@/components/onboarding/LogoUploadField";
 import {
   ApiError,
   completeOnboarding,
@@ -377,8 +378,8 @@ export function OnboardingWizard() {
                   <Field label="Website">
                     <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" className={inputClass} />
                   </Field>
-                  <Field label="Logo URL" className="sm:col-span-2">
-                    <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://…" className={inputClass} />
+                  <Field label="Organization logo" className="sm:col-span-2">
+                    <LogoUploadField value={logoUrl} onChange={setLogoUrl} disabled={submitting} />
                   </Field>
                   <ActionRow submitting={submitting} showBack={false} continueLabel="Save & Continue" className="sm:col-span-2" />
                 </form>

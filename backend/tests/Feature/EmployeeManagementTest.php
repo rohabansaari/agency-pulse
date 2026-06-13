@@ -200,6 +200,44 @@ class EmployeeManagementTest extends TestCase
 
     }
 
+    public function test_admin_can_reset_manager_password(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $manager = User::factory()->manager()->create([
+            'organization_id' => $admin->organization_id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson("/api/v1/team/{$manager->id}/reset-password", [
+                'new_password' => 'managerpass123',
+            ])
+            ->assertOk();
+
+        $manager->refresh();
+        $this->assertTrue(Hash::check('managerpass123', $manager->password));
+    }
+
+    public function test_admin_can_reset_sub_admin_password(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $subAdmin = User::factory()->subAdmin()->create([
+            'organization_id' => $admin->organization_id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson("/api/v1/team/{$subAdmin->id}/reset-password", [
+                'new_password' => 'subadminpass123',
+            ])
+            ->assertOk();
+
+        $subAdmin->refresh();
+        $this->assertTrue(Hash::check('subadminpass123', $subAdmin->password));
+    }
+
 
 
     public function test_admin_role_cannot_be_created_via_employee_endpoint(): void

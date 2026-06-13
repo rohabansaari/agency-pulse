@@ -887,6 +887,34 @@ export async function updateOnboardingOrganization(data: {
   });
 }
 
+export async function uploadOrganizationLogo(
+  file: File,
+): Promise<{ message: string; logo_url: string; status: OnboardingStatus }> {
+  const formData = new FormData();
+  formData.append("logo", file);
+
+  const token = getToken();
+  const organizationId = getOrganizationId();
+
+  const response = await fetch(`${API_BASE}/onboarding/organization/logo`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(organizationId ? { "X-Organization-Id": String(organizationId) } : {}),
+    },
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ApiError(response.status, data);
+  }
+
+  return data;
+}
+
 export async function updateOnboardingStep(step: number): Promise<{ status: OnboardingStatus }> {
   return apiFetch<{ status: OnboardingStatus }>("/onboarding/step", {
     method: "PATCH",

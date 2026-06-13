@@ -387,112 +387,104 @@ def prompt_login_gui(config: dict) -> dict:
     import tkinter as tk
     from tkinter import messagebox
 
+    # AgencyPulse design tokens (aligned with frontend globals.css)
+    BG = "#f3f1ec"
+    CARD = "#faf9f6"
+    FOREGROUND = "#1a1917"
+    MUTED = "#6b6560"
+    BORDER = "#ddd8cf"
+    PRIMARY = "#4a5568"
+    PRIMARY_HOVER = "#3d4654"
+    ACCENT = "#2d6a4f"
+    DANGER = "#c44536"
+
     result: dict = {}
     api_base_url = normalize_api_base_url(config.get("api_base_url") or default_api_base_url())
 
     root = tk.Tk()
     root.title("AgencyPulse")
     root.resizable(False, False)
-    root.geometry("460x440")
-    root.configure(bg="#1c1917")
+    root.geometry("480x520")
+    root.configure(bg=BG)
 
-    canvas = tk.Canvas(root, width=460, height=440, highlightthickness=0, bg="#1c1917")
-    canvas.pack(fill="both", expand=True)
+    outer = tk.Frame(root, bg=BG, padx=28, pady=28)
+    outer.pack(fill="both", expand=True)
 
-    canvas.create_rectangle(0, 0, 460, 440, fill="#1c1917", outline="")
-    canvas.create_oval(-60, -60, 180, 180, fill="#2d6a4f", outline="")
-    canvas.create_oval(300, 280, 520, 500, fill="#4a5568", outline="")
+    header = tk.Frame(outer, bg=BG)
+    header.pack(fill="x", pady=(0, 18))
 
-    card = tk.Frame(root, bg="#faf9f6", padx=32, pady=32)
-    canvas.create_window(230, 220, window=card, width=380, height=340)
-
-    logo = tk.Label(
-        card,
+    logo_badge = tk.Label(
+        header,
         text="AP",
-        font=("Segoe UI", 14, "bold"),
+        font=("Segoe UI", 12, "bold"),
         fg="#ffffff",
-        bg="#2d6a4f",
+        bg=PRIMARY,
         width=3,
         height=1,
+        padx=6,
+        pady=4,
     )
-    logo.grid(row=0, column=0, sticky="w")
+    logo_badge.pack(side="left")
 
-    title = tk.Label(
-        card,
-        text="AgencyPulse",
-        font=("Segoe UI", 11, "bold"),
-        fg="#18181b",
-        bg="#faf9f6",
-    )
-    title.grid(row=0, column=1, sticky="w", padx=(8, 0))
-
-    heading = tk.Label(
-        card,
-        text="Sign in to AgencyPulse",
-        font=("Segoe UI", 16, "bold"),
-        fg="#18181b",
-        bg="#faf9f6",
-    )
-    heading.grid(row=1, column=0, columnspan=2, sticky="w", pady=(20, 4))
-
-    subtitle = tk.Label(
-        card,
-        text="Connect your desktop agent to your workspace.",
+    brand = tk.Frame(header, bg=BG)
+    brand.pack(side="left", padx=(10, 0))
+    tk.Label(brand, text="AgencyPulse", font=("Segoe UI", 13, "bold"), fg=FOREGROUND, bg=BG).pack(anchor="w")
+    tk.Label(
+        brand,
+        text="Desktop agent",
         font=("Segoe UI", 9),
-        fg="#71717a",
-        bg="#faf9f6",
-        wraplength=300,
+        fg=MUTED,
+        bg=BG,
+    ).pack(anchor="w")
+
+    card = tk.Frame(outer, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=28, pady=28)
+    card.pack(fill="both", expand=True)
+
+    tk.Label(
+        card,
+        text="Sign in to your workspace",
+        font=("Segoe UI", 18, "bold"),
+        fg=FOREGROUND,
+        bg=CARD,
+    ).pack(anchor="w")
+
+    tk.Label(
+        card,
+        text="Use your employee or manager account. Credentials are saved locally on this device.",
+        font=("Segoe UI", 9),
+        fg=MUTED,
+        bg=CARD,
+        wraplength=360,
         justify="left",
-    )
-    subtitle.grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 16))
+    ).pack(anchor="w", pady=(6, 18))
 
     status_var = tk.StringVar(value="")
-    status_label = tk.Label(
-        card,
-        textvariable=status_var,
-        font=("Segoe UI", 9),
-        fg="#2d6a4f",
-        bg="#faf9f6",
-    )
-    status_label.grid(row=3, column=0, columnspan=2, sticky="w", pady=(0, 8))
+    status_label = tk.Label(card, textvariable=status_var, font=("Segoe UI", 9), fg=ACCENT, bg=CARD)
+    status_label.pack(anchor="w", pady=(0, 10))
 
-    email_label = tk.Label(card, text="Email", font=("Segoe UI", 9), fg="#52525b", bg="#faf9f6")
-    email_label.grid(row=4, column=0, columnspan=2, sticky="w")
-    email_var = tk.StringVar()
-    email_entry = tk.Entry(
-        card,
-        textvariable=email_var,
-        font=("Segoe UI", 10),
-        relief="solid",
-        bd=1,
-        highlightthickness=1,
-        highlightcolor="#2d6a4f",
-        highlightbackground="#e4e4e7",
-    )
-    email_entry.grid(row=5, column=0, columnspan=2, sticky="ew", ipady=6, pady=(4, 12))
+    def field(label: str, show: str | None = None) -> tk.Entry:
+        tk.Label(card, text=label, font=("Segoe UI", 9, "bold"), fg=FOREGROUND, bg=CARD).pack(anchor="w")
+        entry = tk.Entry(
+            card,
+            show=show,
+            font=("Segoe UI", 10),
+            relief="solid",
+            bd=1,
+            highlightthickness=1,
+            highlightcolor=PRIMARY,
+            highlightbackground=BORDER,
+            bg="#ffffff",
+            fg=FOREGROUND,
+        )
+        entry.pack(fill="x", ipady=7, pady=(6, 14))
+        return entry
 
-    password_label = tk.Label(card, text="Password", font=("Segoe UI", 9), fg="#52525b", bg="#faf9f6")
-    password_label.grid(row=6, column=0, columnspan=2, sticky="w")
-    password_var = tk.StringVar()
-    password_entry = tk.Entry(
-        card,
-        textvariable=password_var,
-        show="*",
-        font=("Segoe UI", 10),
-        relief="solid",
-        bd=1,
-        highlightthickness=1,
-        highlightcolor="#2d6a4f",
-        highlightbackground="#e4e4e7",
-    )
-    password_entry.grid(row=7, column=0, columnspan=2, sticky="ew", ipady=6, pady=(4, 16))
-
-    card.columnconfigure(0, weight=1)
-    card.columnconfigure(1, weight=1)
+    email_entry = field("Email")
+    password_entry = field("Password", "*")
 
     def submit() -> None:
-        email = email_var.get().strip()
-        password = password_var.get().strip()
+        email = email_entry.get().strip()
+        password = password_entry.get().strip()
 
         if not email or not password:
             messagebox.showerror("AgencyPulse", "Email and password are required.")
@@ -547,7 +539,7 @@ def prompt_login_gui(config: dict) -> dict:
             )
             return
 
-        status_var.set("Connected!")
+        status_var.set("Connected")
         result.update(
             {
                 **config,
@@ -558,23 +550,35 @@ def prompt_login_gui(config: dict) -> dict:
                 "device_id": config.get("device_id") or str(uuid.uuid4()),
             }
         )
-        root.after(400, root.destroy)
+        root.after(350, root.destroy)
+
+    button_row = tk.Frame(card, bg=CARD)
+    button_row.pack(fill="x", pady=(4, 0))
 
     sign_in_btn = tk.Button(
-        card,
+        button_row,
         text="Sign in",
         command=submit,
         font=("Segoe UI", 10, "bold"),
         fg="#ffffff",
-        bg="#2d6a4f",
-        activebackground="#245a42",
+        bg=PRIMARY,
+        activebackground=PRIMARY_HOVER,
         activeforeground="#ffffff",
         relief="flat",
-        padx=16,
-        pady=8,
+        padx=18,
+        pady=9,
         cursor="hand2",
+        borderwidth=0,
     )
-    sign_in_btn.grid(row=8, column=0, columnspan=2, sticky="e")
+    sign_in_btn.pack(side="right")
+
+    tk.Label(
+        card,
+        text="Runs quietly in the background while your timer is active.",
+        font=("Segoe UI", 8),
+        fg=MUTED,
+        bg=CARD,
+    ).pack(anchor="w", pady=(16, 0))
 
     email_entry.focus_set()
     root.bind("<Return>", lambda _event: submit())
@@ -879,15 +883,20 @@ def main() -> int:
             return 1
         return admin_install()
 
-    if any(arg.lower().startswith(f"{PROTOCOL}://") for arg in sys.argv[1:]):
-        if not acquire_lock():
-            signal_wake()
-            return 0
-        log("Launched from browser timer wake.")
+    protocol_wake = any(arg.lower().startswith(f"{PROTOCOL}://") for arg in sys.argv[1:])
 
     if not acquire_lock():
         signal_wake()
+        if not protocol_wake:
+            notify_user(
+                "AgencyPulse Agent",
+                "The desktop agent is already running in the background.\n\n"
+                "Start the timer on the website to begin screenshot capture.",
+            )
         return 0
+
+    if protocol_wake:
+        log("Launched from browser timer wake.")
 
     try:
         run_agent()
@@ -896,10 +905,21 @@ def main() -> int:
         return 0
     except RuntimeError as error:
         log(str(error))
+        notify_user("AgencyPulse Agent", str(error))
         return 1
 
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except Exception as error:
+        log(f"Fatal error: {error}")
+        notify_user(
+            "AgencyPulse Agent",
+            f"Could not start the desktop agent.\n\n{error}",
+        )
+        raise SystemExit(1) from error
