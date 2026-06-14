@@ -15,6 +15,10 @@ return [
         'key' => env('RESEND_KEY', env('RESEND_API_KEY')),
     ],
 
+    'brevo' => [
+        'key' => env('BREVO_API_KEY'),
+    ],
+
     'mailersend' => [
         'key' => env('MAILERSEND_API_KEY'),
     ],

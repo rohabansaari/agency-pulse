@@ -30,7 +30,7 @@ class MailConfigurationTest extends TestCase
         $issue = app(MailConfiguration::class)->configurationIssue();
 
         $this->assertNotNull($issue);
-        $this->assertStringContainsString('MAIL_MAILER must be mailersend', $issue);
+        $this->assertStringContainsString('MAIL_MAILER must be resend', $issue);
     }
 
     public function test_mailersend_mailer_requires_api_key(): void
@@ -93,6 +93,31 @@ class MailConfigurationTest extends TestCase
         $this->assertNotNull($status['issue']);
     }
 
+    public function test_brevo_mailer_requires_api_key(): void
+    {
+        Config::set('mail.default', 'brevo');
+        Config::set('services.brevo.key', '');
+        Config::set('mail.from.address', 'noreply@yourdomain.com');
+
+        $issue = app(MailConfiguration::class)->configurationIssue();
+
+        $this->assertSame(
+            'BREVO_API_KEY is not set. Create a free API key at app.brevo.com → SMTP & API → API keys.',
+            $issue,
+        );
+    }
+
+    public function test_brevo_mailer_rejects_gmail_from_address(): void
+    {
+        Config::set('mail.default', 'brevo');
+        Config::set('services.brevo.key', 'xkeysib_test_key');
+        Config::set('mail.from.address', 'agencypulse.notifications@gmail.com');
+
+        $issue = app(MailConfiguration::class)->configurationIssue();
+
+        $this->assertStringContainsString('Gmail addresses cannot be used', $issue);
+    }
+
     public function test_resend_mailer_requires_api_key(): void
     {
         Config::set('mail.default', 'resend');
@@ -125,7 +150,7 @@ class MailConfigurationTest extends TestCase
         $hint = app(MailConfiguration::class)->renderSmtpBlockedHint();
 
         $this->assertNotNull($hint);
-        $this->assertStringContainsString('MAIL_MAILER=mailersend', $hint);
+        $this->assertStringContainsString('MAIL_MAILER=resend', $hint);
     }
 
     public function test_smtp_mailer_requires_matching_from_address(): void
@@ -171,6 +196,8 @@ class MailConfigurationTest extends TestCase
                     'render_smtp_blocked_hint',
                     'from_address',
                     'using_trial_mailersend_sender',
+                    'recommended_mailer',
+                    'providers',
                     'host',
                     'port',
                 ],

@@ -498,6 +498,19 @@ export interface PlatformDashboard {
   tenant_users_total: number;
 }
 
+export interface PlatformMailProvider {
+  id: string;
+  name: string;
+  mailer: string;
+  recommended: boolean;
+  free_emails_per_month: string;
+  free_daily_limit: string | null;
+  unique_recipients: string;
+  credit_card_required: boolean;
+  render_free_tier: boolean;
+  env: Record<string, string>;
+}
+
 export interface PlatformMailStatus {
   mailer: string;
   configured: boolean;
@@ -505,6 +518,8 @@ export interface PlatformMailStatus {
   render_smtp_blocked_hint: string | null;
   from_address: string | null;
   using_trial_mailersend_sender?: boolean;
+  recommended_mailer?: string;
+  providers?: PlatformMailProvider[];
   host: string | null;
   port: number | string | null;
 }

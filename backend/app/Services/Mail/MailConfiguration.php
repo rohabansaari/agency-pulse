@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 class MailConfiguration
 {
     /** @var list<string> */
-    private const REAL_DELIVERY_MAILERS = ['mailersend', 'smtp', 'ses', 'postmark', 'resend'];
+    private const REAL_DELIVERY_MAILERS = ['resend', 'brevo', 'mailersend', 'smtp', 'ses', 'postmark'];
 
     /** @var list<string> */
     private const PLACEHOLDER_FROM_ADDRESSES = [
@@ -49,12 +49,13 @@ class MailConfiguration
         $mailer = $this->mailer();
 
         if (! in_array($mailer, self::REAL_DELIVERY_MAILERS, true)) {
-            return 'MAIL_MAILER must be mailersend (recommended on Render), resend, or smtp on a paid host. Currently "'.$mailer.'" only writes to logs.';
+            return 'MAIL_MAILER must be resend (recommended), brevo, mailersend, or smtp on a paid host. Currently "'.$mailer.'" only writes to logs.';
         }
 
         return match ($mailer) {
-            'mailersend' => $this->mailersendConfigurationIssue(),
             'resend' => $this->resendConfigurationIssue(),
+            'brevo' => $this->brevoConfigurationIssue(),
+            'mailersend' => $this->mailersendConfigurationIssue(),
             'smtp' => $this->smtpConfigurationIssue(),
             default => null,
         };
@@ -66,7 +67,7 @@ class MailConfiguration
             return null;
         }
 
-        return 'Render free tier blocks outbound SMTP (ports 465/587). Switch to MAIL_MAILER=mailersend with MAILERSEND_API_KEY, or upgrade the API to paid.';
+        return 'Render free tier blocks outbound SMTP (ports 465/587). Switch to MAIL_MAILER=resend or MAIL_MAILER=brevo with an HTTP API key, or upgrade the API to paid.';
     }
 
     public function fromAddress(): ?string
@@ -118,6 +119,30 @@ class MailConfiguration
 
         if ($this->isTrialMailerSendSender()) {
             return 'MAIL_FROM_ADDRESS uses MailerSend\'s trial domain (@mlsender.net), which only allows 2 unique recipients. Set MAIL_FROM_ADDRESS to your verified domain (e.g. noreply@yourdomain.com) and redeploy.';
+        }
+
+        return null;
+    }
+
+    private function brevoConfigurationIssue(): ?string
+    {
+        $apiKey = (string) config('services.brevo.key', '');
+        $fromAddress = $this->fromAddress();
+
+        if ($apiKey === '') {
+            return 'BREVO_API_KEY is not set. Create a free API key at app.brevo.com → SMTP & API → API keys.';
+        }
+
+        if ($fromAddress === null) {
+            return 'MAIL_FROM_ADDRESS is not set. Use an address on a domain you verified in Brevo (e.g. noreply@yourdomain.com).';
+        }
+
+        if (in_array($fromAddress, self::PLACEHOLDER_FROM_ADDRESSES, true)) {
+            return 'MAIL_FROM_ADDRESS is still a placeholder. Set it to an address on your verified Brevo domain (e.g. noreply@yourdomain.com).';
+        }
+
+        if (str_ends_with($fromAddress, '@gmail.com')) {
+            return 'Gmail addresses cannot be used as the sender with Brevo. Verify your domain in Brevo and set MAIL_FROM_ADDRESS to e.g. noreply@yourdomain.com.';
         }
 
         return null;
@@ -180,12 +205,16 @@ class MailConfiguration
      *     render_smtp_blocked_hint: string|null,
      *     from_address: string|null,
      *     using_trial_mailersend_sender: bool,
+     *     recommended_mailer: string,
+     *     providers: list<array<string, mixed>>,
      *     host: string|null,
      *     port: int|string|null
      * }
      */
     public function status(): array
     {
+        $catalog = app(MailProviderCatalog::class);
+
         return [
             'mailer' => $this->mailer(),
             'configured' => $this->isRealDeliveryConfigured(),
@@ -193,6 +222,8 @@ class MailConfiguration
             'render_smtp_blocked_hint' => $this->renderSmtpBlockedHint(),
             'from_address' => $this->fromAddress(),
             'using_trial_mailersend_sender' => $this->isTrialMailerSendSender(),
+            'recommended_mailer' => $catalog->recommendedMailer(),
+            'providers' => $catalog->options(),
             'host' => $this->mailer() === 'smtp' ? config('mail.mailers.smtp.host') : null,
             'port' => $this->mailer() === 'smtp' ? config('mail.mailers.smtp.port') : null,
         ];

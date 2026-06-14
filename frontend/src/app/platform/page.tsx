@@ -336,6 +336,12 @@ export default function PlatformPage() {
             ) : null}
             <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
               Current mailer: <span className="font-mono">{mailStatus.mailer}</span>
+              {mailStatus.recommended_mailer ? (
+                <>
+                  {" "}
+                  · recommended: <span className="font-mono">{mailStatus.recommended_mailer}</span>
+                </>
+              ) : null}
               {mailStatus.host ? (
                 <>
                   {" "}
@@ -343,6 +349,22 @@ export default function PlatformPage() {
                 </>
               ) : null}
             </p>
+            {mailStatus.providers && !mailStatus.configured ? (
+              <ul className="mt-3 space-y-2 text-xs text-amber-900 dark:text-amber-200">
+                {mailStatus.providers.map((provider) => (
+                  <li key={provider.id} className="rounded-lg border border-amber-200/80 bg-white/60 p-2 dark:border-amber-800 dark:bg-amber-950/20">
+                    <span className="font-semibold">
+                      {provider.name}
+                      {provider.recommended ? " (recommended)" : ""}
+                    </span>
+                    {" — "}
+                    {provider.free_emails_per_month}
+                    {provider.free_daily_limit ? `, ${provider.free_daily_limit}` : ""}
+                    . {provider.unique_recipients}. No credit card.
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </section>
         ) : null}
 

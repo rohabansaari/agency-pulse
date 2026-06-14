@@ -104,11 +104,53 @@ Save to redeploy, then configure **email** using one of the options below.
 
 This is **not** a wrong password — it is Render's network policy ([changelog](https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports)).
 
-Pick **one** path:
+Pick **one** path (all use HTTPS on port 443 — works on Render free tier):
 
-#### Option A — MailerSend (recommended on Render **free** tier)
+| Provider | Free volume | Daily cap | Unique recipients | Credit card | Best for |
+|----------|-------------|-----------|-------------------|-------------|----------|
+| **Resend** *(recommended)* | 3,000/month | 100/day | No cap on verified domain | No | Invitation emails, simple setup |
+| **Brevo** | ~9,000/month | 300/day | No cap on verified domain | No | Higher daily volume |
+| MailerSend | 3,000/month | — | **Only 2** if using `@mlsender.net` trial sender | No | Legacy — use verified domain only |
 
-Uses HTTPS (port 443), works on all Render plans. Free tier: 3,000 emails/month.
+#### Option A — Resend (recommended)
+
+1. Sign up at [resend.com](https://resend.com) — no credit card.
+2. **Domains** → add and verify your domain (DNS: SPF, DKIM).
+3. **API Keys** → create a key (`re_…`).
+4. On Render **API** service → **Environment**:
+
+| Key | Value |
+|-----|--------|
+| `MAIL_MAILER` | `resend` |
+| `RESEND_KEY` | `re_…` *(your Resend API key)* |
+| `MAIL_FROM_ADDRESS` | `noreply@yourdomain.com` *(verified domain)* |
+| `MAIL_FROM_NAME` | `AgencyPulse` |
+
+Remove Gmail SMTP variables and any unused MailerSend/Brevo keys.
+
+5. Save → redeploy → **Platform** → **Send test email**.
+
+You cannot send `from` `@gmail.com` — the From address must use your verified domain.
+
+#### Option B — Brevo (highest free daily volume)
+
+1. Sign up at [brevo.com](https://www.brevo.com) — no credit card. Free plan: **300 emails/day** (~9,000/month).
+2. **Senders, domains & IPs** → **Domains** → add and verify your domain.
+3. **SMTP & API** → **API keys** → create a key (`xkeysib-…`).
+4. On Render **API** service → **Environment**:
+
+| Key | Value |
+|-----|--------|
+| `MAIL_MAILER` | `brevo` |
+| `BREVO_API_KEY` | `xkeysib-…` *(your Brevo API key)* |
+| `MAIL_FROM_ADDRESS` | `noreply@yourdomain.com` *(verified domain)* |
+| `MAIL_FROM_NAME` | `AgencyPulse` |
+
+5. Save → redeploy → **Platform** → **Send test email**.
+
+#### Option C — MailerSend (legacy)
+
+Uses HTTPS (port 443). Free tier: 3,000 emails/month.
 
 1. Sign up at [mailersend.com](https://www.mailersend.com) → **Email** → **Domains** → add and verify your domain (DNS records).
 2. **Email** → **Domains** → your domain → **API tokens** → create a token (`mlsn.…`).
@@ -129,24 +171,7 @@ You cannot send `from` `@gmail.com` via MailerSend — the From address must use
 
 **Trial sender domain limit:** If `MAIL_FROM_ADDRESS` uses MailerSend's trial domain (`@*.mlsender.net`), MailerSend only allows **2 unique recipients** total — admin invites to your signup email may work while employee, manager, and sub-admin invites to other inboxes fail with `MS42225`. This is separate from your monthly email quota. Fix: verify your own domain in MailerSend → set `MAIL_FROM_ADDRESS` to e.g. `noreply@yourdomain.com` (not `@mlsender.net`) → redeploy → resend invitations from **Employees**.
 
-#### Option B — Resend (alternative HTTP API)
-
-Uses HTTPS (port 443), works on all Render plans. Free tier: 3,000 emails/month.
-
-1. Sign up at [resend.com](https://resend.com) → **API Keys** → create a key.
-2. **Domains** → add and verify your sending domain (DNS records). You cannot send production mail `from` `@gmail.com` via Resend — use e.g. `noreply@yourdomain.com`.
-3. On Render **API** service → **Environment**:
-
-| Key | Value |
-|-----|--------|
-| `MAIL_MAILER` | `resend` |
-| `RESEND_KEY` | `re_…` *(your Resend API key)* |
-| `MAIL_FROM_ADDRESS` | `noreply@yourdomain.com` *(verified domain in Resend)* |
-| `MAIL_FROM_NAME` | `AgencyPulse` |
-
-4. Save → wait for redeploy → **Platform** → **Send test email**.
-
-#### Option C — Gmail SMTP (Render **paid** API only)
+#### Option D — Gmail SMTP (Render **paid** API only)
 
 Upgrade the API web service from **Free** to **Starter** ($7/mo). Paid instances allow SMTP on ports 465/587.
 
