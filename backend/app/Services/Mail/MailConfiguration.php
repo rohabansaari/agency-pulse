@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 class MailConfiguration
 {
     /** @var list<string> */
-    private const REAL_DELIVERY_MAILERS = ['resend', 'brevo', 'mailersend', 'smtp', 'ses', 'postmark'];
+    private const REAL_DELIVERY_MAILERS = ['piisend', 'resend', 'brevo', 'mailersend', 'smtp', 'ses', 'postmark'];
 
     /** @var list<string> */
     private const PLACEHOLDER_FROM_ADDRESSES = [
@@ -49,10 +49,11 @@ class MailConfiguration
         $mailer = $this->mailer();
 
         if (! in_array($mailer, self::REAL_DELIVERY_MAILERS, true)) {
-            return 'MAIL_MAILER must be resend (recommended), brevo, mailersend, or smtp on a paid host. Currently "'.$mailer.'" only writes to logs.';
+            return 'MAIL_MAILER must be piisend (no domain), resend, brevo, mailersend, or smtp on a paid host. Currently "'.$mailer.'" only writes to logs.';
         }
 
         return match ($mailer) {
+            'piisend' => $this->piisendConfigurationIssue(),
             'resend' => $this->resendConfigurationIssue(),
             'brevo' => $this->brevoConfigurationIssue(),
             'mailersend' => $this->mailersendConfigurationIssue(),
@@ -67,7 +68,7 @@ class MailConfiguration
             return null;
         }
 
-        return 'Render free tier blocks outbound SMTP (ports 465/587). Switch to MAIL_MAILER=resend or MAIL_MAILER=brevo with an HTTP API key, or upgrade the API to paid.';
+        return 'Render free tier blocks outbound SMTP (ports 465/587). Switch to MAIL_MAILER=piisend with PIISEND_API_KEY (no domain), or MAIL_MAILER=resend / brevo with a verified domain, or upgrade the API to paid.';
     }
 
     public function fromAddress(): ?string
@@ -94,6 +95,17 @@ class MailConfiguration
         $domain = substr(strrchr($fromAddress, '@') ?: '', 1);
 
         return $domain === 'mlsender.net' || str_ends_with($domain, '.mlsender.net');
+    }
+
+    private function piisendConfigurationIssue(): ?string
+    {
+        $apiKey = (string) config('services.piisend.key', '');
+
+        if ($apiKey === '') {
+            return 'PIISEND_API_KEY is not set. Sign up at piisend.com → API → Keys → create a key with emails:send scope.';
+        }
+
+        return null;
     }
 
     private function mailersendConfigurationIssue(): ?string

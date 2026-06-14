@@ -106,13 +106,36 @@ This is **not** a wrong password — it is Render's network policy ([changelog](
 
 Pick **one** path (all use HTTPS on port 443 — works on Render free tier):
 
-| Provider | Free volume | Daily cap | Unique recipients | Credit card | Best for |
-|----------|-------------|-----------|-------------------|-------------|----------|
-| **Resend** *(recommended)* | 3,000/month | 100/day | No cap on verified domain | No | Invitation emails, simple setup |
-| **Brevo** | ~9,000/month | 300/day | No cap on verified domain | No | Higher daily volume |
-| MailerSend | 3,000/month | — | **Only 2** if using `@mlsender.net` trial sender | No | Legacy — use verified domain only |
+| Provider | Custom domain? | Free volume | Daily cap | Unique recipients | Credit card | Best for |
+|----------|----------------|-------------|-----------|-------------------|-------------|----------|
+| **Piisend** *(recommended without a domain)* | **No** — shared sender | 3,000/month | 100/day | No cap | No | Invitation emails before you own a domain |
+| Resend | Yes — DNS verification | 3,000/month | 100/day | No cap on verified domain | No | Branded sender once you have a domain |
+| Brevo | Yes — DNS verification | ~9,000/month | 300/day | No cap on verified domain | No | Higher daily volume with your domain |
+| MailerSend | Yes (trial `@mlsender.net` = **2 recipients only**) | 3,000/month | — | 2 on trial sender | No | Legacy — verified domain only |
 
-#### Option A — Resend (recommended)
+#### Option A — Piisend (no custom domain required)
+
+Use this when you **do not own a domain yet**. Piisend sends from a **shared platform address** on the free tier — no DNS setup.
+
+1. Sign up at [piisend.com](https://piisend.com) — no credit card.
+2. **API → Keys** → create a key with scope **`emails:send`** (`pii_live_…` or `pii_test_…`).
+3. On Render **API** service → **Environment**:
+
+| Key | Value |
+|-----|--------|
+| `MAIL_MAILER` | `piisend` |
+| `PIISEND_API_KEY` | `pii_live_…` *(your Piisend API key)* |
+| `MAIL_FROM_NAME` | `AgencyPulse` |
+
+`MAIL_FROM_ADDRESS` is **optional** on Piisend free tier — leave it unset and Piisend uses the shared sender. Set it later when you verify your own domain in Piisend.
+
+Remove Gmail SMTP variables and any unused Resend/Brevo/MailerSend keys.
+
+4. Save → redeploy → **Platform** → **Send test email**.
+
+Later, when you buy a domain: verify it in Piisend → set `MAIL_FROM_ADDRESS` to e.g. `noreply@yourdomain.com` → redeploy.
+
+#### Option B — Resend (requires your own domain)
 
 1. Sign up at [resend.com](https://resend.com) — no credit card.
 2. **Domains** → add and verify your domain (DNS: SPF, DKIM).
@@ -132,7 +155,7 @@ Remove Gmail SMTP variables and any unused MailerSend/Brevo keys.
 
 You cannot send `from` `@gmail.com` — the From address must use your verified domain.
 
-#### Option B — Brevo (highest free daily volume)
+#### Option C — Brevo (highest free daily volume, requires domain)
 
 1. Sign up at [brevo.com](https://www.brevo.com) — no credit card. Free plan: **300 emails/day** (~9,000/month).
 2. **Senders, domains & IPs** → **Domains** → add and verify your domain.
@@ -148,7 +171,7 @@ You cannot send `from` `@gmail.com` — the From address must use your verified 
 
 5. Save → redeploy → **Platform** → **Send test email**.
 
-#### Option C — MailerSend (legacy)
+#### Option D — MailerSend (legacy, requires domain)
 
 Uses HTTPS (port 443). Free tier: 3,000 emails/month.
 
@@ -171,7 +194,7 @@ You cannot send `from` `@gmail.com` via MailerSend — the From address must use
 
 **Trial sender domain limit:** If `MAIL_FROM_ADDRESS` uses MailerSend's trial domain (`@*.mlsender.net`), MailerSend only allows **2 unique recipients** total — admin invites to your signup email may work while employee, manager, and sub-admin invites to other inboxes fail with `MS42225`. This is separate from your monthly email quota. Fix: verify your own domain in MailerSend → set `MAIL_FROM_ADDRESS` to e.g. `noreply@yourdomain.com` (not `@mlsender.net`) → redeploy → resend invitations from **Employees**.
 
-#### Option D — Gmail SMTP (Render **paid** API only)
+#### Option E — Gmail SMTP (Render **paid** API only)
 
 Upgrade the API web service from **Free** to **Starter** ($7/mo). Paid instances allow SMTP on ports 465/587.
 

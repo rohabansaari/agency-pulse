@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Mail\Transport\PiisendTransport;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;
 use Symfony\Component\Mailer\Bridge\Brevo\Transport\BrevoTransportFactory;
@@ -18,6 +19,12 @@ class MailTransportServiceProvider extends ServiceProvider
                     'default',
                     (string) config('services.brevo.key', ''),
                 ),
+            );
+        });
+
+        Mail::extend('piisend', function () {
+            return new PiisendTransport(
+                (string) config('services.piisend.key', ''),
             );
         });
     }

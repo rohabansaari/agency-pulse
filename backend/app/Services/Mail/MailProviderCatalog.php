@@ -10,6 +10,7 @@ class MailProviderCatalog
      *     name: string,
      *     mailer: string,
      *     recommended: bool,
+     *     domain_required: bool,
      *     free_emails_per_month: string,
      *     free_daily_limit: string|null,
      *     unique_recipients: string,
@@ -22,10 +23,28 @@ class MailProviderCatalog
     {
         return [
             [
+                'id' => 'piisend',
+                'name' => 'Piisend',
+                'mailer' => 'piisend',
+                'recommended' => true,
+                'domain_required' => false,
+                'free_emails_per_month' => '3,000',
+                'free_daily_limit' => '100/day',
+                'unique_recipients' => 'No cap (shared sending domain on free tier)',
+                'credit_card_required' => false,
+                'render_free_tier' => true,
+                'env' => [
+                    'MAIL_MAILER' => 'piisend',
+                    'PIISEND_API_KEY' => 'pii_live_…',
+                    'MAIL_FROM_NAME' => 'AgencyPulse',
+                ],
+            ],
+            [
                 'id' => 'resend',
                 'name' => 'Resend',
                 'mailer' => 'resend',
-                'recommended' => true,
+                'recommended' => false,
+                'domain_required' => true,
                 'free_emails_per_month' => '3,000',
                 'free_daily_limit' => '100/day',
                 'unique_recipients' => 'No cap on verified domain (volume limits only)',
@@ -42,7 +61,8 @@ class MailProviderCatalog
                 'id' => 'brevo',
                 'name' => 'Brevo',
                 'mailer' => 'brevo',
-                'recommended' => true,
+                'recommended' => false,
+                'domain_required' => true,
                 'free_emails_per_month' => '~9,000 (300/day)',
                 'free_daily_limit' => '300/day',
                 'unique_recipients' => 'No cap on verified domain (volume limits only)',
@@ -60,6 +80,7 @@ class MailProviderCatalog
                 'name' => 'MailerSend',
                 'mailer' => 'mailersend',
                 'recommended' => false,
+                'domain_required' => true,
                 'free_emails_per_month' => '3,000',
                 'free_daily_limit' => null,
                 'unique_recipients' => 'Only 2 if sending from @mlsender.net trial domain',
@@ -77,6 +98,6 @@ class MailProviderCatalog
 
     public function recommendedMailer(): string
     {
-        return 'resend';
+        return 'piisend';
     }
 }

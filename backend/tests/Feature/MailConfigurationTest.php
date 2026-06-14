@@ -30,7 +30,32 @@ class MailConfigurationTest extends TestCase
         $issue = app(MailConfiguration::class)->configurationIssue();
 
         $this->assertNotNull($issue);
-        $this->assertStringContainsString('MAIL_MAILER must be resend', $issue);
+        $this->assertStringContainsString('MAIL_MAILER must be piisend', $issue);
+    }
+
+    public function test_piisend_mailer_requires_api_key(): void
+    {
+        Config::set('mail.default', 'piisend');
+        Config::set('services.piisend.key', '');
+
+        $issue = app(MailConfiguration::class)->configurationIssue();
+
+        $this->assertSame(
+            'PIISEND_API_KEY is not set. Sign up at piisend.com → API → Keys → create a key with emails:send scope.',
+            $issue,
+        );
+    }
+
+    public function test_piisend_mailer_is_configured_without_from_address(): void
+    {
+        Config::set('mail.default', 'piisend');
+        Config::set('services.piisend.key', 'pii_test_key');
+        Config::set('mail.from.address', '');
+
+        $mailConfiguration = app(MailConfiguration::class);
+
+        $this->assertNull($mailConfiguration->configurationIssue());
+        $this->assertTrue($mailConfiguration->isRealDeliveryConfigured());
     }
 
     public function test_mailersend_mailer_requires_api_key(): void
@@ -150,7 +175,7 @@ class MailConfigurationTest extends TestCase
         $hint = app(MailConfiguration::class)->renderSmtpBlockedHint();
 
         $this->assertNotNull($hint);
-        $this->assertStringContainsString('MAIL_MAILER=resend', $hint);
+        $this->assertStringContainsString('MAIL_MAILER=piisend', $hint);
     }
 
     public function test_smtp_mailer_requires_matching_from_address(): void

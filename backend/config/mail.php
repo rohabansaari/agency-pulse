@@ -36,6 +36,10 @@ return [
             'transport' => 'brevo',
         ],
 
+        'piisend' => [
+            'transport' => 'piisend',
+        ],
+
         'mailersend' => [
             'transport' => 'mailersend',
         ],

@@ -356,6 +356,7 @@ export default function PlatformPage() {
                     <span className="font-semibold">
                       {provider.name}
                       {provider.recommended ? " (recommended)" : ""}
+                      {!provider.domain_required ? " · no domain required" : ""}
                     </span>
                     {" — "}
                     {provider.free_emails_per_month}
@@ -372,7 +373,16 @@ export default function PlatformPage() {
           <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Test email delivery</h2>
             <p className="mt-1 text-xs text-zinc-500">
-              Sends a test message via {mailStatus.from_address} before inviting admins.
+              Sends a test message
+              {mailStatus.from_address ? (
+                <>
+                  {" "}
+                  via <span className="font-mono">{mailStatus.from_address}</span>
+                </>
+              ) : (
+                " using the provider shared sender"
+              )}{" "}
+              before inviting admins.
             </p>
             <form className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleMailTest}>
               <input

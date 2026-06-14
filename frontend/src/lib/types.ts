@@ -503,6 +503,7 @@ export interface PlatformMailProvider {
   name: string;
   mailer: string;
   recommended: boolean;
+  domain_required: boolean;
   free_emails_per_month: string;
   free_daily_limit: string | null;
   unique_recipients: string;

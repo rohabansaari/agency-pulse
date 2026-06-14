@@ -7,20 +7,20 @@ use Tests\TestCase;
 
 class MailProviderCatalogTest extends TestCase
 {
-    public function test_recommends_resend_for_render_free_tier(): void
+    public function test_recommends_piisend_without_domain(): void
     {
         $catalog = app(MailProviderCatalog::class);
 
-        $this->assertSame('resend', $catalog->recommendedMailer());
+        $this->assertSame('piisend', $catalog->recommendedMailer());
 
+        $piisend = collect($catalog->options())->firstWhere('id', 'piisend');
         $resend = collect($catalog->options())->firstWhere('id', 'resend');
-        $brevo = collect($catalog->options())->firstWhere('id', 'brevo');
 
-        $this->assertTrue($resend['recommended']);
-        $this->assertTrue($brevo['recommended']);
-        $this->assertFalse($resend['credit_card_required']);
-        $this->assertFalse($brevo['credit_card_required']);
-        $this->assertStringContainsString('No cap', $resend['unique_recipients']);
-        $this->assertStringContainsString('No cap', $brevo['unique_recipients']);
+        $this->assertTrue($piisend['recommended']);
+        $this->assertFalse($piisend['domain_required']);
+        $this->assertFalse($resend['recommended']);
+        $this->assertTrue($resend['domain_required']);
+        $this->assertFalse($piisend['credit_card_required']);
+        $this->assertStringContainsString('shared sending domain', $piisend['unique_recipients']);
     }
 }

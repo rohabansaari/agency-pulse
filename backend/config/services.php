@@ -19,6 +19,10 @@ return [
         'key' => env('BREVO_API_KEY'),
     ],
 
+    'piisend' => [
+        'key' => env('PIISEND_API_KEY'),
+    ],
+
     'mailersend' => [
         'key' => env('MAILERSEND_API_KEY'),
     ],
