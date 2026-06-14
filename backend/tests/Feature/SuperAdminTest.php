@@ -177,7 +177,7 @@ class SuperAdminTest extends TestCase
             'role' => UserRole::Admin->value,
         ]);
 
-        Mail::assertSent(\App\Mail\AdminWelcomeMail::class);
+        Mail::assertSent(AccountInvitationMail::class);
     }
 
     public function test_tenant_admin_cannot_access_platform_organizations(): void

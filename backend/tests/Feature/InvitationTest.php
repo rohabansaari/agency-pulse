@@ -4,8 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\OrganizationMemberStatus;
 use App\Enums\UserRole;
-use App\Mail\AdminWelcomeMail;
-use App\Mail\UserInvitationMail;
+use App\Mail\AccountInvitationMail;
 use App\Models\InvitationToken;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -54,7 +53,7 @@ class InvitationTest extends TestCase
                 ->exists()
         );
 
-        Mail::assertSent(AdminWelcomeMail::class, fn ($mail) => $mail->hasTo('jane@acme.test'));
+        Mail::assertSent(AccountInvitationMail::class, fn ($mail) => $mail->hasTo('jane@acme.test'));
     }
 
     public function test_platform_org_creation_succeeds_when_mail_fails(): void
@@ -101,7 +100,7 @@ class InvitationTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('member.status', OrganizationMemberStatus::Invited->value);
 
-        Mail::assertSent(UserInvitationMail::class);
+        Mail::assertSent(AccountInvitationMail::class);
 
         $this->postJson('/api/v1/auth/login', [
             'email' => 'employee@example.com',
@@ -143,6 +142,68 @@ class InvitationTest extends TestCase
             'email' => 'invited@example.com',
             'password' => 'Password1!',
         ])->assertOk();
+    }
+
+    public function test_admin_and_employee_invitations_use_same_mailable(): void
+    {
+        Mail::fake();
+
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+        Sanctum::actingAs($superAdmin);
+
+        $this->postJson('/api/v1/platform/organizations', [
+            'organization_name' => 'Same Mail Org',
+            'admin_name' => 'Jane Admin',
+            'admin_email' => 'same-mail-admin@acme.test',
+        ])->assertCreated();
+
+        Mail::assertSent(AccountInvitationMail::class, fn ($mail) => $mail->hasTo('same-mail-admin@acme.test'));
+
+        $admin = User::query()->where('email', 'same-mail-admin@acme.test')->firstOrFail();
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders(['X-Organization-Id' => (string) $admin->organization_id])
+            ->postJson('/api/v1/team/create-employee', [
+                'name' => 'Team Member',
+                'email' => 'same-mail-employee@acme.test',
+                'role' => UserRole::Employee->value,
+                'salary_type' => 'hourly',
+                'hourly_rate' => 50,
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('invitation_email_sent', true);
+
+        Mail::assertSent(AccountInvitationMail::class, fn ($mail) => $mail->hasTo('same-mail-employee@acme.test'));
+    }
+
+    public function test_manager_and_sub_admin_creation_send_invitations(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        foreach ([UserRole::Manager, UserRole::SubAdmin] as $role) {
+            $email = $role->value.'@example.com';
+
+            $this->withHeaders(['X-Organization-Id' => (string) $admin->organization_id])
+                ->postJson('/api/v1/team/create-employee', [
+                    'name' => ucfirst($role->value),
+                    'email' => $email,
+                    'role' => $role->value,
+                    'salary_type' => 'hourly',
+                    'hourly_rate' => 50,
+                    'payroll_pin' => '1234',
+                    'payroll_pin_confirmation' => '1234',
+                ])
+                ->assertCreated()
+                ->assertJsonPath('invitation_email_sent', true);
+
+            Mail::assertSent(AccountInvitationMail::class, fn ($mail) => $mail->hasTo($email));
+        }
     }
 
     public function test_expired_invitation_token_is_rejected(): void
@@ -194,7 +255,7 @@ class InvitationTest extends TestCase
             ->postJson("/api/v1/team/{$employee->id}/resend-invitation")
             ->assertOk();
 
-        Mail::assertSent(UserInvitationMail::class);
+        Mail::assertSent(AccountInvitationMail::class);
     }
 
     public function test_suspended_member_cannot_login(): void

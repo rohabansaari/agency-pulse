@@ -2,7 +2,6 @@
 
 namespace App\Services\Onboarding;
 
-use App\Enums\OrganizationMemberStatus;
 use App\Enums\SalaryType;
 use App\Enums\UserRole;
 use App\Models\Organization;
@@ -13,9 +12,6 @@ use App\Services\Auth\MembershipRoleSync;
 use App\Services\Auth\RoleMutationGuard;
 use App\Services\Payroll\AdminPayrollService;
 use App\Services\Tenant\TenantContext;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -48,39 +44,25 @@ class OnboardingEmployeeService
 
         $organization = Organization::query()->findOrFail(TenantContext::id());
 
-        $bundle = DB::transaction(function () use ($validated, $admin, $role, $organization) {
-            $pending = $this->invitations->createPendingMember(
-                $organization,
-                $validated['name'],
-                $validated['email'],
-                $role,
-            );
-
-            $contractPayload = $this->contractPayloadFromSalary($validated);
-            $this->adminPayroll->createInitialContract($pending['user'], $contractPayload, $admin);
-
-            $plainToken = $this->invitations->issueToken($pending['user'], $organization, resent: false);
-
-            return [
-                'membership' => $pending['membership'],
-                'user' => $pending['user'],
-                'plain_token' => $plainToken,
-            ];
-        });
-
-        $delivery = $this->invitations->trySendInvitationEmail(
-            $bundle['user'],
+        $result = $this->invitations->createInvitedMember(
             $organization,
-            $bundle['plain_token'],
+            $validated['name'],
+            $validated['email'],
+            $role,
+            isAdminWelcome: false,
+            afterPending: function (User $user) use ($validated, $admin): void {
+                $contractPayload = $this->contractPayloadFromSalary($validated);
+                $this->adminPayroll->createInitialContract($user, $contractPayload, $admin);
+            },
         );
 
         return [
-            'member' => $bundle['membership'],
-            'message' => $delivery['sent']
+            'member' => $result['membership'],
+            'message' => $result['invitation_email_sent']
                 ? 'Employee invited. An activation email was sent.'
                 : 'Employee invited. The activation email could not be sent — resend the invitation from the team page.',
-            'invitation_email_sent' => $delivery['sent'],
-            'delivery_issue' => $delivery['error'],
+            'invitation_email_sent' => $result['invitation_email_sent'],
+            'delivery_issue' => $result['delivery_issue'],
         ];
     }
 

@@ -4,8 +4,7 @@ namespace App\Services\Auth;
 
 use App\Enums\OrganizationMemberStatus;
 use App\Enums\UserRole;
-use App\Mail\AdminWelcomeMail;
-use App\Mail\UserInvitationMail;
+use App\Mail\AccountInvitationMail;
 use App\Models\InvitationToken;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -93,7 +92,8 @@ class InvitationService
     }
 
     /**
-     * @return array{user: User, membership: OrganizationMember, plain_token: string, invitation_email_sent: bool}
+     * @param  callable(User, OrganizationMember): void|null  $afterPending
+     * @return array{user: User, membership: OrganizationMember, plain_token: string, invitation_email_sent: bool, delivery_issue: string|null}
      */
     public function createInvitedMember(
         Organization $organization,
@@ -101,9 +101,15 @@ class InvitationService
         string $email,
         UserRole $role,
         bool $isAdminWelcome = false,
+        ?callable $afterPending = null,
     ): array {
-        $bundle = DB::transaction(function () use ($organization, $name, $email, $role) {
+        $bundle = DB::transaction(function () use ($organization, $name, $email, $role, $afterPending) {
             $pending = $this->createPendingMember($organization, $name, $email, $role);
+
+            if ($afterPending !== null) {
+                $afterPending($pending['user'], $pending['membership']);
+            }
+
             $plainToken = $this->issueToken($pending['user'], $organization, resent: false);
 
             return [
@@ -156,12 +162,37 @@ class InvitationService
         string $plainToken,
         bool $isAdminWelcome,
     ): void {
-        $setupUrl = $this->setupPasswordUrl($plainToken);
-        $mailable = $isAdminWelcome
-            ? new AdminWelcomeMail($user, $organization, $setupUrl)
-            : new UserInvitationMail($user, $organization, $setupUrl);
+        $user = $user->fresh();
+        $organization = $organization->fresh();
+        $recipientEmail = trim((string) $user?->email);
 
-        Mail::to($user->email)->send($mailable);
+        if ($recipientEmail === '') {
+            throw new \InvalidArgumentException('Invitation recipient email is missing.');
+        }
+
+        $setupUrl = $this->setupPasswordUrl($plainToken);
+        $role = $this->resolveInvitationRole($user, $organization, $isAdminWelcome);
+
+        Mail::to($recipientEmail, (string) $user->name)->send(
+            new AccountInvitationMail($user, $organization, $setupUrl, $role),
+        );
+    }
+
+    private function resolveInvitationRole(
+        User $user,
+        Organization $organization,
+        bool $isAdminWelcome,
+    ): UserRole {
+        if ($isAdminWelcome) {
+            return UserRole::Admin;
+        }
+
+        $membership = OrganizationMember::query()
+            ->where('user_id', $user->id)
+            ->where('organization_id', $organization->id)
+            ->first();
+
+        return $membership?->role ?? $user->role ?? UserRole::Employee;
     }
 
     /**
@@ -173,7 +204,7 @@ class InvitationService
         string $plainToken,
         bool $isAdminWelcome = false,
     ): array {
-        $mailable = $isAdminWelcome ? 'admin_welcome' : 'user_invitation';
+        $mailable = 'account_invitation';
 
         Log::info('Invitation email attempt.', [
             'user_id' => $user->id,
@@ -234,7 +265,7 @@ class InvitationService
             || str_contains($message, 'unique recipients limit')
             || str_contains($message, 'trial domain')
         ) {
-            return 'MailerSend trial limit reached: verify your domain at mailersend.com and move to the free Hobby plan to invite employees, managers, and sub admins.';
+            return 'MailerSend rejected this invitation. Check the MailerSend dashboard for domain verification and recipient limits, then resend from Employees.';
         }
 
         if (str_contains($message, 'MS42207') || str_contains($message, 'must be verified')) {
@@ -242,7 +273,7 @@ class InvitationService
         }
 
         if (str_contains($message, 'MS42212')) {
-            return 'MailerSend rejected this recipient. Verify your domain in MailerSend to send invitations to any email address.';
+            return 'MailerSend rejected this recipient. Verify your sending domain in MailerSend and resend the invitation.';
         }
 
         return $message;

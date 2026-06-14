@@ -7,7 +7,6 @@ use App\Enums\SalaryType;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TeamMemberResource;
-use App\Models\InvitationToken;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
@@ -23,8 +22,6 @@ use App\Services\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -94,44 +91,30 @@ class TeamController extends TenantAppController
 
         $organization = Organization::query()->findOrFail(TenantContext::id());
 
-        $bundle = DB::transaction(function () use ($validated, $request, $assignedRole, $organization) {
-            $pending = $this->invitations->createPendingMember(
-                $organization,
-                $validated['name'],
-                $validated['email'],
-                $assignedRole,
-            );
-
-            $this->adminPayroll->createInitialContract($pending['user'], $validated, $request->user());
-
-            if (! empty($validated['payroll_pin'])) {
-                $this->payrollVault->setPinOnFirstEmployee($request->user(), $validated['payroll_pin']);
-            }
-
-            $plainToken = $this->invitations->issueToken($pending['user'], $organization, resent: false);
-
-            return [
-                'membership' => $pending['membership'],
-                'user' => $pending['user'],
-                'plain_token' => $plainToken,
-            ];
-        });
-
-        $delivery = $this->invitations->trySendInvitationEmail(
-            $bundle['user'],
+        $result = $this->invitations->createInvitedMember(
             $organization,
-            $bundle['plain_token'],
+            $validated['name'],
+            $validated['email'],
+            $assignedRole,
+            isAdminWelcome: false,
+            afterPending: function (User $user) use ($validated, $request): void {
+                $this->adminPayroll->createInitialContract($user, $validated, $request->user());
+
+                if (! empty($validated['payroll_pin'])) {
+                    $this->payrollVault->setPinOnFirstEmployee($request->user(), $validated['payroll_pin']);
+                }
+            },
         );
 
-        $message = $delivery['sent']
+        $message = $result['invitation_email_sent']
             ? 'Employee invited. An activation email was sent.'
             : 'Employee invited. The activation email could not be sent — resend the invitation from the team page.';
 
         return response()->json([
             'message' => $message,
-            'member' => new TeamMemberResource($bundle['membership']),
-            'invitation_email_sent' => $delivery['sent'],
-            'delivery_issue' => $delivery['error'],
+            'member' => new TeamMemberResource($result['membership']),
+            'invitation_email_sent' => $result['invitation_email_sent'],
+            'delivery_issue' => $result['delivery_issue'],
         ], 201);
     }
 

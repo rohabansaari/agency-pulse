@@ -8,7 +8,7 @@ namespace Tests\Feature;
 
 use App\Enums\OrganizationMemberStatus;
 use App\Enums\UserRole;
-use App\Mail\UserInvitationMail;
+use App\Mail\AccountInvitationMail;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -55,7 +55,7 @@ class EmployeeManagementTest extends TestCase
             ->assertJsonPath('member.status', OrganizationMemberStatus::Invited->value)
             ->assertJsonPath('invitation_email_sent', true);
 
-        Mail::assertSent(UserInvitationMail::class);
+        Mail::assertSent(AccountInvitationMail::class);
 
         $this->postJson('/api/v1/auth/login', [
             'email' => 'employee@example.com',
