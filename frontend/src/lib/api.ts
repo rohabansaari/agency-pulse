@@ -399,6 +399,15 @@ export type EmployeeInviteResponse = {
   message: string;
   invitation_email_sent: boolean;
   delivery_issue?: string | null;
+  delivery?: {
+    transaction_committed?: boolean;
+    invitation_token_exists?: boolean;
+    invitation_token_id?: number | null;
+    mail_dispatch_attempted?: boolean;
+    mail_dispatch_succeeded?: boolean;
+    mailersend_response?: string | null;
+    exception_message?: string | null;
+  } | null;
 };
 
 export async function createEmployee(data: {

@@ -93,11 +93,18 @@ export function TeamManager({ user }: { user: User }) {
       });
 
       if (!response.invitation_email_sent) {
-        setError(response.delivery_issue || response.message);
+        setError(
+          `${response.delivery_issue || response.message} The employee was created — use Resend invitation instead of creating them again.`,
+        );
+        setShowCreate(false);
+        setCreateName("");
+        setCreateEmail("");
+        setCreateRole("employee");
+        setCreatePayrollPin("");
+        setCreatePayrollPinConfirmation("");
+        await load();
         return;
       }
-
-      setShowCreate(false);
       setCreateName("");
       setCreateEmail("");
       setCreateRole("employee");

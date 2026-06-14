@@ -190,7 +190,12 @@ export function OnboardingWizard() {
       setStatus(response.status);
 
       if (!response.invitation_email_sent) {
-        setError(response.delivery_issue || response.message);
+        setError(
+          `${response.delivery_issue || response.message} The employee was created — use Resend invitation instead of creating them again.`,
+        );
+        setEmployeeName("");
+        setEmployeeEmail("");
+        setEmployeeSalary("");
         return;
       }
 

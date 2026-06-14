@@ -115,6 +115,7 @@ class TeamController extends TenantAppController
             'member' => new TeamMemberResource($result['membership']),
             'invitation_email_sent' => $result['invitation_email_sent'],
             'delivery_issue' => $result['delivery_issue'],
+            'delivery' => $result['delivery'] ?? null,
         ], 201);
     }
 

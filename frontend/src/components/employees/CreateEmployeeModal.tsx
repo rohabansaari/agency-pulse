@@ -78,7 +78,10 @@ export function CreateEmployeeModal({
       });
 
       if (!response.invitation_email_sent) {
-        setError(response.delivery_issue || response.message);
+        setError(
+          `${response.delivery_issue || response.message} The employee was created — use Resend invitation instead of creating them again.`,
+        );
+        onCreated(response.message);
         return;
       }
 

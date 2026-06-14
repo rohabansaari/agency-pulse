@@ -9,6 +9,7 @@ use App\Models\InvitationToken;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use App\Services\Mail\InvitationDeliveryTracer;
 use App\Services\Mail\MailConfiguration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +25,7 @@ class InvitationService
     public function __construct(
         private readonly MembershipRoleSync $membershipRoleSync,
         private readonly MailConfiguration $mailConfiguration,
+        private readonly InvitationDeliveryTracer $deliveryTracer,
     ) {}
 
     public function createPlaceholderPassword(): string
@@ -106,6 +108,8 @@ class InvitationService
         $bundle = DB::transaction(function () use ($organization, $name, $email, $role, $afterPending) {
             $pending = $this->createPendingMember($organization, $name, $email, $role);
 
+            $this->deliveryTracer->logMemberCreated($pending['user'], $pending['membership']);
+
             if ($afterPending !== null) {
                 $afterPending($pending['user'], $pending['membership']);
             }
@@ -117,6 +121,11 @@ class InvitationService
                 'plain_token' => $plainToken,
             ];
         });
+
+        $transactionMeta = $this->deliveryTracer->logTransactionCommitted(
+            $bundle['pending']['user'],
+            $organization,
+        );
 
         $delivery = $this->trySendInvitationEmail(
             $bundle['pending']['user'],
@@ -131,6 +140,7 @@ class InvitationService
             'plain_token' => $bundle['plain_token'],
             'invitation_email_sent' => $delivery['sent'],
             'delivery_issue' => $delivery['error'],
+            'delivery' => $this->deliveryTracer->buildDeliveryMeta($transactionMeta, $delivery['meta']),
         ];
     }
 
@@ -196,7 +206,7 @@ class InvitationService
     }
 
     /**
-     * @return array{sent: bool, error: string|null}
+     * @return array{sent: bool, error: string|null, meta: array<string, mixed>}
      */
     public function trySendInvitationEmail(
         User $user,
@@ -205,54 +215,62 @@ class InvitationService
         bool $isAdminWelcome = false,
     ): array {
         $mailable = 'account_invitation';
-
-        Log::info('Invitation email attempt.', [
+        $baseContext = [
             'user_id' => $user->id,
             'email' => $user->email,
             'role' => $user->role?->value ?? $user->role,
             'organization_id' => $organization->id,
             'mailable' => $mailable,
             'mailer' => $this->mailConfiguration->mailer(),
-        ]);
+            'mail_dispatch_attempted' => true,
+        ];
+
+        Log::info('Invitation email attempt.', $baseContext);
 
         if ($issue = $this->mailConfiguration->configurationIssue()) {
             Log::error('Invitation email not sent — mail misconfigured.', [
-                'user_id' => $user->id,
-                'organization_id' => $organization->id,
-                'email' => $user->email,
+                ...$baseContext,
                 'issue' => $issue,
-                'mailer' => $this->mailConfiguration->mailer(),
             ]);
 
-            return ['sent' => false, 'error' => $issue];
+            return [
+                'sent' => false,
+                'error' => $issue,
+                'meta' => [
+                    ...$baseContext,
+                    'mail_dispatch_succeeded' => false,
+                    'mail_dispatch_failed_before_send' => true,
+                ],
+            ];
         }
+
+        $this->deliveryTracer->logMailDispatchAttempt($baseContext);
 
         try {
             $this->sendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
 
-            Log::info('Invitation email sent.', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'role' => $user->role?->value ?? $user->role,
-                'organization_id' => $organization->id,
-                'mailable' => $mailable,
-            ]);
+            $successMeta = [
+                ...$baseContext,
+                'mail_dispatch_succeeded' => true,
+            ];
 
-            return ['sent' => true, 'error' => null];
+            $this->deliveryTracer->logMailDispatchSuccess($successMeta);
+            Log::info('Invitation email sent.', $successMeta);
+
+            return ['sent' => true, 'error' => null, 'meta' => $successMeta];
         } catch (\Throwable $exception) {
+            $failure = $this->deliveryTracer->logMailDispatchFailure($exception, $baseContext);
             $error = $this->formatDeliveryError($exception);
 
-            Log::error('Invitation email failed to send.', [
-                'user_id' => $user->id,
-                'organization_id' => $organization->id,
-                'email' => $user->email,
-                'role' => $user->role?->value ?? $user->role,
-                'mailable' => $mailable,
-                'error' => $exception->getMessage(),
-                'delivery_issue' => $error,
-            ]);
-
-            return ['sent' => false, 'error' => $error];
+            return [
+                'sent' => false,
+                'error' => $error,
+                'meta' => [
+                    ...$baseContext,
+                    'mail_dispatch_succeeded' => false,
+                    ...$failure,
+                ],
+            ];
         }
     }
 

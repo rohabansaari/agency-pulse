@@ -121,6 +121,7 @@ class OnboardingController extends TenantController
             'member' => new TeamMemberResource($result['member']),
             'invitation_email_sent' => $result['invitation_email_sent'],
             'delivery_issue' => $result['delivery_issue'] ?? null,
+            'delivery' => $result['delivery'] ?? null,
             'status' => $this->onboarding->status($request->user(), $organization),
         ], 201);
     }

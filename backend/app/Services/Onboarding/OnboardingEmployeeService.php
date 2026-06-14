@@ -63,6 +63,7 @@ class OnboardingEmployeeService
                 : 'Employee invited. The activation email could not be sent — resend the invitation from the team page.',
             'invitation_email_sent' => $result['invitation_email_sent'],
             'delivery_issue' => $result['delivery_issue'],
+            'delivery' => $result['delivery'] ?? null,
         ];
     }
 
