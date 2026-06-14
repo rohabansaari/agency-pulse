@@ -53,9 +53,17 @@ class PlatformMailController extends Controller
                 'error' => $exception->getMessage(),
             ]);
 
+            $message = 'Email send failed.';
+            $hint = $this->mailConfiguration->renderSmtpBlockedHint();
+
+            if ($hint && $this->isSmtpConnectionFailure($exception->getMessage())) {
+                $message = 'SMTP connection timed out. Render free tier blocks ports 465/587 — upgrade the API or switch to MAIL_MAILER=resend.';
+            }
+
             return response()->json([
-                'message' => 'SMTP send failed. Check Render logs and Gmail App Password.',
+                'message' => $message,
                 'delivery_issue' => $exception->getMessage(),
+                'render_smtp_blocked_hint' => $hint,
                 'mail' => $this->mailConfiguration->status(),
             ], 422);
         }
@@ -64,5 +72,23 @@ class PlatformMailController extends Controller
             'message' => 'Test email sent to '.$recipient.'. Check inbox and spam.',
             'mail' => $this->mailConfiguration->status(),
         ]);
+    }
+
+    private function isSmtpConnectionFailure(string $message): bool
+    {
+        $needles = [
+            'Unable to connect',
+            'Connection could not be established',
+            'Operation timed out',
+            'stream_socket_client',
+        ];
+
+        foreach ($needles as $needle) {
+            if (str_contains($message, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

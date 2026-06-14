@@ -93,22 +93,56 @@ Do **not** leave placeholder text like `<paste MYSQLHOST>` — Laravel will try 
 | `APP_URL` | `https://agencypulse-api.onrender.com` |
 | `FRONTEND_URL` | `https://agencypulse-web.onrender.com` *(your frontend URL — also enables CORS and invitation links)* |
 | `CORS_ALLOWED_ORIGINS` | *(optional)* extra origins, comma-separated, if you use a custom domain |
-| `MAIL_MAILER` | `smtp` *(required — `log` writes to server logs only and never delivers to inboxes)* |
-| `MAIL_HOST` | `smtp.gmail.com` |
-| `MAIL_PORT` | `587` |
-| `MAIL_USERNAME` | `agencypulse.notifications@gmail.com` |
-| `MAIL_PASSWORD` | Gmail App Password — **16 characters, no spaces** (Google shows it as `xxxx xxxx xxxx xxxx`; paste without spaces or the app strips them) |
-| `MAIL_ENCRYPTION` | `tls` |
-| `MAIL_FROM_ADDRESS` | `agencypulse.notifications@gmail.com` *(must exactly match `MAIL_USERNAME`)* |
+
+Save to redeploy, then configure **email** using one of the options below.
+
+### Email on Render (read this — SMTP timeouts are expected on free tier)
+
+**Render free web services block outbound SMTP** on ports **25, 465, and 587**. Gmail App Passwords can be correct and you will still see:
+
+`Unable to connect to ssl://smtp.gmail.com:465 (Operation timed out)`
+
+This is **not** a wrong password — it is Render’s network policy ([changelog](https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports)).
+
+Pick **one** path:
+
+#### Option A — Resend (recommended on Render **free** tier)
+
+Uses HTTPS (port 443), works on all Render plans. Free tier: 3,000 emails/month.
+
+1. Sign up at [resend.com](https://resend.com) → **API Keys** → create a key.
+2. **Domains** → add and verify your sending domain (DNS records). You cannot send production mail `from` `@gmail.com` via Resend — use e.g. `noreply@yourdomain.com`.
+3. On Render **API** service → **Environment**:
+
+| Key | Value |
+|-----|--------|
+| `MAIL_MAILER` | `resend` |
+| `RESEND_KEY` | `re_…` *(your Resend API key)* |
+| `MAIL_FROM_ADDRESS` | `noreply@yourdomain.com` *(verified domain in Resend)* |
 | `MAIL_FROM_NAME` | `AgencyPulse` |
 
-**After changing any mail variable:** click **Save Changes** on Render so the API redeploys and runs `php artisan config:cache` with the new values.
+Remove or ignore `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` when using Resend.
 
-**Verify delivery:** sign in as super admin → **Platform** → use **Send test email** before creating organizations.
+4. Save → wait for redeploy → **Platform** → **Send test email**.
 
-If org creation says invitation sent but nothing arrives, open **Platform** — a yellow banner means `MAIL_MAILER` is still `log` or SMTP is incomplete.
+#### Option B — Gmail SMTP (Render **paid** API only)
 
-Save to redeploy.
+Upgrade the API web service from **Free** to **Starter** ($7/mo). Paid instances allow SMTP on ports 465/587.
+
+| Key | Value |
+|-----|--------|
+| `MAIL_MAILER` | `smtp` |
+| `MAIL_HOST` | `smtp.gmail.com` |
+| `MAIL_PORT` | `587` |
+| `MAIL_ENCRYPTION` | `tls` |
+| `MAIL_USERNAME` | `agencypulse.notifications@gmail.com` |
+| `MAIL_PASSWORD` | Gmail App Password, 16 chars, no spaces |
+| `MAIL_FROM_ADDRESS` | `agencypulse.notifications@gmail.com` |
+| `MAIL_FROM_NAME` | `AgencyPulse` |
+
+Port **587 + tls** is preferred over 465/ssl for Gmail.
+
+**After any mail change:** Save on Render → redeploy → **Platform** → **Send test email** → check inbox and spam.
 
 ### Invitation email flow
 

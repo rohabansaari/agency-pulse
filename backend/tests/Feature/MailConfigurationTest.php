@@ -30,7 +30,42 @@ class MailConfigurationTest extends TestCase
         $issue = app(MailConfiguration::class)->configurationIssue();
 
         $this->assertNotNull($issue);
-        $this->assertStringContainsString('MAIL_MAILER must be smtp', $issue);
+        $this->assertStringContainsString('MAIL_MAILER must be resend', $issue);
+    }
+
+    public function test_resend_mailer_requires_api_key(): void
+    {
+        Config::set('mail.default', 'resend');
+        Config::set('services.resend.key', '');
+        Config::set('mail.from.address', 'noreply@example.com');
+
+        $issue = app(MailConfiguration::class)->configurationIssue();
+
+        $this->assertSame('RESEND_KEY is not set. Create a free API key at resend.com/api-keys.', $issue);
+    }
+
+    public function test_resend_mailer_rejects_gmail_from_address(): void
+    {
+        Config::set('mail.default', 'resend');
+        Config::set('services.resend.key', 're_test_key');
+        Config::set('mail.from.address', 'agencypulse.notifications@gmail.com');
+
+        $issue = app(MailConfiguration::class)->configurationIssue();
+
+        $this->assertStringContainsString('Gmail addresses cannot be used', $issue);
+    }
+
+    public function test_smtp_on_render_shows_blocked_hint(): void
+    {
+        Config::set('mail.default', 'smtp');
+        Config::set('mail.mailers.smtp.username', 'agencypulse.notifications@gmail.com');
+        Config::set('mail.mailers.smtp.password', 'apppassword123456');
+        Config::set('mail.from.address', 'agencypulse.notifications@gmail.com');
+
+        $hint = app(MailConfiguration::class)->renderSmtpBlockedHint();
+
+        $this->assertNotNull($hint);
+        $this->assertStringContainsString('Render free tier blocks outbound SMTP', $hint);
     }
 
     public function test_smtp_mailer_requires_matching_from_address(): void
@@ -69,7 +104,7 @@ class MailConfigurationTest extends TestCase
         $this->getJson('/api/v1/platform/mail/status')
             ->assertOk()
             ->assertJsonStructure([
-                'mail' => ['mailer', 'configured', 'issue', 'from_address', 'host', 'port'],
+                'mail' => ['mailer', 'configured', 'issue', 'render_smtp_blocked_hint', 'from_address', 'host', 'port'],
             ]);
     }
 }

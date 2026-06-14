@@ -318,14 +318,21 @@ export default function PlatformPage() {
           </p>
         ) : null}
 
-        {mailStatus && !mailStatus.configured ? (
+        {mailStatus && (!mailStatus.configured || mailStatus.render_smtp_blocked_hint) ? (
           <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
-            <h2 className="font-semibold text-amber-900 dark:text-amber-200">Email delivery not configured</h2>
+            <h2 className="font-semibold text-amber-900 dark:text-amber-200">
+              {mailStatus.configured ? "SMTP blocked on Render free tier" : "Email delivery not configured"}
+            </h2>
             <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
-              Invitations will not reach inboxes until SMTP is set on the API service (Render environment variables).
+              {mailStatus.configured
+                ? "Gmail SMTP credentials can be correct and still fail with a timeout on Render free services."
+                : "Invitations will not reach inboxes until mail is configured on the API service (Render environment variables)."}
             </p>
             {mailStatus.issue ? (
               <p className="mt-2 text-sm font-medium text-amber-900 dark:text-amber-200">{mailStatus.issue}</p>
+            ) : null}
+            {mailStatus.render_smtp_blocked_hint ? (
+              <p className="mt-2 text-sm text-amber-900 dark:text-amber-200">{mailStatus.render_smtp_blocked_hint}</p>
             ) : null}
             <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
               Current mailer: <span className="font-mono">{mailStatus.mailer}</span>

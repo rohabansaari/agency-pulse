@@ -501,6 +501,7 @@ export interface PlatformMailStatus {
   mailer: string;
   configured: boolean;
   issue: string | null;
+  render_smtp_blocked_hint: string | null;
   from_address: string | null;
   host: string | null;
   port: number | string | null;

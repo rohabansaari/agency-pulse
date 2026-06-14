@@ -42,13 +42,51 @@ class MailConfiguration
         $mailer = $this->mailer();
 
         if (! in_array($mailer, self::REAL_DELIVERY_MAILERS, true)) {
-            return 'MAIL_MAILER must be smtp in production (currently "'.$mailer.'"). Log/array drivers do not deliver to inboxes.';
+            return 'MAIL_MAILER must be resend (recommended on Render free tier) or smtp on a paid host. Currently "'.$mailer.'" only writes to logs.';
+        }
+
+        if ($mailer === 'resend') {
+            return $this->resendConfigurationIssue();
         }
 
         if ($mailer !== 'smtp') {
             return null;
         }
 
+        return $this->smtpConfigurationIssue();
+    }
+
+    public function renderSmtpBlockedHint(): ?string
+    {
+        if ($this->mailer() !== 'smtp') {
+            return null;
+        }
+
+        return 'Render free tier blocks outbound SMTP (ports 465/587). Upgrade the API to a paid instance, or switch to MAIL_MAILER=resend with a Resend API key.';
+    }
+
+    private function resendConfigurationIssue(): ?string
+    {
+        $apiKey = (string) config('services.resend.key', '');
+        $fromAddress = (string) config('mail.from.address', '');
+
+        if ($apiKey === '') {
+            return 'RESEND_KEY is not set. Create a free API key at resend.com/api-keys.';
+        }
+
+        if ($fromAddress === '') {
+            return 'MAIL_FROM_ADDRESS is not set. Use an address on a domain you verified in Resend (e.g. noreply@yourdomain.com).';
+        }
+
+        if (str_ends_with(strtolower($fromAddress), '@gmail.com')) {
+            return 'Gmail addresses cannot be used as the sender with Resend. Verify your own domain in Resend and set MAIL_FROM_ADDRESS to e.g. noreply@yourdomain.com.';
+        }
+
+        return null;
+    }
+
+    private function smtpConfigurationIssue(): ?string
+    {
         $username = (string) config('mail.mailers.smtp.username', '');
         $password = (string) config('mail.mailers.smtp.password', '');
         $fromAddress = (string) config('mail.from.address', '');
@@ -77,6 +115,7 @@ class MailConfiguration
      *     mailer: string,
      *     configured: bool,
      *     issue: string|null,
+     *     render_smtp_blocked_hint: string|null,
      *     from_address: string|null,
      *     host: string|null,
      *     port: int|string|null
@@ -88,9 +127,10 @@ class MailConfiguration
             'mailer' => $this->mailer(),
             'configured' => $this->isRealDeliveryConfigured(),
             'issue' => $this->configurationIssue(),
+            'render_smtp_blocked_hint' => $this->renderSmtpBlockedHint(),
             'from_address' => config('mail.from.address'),
-            'host' => config('mail.mailers.smtp.host'),
-            'port' => config('mail.mailers.smtp.port'),
+            'host' => $this->mailer() === 'smtp' ? config('mail.mailers.smtp.host') : null,
+            'port' => $this->mailer() === 'smtp' ? config('mail.mailers.smtp.port') : null,
         ];
     }
 
@@ -104,6 +144,7 @@ class MailConfiguration
             Log::warning('Mail is not configured for inbox delivery.', [
                 'issue' => $issue,
                 'mailer' => $this->mailer(),
+                'render_smtp_blocked_hint' => $this->renderSmtpBlockedHint(),
             ]);
         }
     }
