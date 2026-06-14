@@ -18,24 +18,27 @@
                 </tr>
                 <tr>
                     <td style="padding:8px 32px 32px;">
+                        <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;">Hi {{ $user->name }},</h1>
+                        <p style="margin:0 0 16px;line-height:1.6;color:#6b6560;">
+                            You have been invited to join
+                            <strong style="color:#1a1917;">{{ $organization->name }}</strong>
+                            on AgencyPulse as
+                            <span style="display:inline-block;background:#2d6a4f;color:#fff;font-weight:600;font-size:12px;padding:4px 10px;border-radius:999px;vertical-align:middle;">{{ $roleLabel }}</span>.
+                        </p>
                         @if ($isAdminWelcome)
-                            <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;">Welcome, {{ $user->name }}</h1>
                             <p style="margin:0 0 16px;line-height:1.6;color:#6b6560;">
-                                Your organization <strong style="color:#1a1917;">{{ $organization->name }}</strong> is ready on AgencyPulse.
-                                Set your admin password to activate your account.
+                                Your organization workspace is ready. Accept the invitation to set your admin password and get started.
                             </p>
                         @else
-                            <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;">Hi {{ $user->name }},</h1>
                             <p style="margin:0 0 16px;line-height:1.6;color:#6b6560;">
-                                You have been invited to join <strong style="color:#1a1917;">{{ $organization->name }}</strong> on AgencyPulse.
-                                Set your password to activate your account.
+                                Click below to accept your invitation and create your password.
                             </p>
                         @endif
                         <p style="margin:0 0 24px;">
-                            <a href="{{ $setupUrl }}" style="display:inline-block;background:#2d6a4f;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px;">Set your password</a>
+                            <a href="{{ $setupUrl }}" style="display:inline-block;background:#2d6a4f;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px;">Accept Invitation</a>
                         </p>
                         <p style="margin:0 0 8px;font-size:13px;color:#6b6560;line-height:1.5;">
-                            This link expires in 24 hours and can only be used once.
+                            This invitation link expires in 48 hours and can only be used once.
                         </p>
                         <p style="margin:0;font-size:12px;color:#6b6560;line-height:1.5;word-break:break-all;">
                             If the button does not work, copy this URL:<br>{{ $setupUrl }}

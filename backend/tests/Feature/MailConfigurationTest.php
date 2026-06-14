@@ -132,15 +132,28 @@ class MailConfigurationTest extends TestCase
         );
     }
 
-    public function test_brevo_mailer_rejects_gmail_from_address(): void
+    public function test_brevo_mailer_allows_verified_gmail_sender(): void
     {
         Config::set('mail.default', 'brevo');
         Config::set('services.brevo.key', 'xkeysib_test_key');
         Config::set('mail.from.address', 'agencypulse.notifications@gmail.com');
 
+        $mailConfiguration = app(MailConfiguration::class);
+
+        $this->assertNull($mailConfiguration->configurationIssue());
+        $this->assertNotNull($mailConfiguration->brevoSenderVerificationHint());
+    }
+
+    public function test_brevo_mailer_rejects_smtp_key_prefix(): void
+    {
+        Config::set('mail.default', 'brevo');
+        Config::set('services.brevo.key', 'xsmtpsib-test-key');
+        Config::set('mail.from.address', 'agencypulse.notifications@gmail.com');
+
         $issue = app(MailConfiguration::class)->configurationIssue();
 
-        $this->assertStringContainsString('Gmail addresses cannot be used', $issue);
+        $this->assertStringContainsString('xsmtpsib-', $issue);
+        $this->assertStringContainsString('xkeysib-', $issue);
     }
 
     public function test_resend_mailer_requires_api_key(): void
@@ -188,9 +201,19 @@ class MailConfigurationTest extends TestCase
         $issue = app(MailConfiguration::class)->configurationIssue();
 
         $this->assertSame(
-            'MAIL_FROM_ADDRESS must exactly match MAIL_USERNAME for Gmail SMTP.',
+            'MAIL_FROM_ADDRESS must exactly match EMAIL_USER for Gmail SMTP.',
             $issue,
         );
+    }
+
+    public function test_smtp_mailer_accepts_email_user_alias(): void
+    {
+        Config::set('mail.default', 'smtp');
+        Config::set('mail.mailers.smtp.username', 'agencypulse.notifications@gmail.com');
+        Config::set('mail.mailers.smtp.password', 'apppassword123456');
+        Config::set('mail.from.address', 'agencypulse.notifications@gmail.com');
+
+        $this->assertNull(app(MailConfiguration::class)->configurationIssue());
     }
 
     public function test_runtime_fixes_strip_spaces_from_app_password(): void

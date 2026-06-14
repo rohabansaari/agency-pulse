@@ -68,7 +68,7 @@ class MailConfiguration
             return null;
         }
 
-        return 'Render free tier blocks outbound SMTP (ports 465/587). Switch to MAIL_MAILER=piisend with PIISEND_API_KEY (no domain), or MAIL_MAILER=resend / brevo with a verified domain, or upgrade the API to paid.';
+        return 'Render free tier blocks outbound SMTP (ports 465/587). Use MAIL_MAILER=piisend with PIISEND_API_KEY (no domain), upgrade the API to Starter for Gmail SMTP, or use Resend/Brevo with a verified domain.';
     }
 
     public function fromAddress(): ?string
@@ -95,6 +95,22 @@ class MailConfiguration
         $domain = substr(strrchr($fromAddress, '@') ?: '', 1);
 
         return $domain === 'mlsender.net' || str_ends_with($domain, '.mlsender.net');
+    }
+
+    public function isGmailSender(): bool
+    {
+        $fromAddress = $this->fromAddress();
+
+        return $fromAddress !== null && str_ends_with($fromAddress, '@gmail.com');
+    }
+
+    public function brevoSenderVerificationHint(): ?string
+    {
+        if ($this->mailer() !== 'brevo' || ! $this->isGmailSender()) {
+            return null;
+        }
+
+        return 'Verify agencypulse.notifications@gmail.com in Brevo → Senders, Domains & IPs → Senders → enter the 6-digit code Brevo emails you. Gmail cannot be domain-authenticated; single-sender verification is required.';
     }
 
     private function piisendConfigurationIssue(): ?string
@@ -142,19 +158,19 @@ class MailConfiguration
         $fromAddress = $this->fromAddress();
 
         if ($apiKey === '') {
-            return 'BREVO_API_KEY is not set. Create a free API key at app.brevo.com → SMTP & API → API keys.';
+            return 'BREVO_API_KEY is not set. Create an HTTP API key at app.brevo.com → SMTP & API → API keys (starts with xkeysib-).';
+        }
+
+        if (str_starts_with($apiKey, 'xsmtpsib-')) {
+            return 'BREVO_API_KEY is an SMTP key (xsmtpsib-). Render uses the HTTP API — create an API key (xkeysib-…) under API keys, not SMTP keys. SMTP ports are blocked on Render free tier anyway.';
         }
 
         if ($fromAddress === null) {
-            return 'MAIL_FROM_ADDRESS is not set. Use an address on a domain you verified in Brevo (e.g. noreply@yourdomain.com).';
+            return 'MAIL_FROM_ADDRESS is not set. Use a sender you verified in Brevo (e.g. agencypulse.notifications@gmail.com).';
         }
 
         if (in_array($fromAddress, self::PLACEHOLDER_FROM_ADDRESSES, true)) {
-            return 'MAIL_FROM_ADDRESS is still a placeholder. Set it to an address on your verified Brevo domain (e.g. noreply@yourdomain.com).';
-        }
-
-        if (str_ends_with($fromAddress, '@gmail.com')) {
-            return 'Gmail addresses cannot be used as the sender with Brevo. Verify your domain in Brevo and set MAIL_FROM_ADDRESS to e.g. noreply@yourdomain.com.';
+            return 'MAIL_FROM_ADDRESS is still a placeholder. Set it to your verified Brevo sender address.';
         }
 
         return null;
@@ -191,19 +207,19 @@ class MailConfiguration
         $fromAddress = (string) config('mail.from.address', '');
 
         if ($username === '') {
-            return 'MAIL_USERNAME is not set.';
+            return 'EMAIL_USER (or MAIL_USERNAME) is not set. Use agencypulse.notifications@gmail.com with a Gmail App Password.';
         }
 
         if ($password === '') {
-            return 'MAIL_PASSWORD is not set. Use a Gmail App Password (16 characters, no spaces).';
+            return 'EMAIL_PASS (or MAIL_PASSWORD) is not set. Use a Gmail App Password (16 characters, no spaces).';
         }
 
         if ($fromAddress === '') {
-            return 'MAIL_FROM_ADDRESS is not set. It must match MAIL_USERNAME for Gmail.';
+            return 'MAIL_FROM_ADDRESS is not set. Set it to the same Gmail address as EMAIL_USER.';
         }
 
         if (strcasecmp($fromAddress, $username) !== 0) {
-            return 'MAIL_FROM_ADDRESS must exactly match MAIL_USERNAME for Gmail SMTP.';
+            return 'MAIL_FROM_ADDRESS must exactly match EMAIL_USER for Gmail SMTP.';
         }
 
         return null;
@@ -217,6 +233,8 @@ class MailConfiguration
      *     render_smtp_blocked_hint: string|null,
      *     from_address: string|null,
      *     using_trial_mailersend_sender: bool,
+     *     using_gmail_sender: bool,
+     *     brevo_sender_verification_hint: string|null,
      *     recommended_mailer: string,
      *     providers: list<array<string, mixed>>,
      *     host: string|null,
@@ -234,6 +252,8 @@ class MailConfiguration
             'render_smtp_blocked_hint' => $this->renderSmtpBlockedHint(),
             'from_address' => $this->fromAddress(),
             'using_trial_mailersend_sender' => $this->isTrialMailerSendSender(),
+            'using_gmail_sender' => $this->isGmailSender(),
+            'brevo_sender_verification_hint' => $this->brevoSenderVerificationHint(),
             'recommended_mailer' => $catalog->recommendedMailer(),
             'providers' => $catalog->options(),
             'host' => $this->mailer() === 'smtp' ? config('mail.mailers.smtp.host') : null,

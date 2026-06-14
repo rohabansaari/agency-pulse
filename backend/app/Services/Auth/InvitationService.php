@@ -4,35 +4,37 @@ namespace App\Services\Auth;
 
 use App\Enums\OrganizationMemberStatus;
 use App\Enums\UserRole;
-use App\Mail\AccountInvitationMail;
 use App\Models\InvitationToken;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use App\Services\Mail\EmailService;
 use App\Services\Mail\InvitationDeliveryTracer;
 use App\Services\Mail\MailConfiguration;
 use App\Services\Mail\MailerSendErrorFormatter;
+use App\Support\InvitationTokenGenerator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class InvitationService
 {
-    public const TOKEN_TTL_HOURS = 24;
+    public const TOKEN_TTL_HOURS = 48;
+
+    private const DUPLICATE_INVITE_WINDOW_SECONDS = 60;
 
     public function __construct(
         private readonly MembershipRoleSync $membershipRoleSync,
         private readonly MailConfiguration $mailConfiguration,
         private readonly InvitationDeliveryTracer $deliveryTracer,
         private readonly MailerSendErrorFormatter $mailerSendErrors,
+        private readonly EmailService $emailService,
     ) {}
 
     public function createPlaceholderPassword(): string
     {
-        return Hash::make(Str::random(64));
+        return Hash::make(InvitationTokenGenerator::create());
     }
 
     /**
@@ -107,6 +109,8 @@ class InvitationService
         bool $isAdminWelcome = false,
         ?callable $afterPending = null,
     ): array {
+        $this->assertNotRecentlyInvited($email, $organization);
+
         $bundle = DB::transaction(function () use ($organization, $name, $email, $role, $afterPending) {
             $pending = $this->createPendingMember($organization, $name, $email, $role);
 
@@ -154,7 +158,7 @@ class InvitationService
             ->whereNull('used_at')
             ->update(['used_at' => now()]);
 
-        $plainToken = Str::random(64);
+        $plainToken = InvitationTokenGenerator::create();
 
         InvitationToken::create([
             'user_id' => $user->id,
@@ -185,9 +189,16 @@ class InvitationService
         $setupUrl = $this->setupPasswordUrl($plainToken);
         $role = $this->resolveInvitationRole($user, $organization, $isAdminWelcome);
 
-        Mail::mailer($this->mailConfiguration->mailer())
-            ->to($recipientEmail, (string) $user->name)
-            ->send(new AccountInvitationMail($user, $organization, $setupUrl, $role));
+        $this->emailService->sendInvitationEmail([
+            'to' => $recipientEmail,
+            'name' => (string) $user->name,
+            'role' => $role,
+            'inviteLink' => $setupUrl,
+            'companyName' => (string) $organization->name,
+            'user' => $user,
+            'organization' => $organization,
+            'isAdminWelcome' => $isAdminWelcome,
+        ]);
     }
 
     private function resolveInvitationRole(
@@ -378,6 +389,8 @@ class InvitationService
             ]);
         }
 
+        $this->assertNotRecentlyInvited($user->email, $organization, 'user');
+
         $membership->update(['invited_at' => now()]);
 
         $previousCount = InvitationToken::query()
@@ -391,7 +404,7 @@ class InvitationService
             ->whereNull('used_at')
             ->update(['used_at' => now()]);
 
-        $plainToken = Str::random(64);
+        $plainToken = InvitationTokenGenerator::create();
 
         $token = InvitationToken::create([
             'user_id' => $user->id,
@@ -418,5 +431,32 @@ class InvitationService
             ->where('organization_id', $member->organization_id)
             ->latest('id')
             ->first();
+    }
+
+    public function assertNotRecentlyInvited(
+        string $email,
+        Organization $organization,
+        string $field = 'email',
+    ): void {
+        $normalizedEmail = strtolower(trim($email));
+
+        $existingUser = User::query()->where('email', $normalizedEmail)->first();
+
+        if (! $existingUser) {
+            return;
+        }
+
+        $recentInvite = InvitationToken::query()
+            ->where('user_id', $existingUser->id)
+            ->where('organization_id', $organization->id)
+            ->whereNull('used_at')
+            ->where('sent_at', '>=', now()->subSeconds(self::DUPLICATE_INVITE_WINDOW_SECONDS))
+            ->exists();
+
+        if ($recentInvite) {
+            throw ValidationException::withMessages([
+                $field => ['An invitation was already sent to this email within the last minute. Please wait before sending again.'],
+            ]);
+        }
     }
 }

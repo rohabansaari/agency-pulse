@@ -258,6 +258,86 @@ class InvitationTest extends TestCase
         Mail::assertSent(AccountInvitationMail::class);
     }
 
+    public function test_invitations_send_endpoint_creates_member_and_sends_email(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        $response = $this->withHeaders(['X-Organization-Id' => (string) $admin->organization_id])
+            ->postJson('/api/v1/invitations/send', [
+                'email' => 'manager@example.com',
+                'name' => 'John Doe',
+                'role' => 'manager',
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('invitation_email_sent', true)
+            ->assertJsonPath('expires_in_hours', 48)
+            ->assertJsonStructure(['invite_link']);
+
+        Mail::assertSent(AccountInvitationMail::class, fn ($mail) => $mail->hasTo('manager@example.com'));
+    }
+
+    public function test_duplicate_invite_within_one_minute_is_rejected(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $employee = User::factory()->employee()->create([
+            'organization_id' => $admin->organization_id,
+        ]);
+
+        OrganizationMember::query()
+            ->where('organization_id', $admin->organization_id)
+            ->where('user_id', $employee->id)
+            ->update([
+                'status' => OrganizationMemberStatus::Invited,
+                'invited_at' => now(),
+                'joined_at' => null,
+            ]);
+
+        InvitationToken::create([
+            'user_id' => $employee->id,
+            'organization_id' => $admin->organization_id,
+            'token_hash' => hash('sha256', 'recent-token'),
+            'sent_at' => now(),
+            'expires_at' => now()->addHours(48),
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders(['X-Organization-Id' => (string) $admin->organization_id])
+            ->postJson("/api/v1/team/{$employee->id}/resend-invitation")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['user']);
+    }
+
+    public function test_invitation_email_uses_role_in_subject(): void
+    {
+        Mail::fake();
+
+        $organization = Organization::factory()->create();
+        $result = app(InvitationService::class)->createInvitedMember(
+            $organization,
+            'Role User',
+            'role-user@example.com',
+            UserRole::SubAdmin,
+        );
+
+        Mail::assertSent(
+            AccountInvitationMail::class,
+            fn (AccountInvitationMail $mail) => str_contains(
+                $mail->envelope()->subject,
+                'Sub Admin',
+            ) && $mail->hasTo('role-user@example.com'),
+        );
+
+        $this->assertNotEmpty($result['plain_token']);
+    }
+
     public function test_suspended_member_cannot_login(): void
     {
         $user = User::factory()->employee()->create([

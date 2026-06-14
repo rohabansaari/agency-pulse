@@ -519,6 +519,8 @@ export interface PlatformMailStatus {
   render_smtp_blocked_hint: string | null;
   from_address: string | null;
   using_trial_mailersend_sender?: boolean;
+  using_gmail_sender?: boolean;
+  brevo_sender_verification_hint?: string | null;
   recommended_mailer?: string;
   providers?: PlatformMailProvider[];
   host: string | null;

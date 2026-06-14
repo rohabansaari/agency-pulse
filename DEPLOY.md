@@ -155,21 +155,50 @@ Remove Gmail SMTP variables and any unused MailerSend/Brevo keys.
 
 You cannot send `from` `@gmail.com` — the From address must use your verified domain.
 
-#### Option C — Brevo (highest free daily volume, requires domain)
+#### Option C — Brevo (300 emails/day, works on Render free tier)
 
-1. Sign up at [brevo.com](https://www.brevo.com) — no credit card. Free plan: **300 emails/day** (~9,000/month).
-2. **Senders, domains & IPs** → **Domains** → add and verify your domain.
-3. **SMTP & API** → **API keys** → create a key (`xkeysib-…`).
-4. On Render **API** service → **Environment**:
+Uses HTTPS (port 443). Free plan: **300 emails/day** (~9,000/month).
+
+**Important:** AgencyPulse uses Brevo’s **HTTP API**, not SMTP. You need an **API key** (`xkeysib-…`), **not** an SMTP key (`xsmtpsib-…`). Render free tier blocks SMTP anyway.
+
+##### Step 1 — Verify your Gmail sender in Brevo
+
+1. Log in at [app.brevo.com](https://app.brevo.com).
+2. **Senders, Domains & IPs** → **Senders** → **Add a sender**.
+3. From name: `AgencyPulse`
+4. From email: `agencypulse.notifications@gmail.com`
+5. Brevo emails a **6-digit code** to that inbox — enter it in Brevo → **Verify sender**.
+
+(Gmail cannot be domain-authenticated; single-sender verification is enough to start sending.)
+
+##### Step 2 — Create an HTTP API key (not SMTP key)
+
+1. Profile menu → **SMTP & API** → **API keys** tab *(not SMTP keys)*.
+2. **Generate a new API key** → name it e.g. `AgencyPulse Render`.
+3. Copy the key — it starts with **`xkeysib-`**.
+
+Do **not** paste `xsmtpsib-…` keys into `BREVO_API_KEY` — those are for SMTP only.
+
+##### Step 3 — Render API environment variables
+
+On your **`agencypulse-api`** service → **Environment**:
 
 | Key | Value |
 |-----|--------|
 | `MAIL_MAILER` | `brevo` |
-| `BREVO_API_KEY` | `xkeysib-…` *(your Brevo API key)* |
-| `MAIL_FROM_ADDRESS` | `noreply@yourdomain.com` *(verified domain)* |
+| `BREVO_API_KEY` | `xkeysib-…` *(HTTP API key from Step 2)* |
+| `MAIL_FROM_ADDRESS` | `agencypulse.notifications@gmail.com` |
 | `MAIL_FROM_NAME` | `AgencyPulse` |
 
-5. Save → redeploy → **Platform** → **Send test email**.
+Remove unused mail keys: `PIISEND_API_KEY`, `RESEND_KEY`, `MAILERSEND_API_KEY`, `EMAIL_USER`, `EMAIL_PASS`, Gmail SMTP vars.
+
+##### Step 4 — Deploy and test
+
+1. Save → wait for redeploy (**Live**).
+2. **Platform** → **Send test email**.
+3. Invite an employee — check inbox and spam.
+
+If Brevo returns “sender not valid”, the Gmail address is not verified yet — repeat Step 1.
 
 #### Option D — MailerSend (legacy, requires domain)
 
@@ -194,9 +223,13 @@ You cannot send `from` `@gmail.com` via MailerSend — the From address must use
 
 **Trial sender domain limit:** If `MAIL_FROM_ADDRESS` uses MailerSend's trial domain (`@*.mlsender.net`), MailerSend only allows **2 unique recipients** total — admin invites to your signup email may work while employee, manager, and sub-admin invites to other inboxes fail with `MS42225`. This is separate from your monthly email quota. Fix: verify your own domain in MailerSend → set `MAIL_FROM_ADDRESS` to e.g. `noreply@yourdomain.com` (not `@mlsender.net`) → redeploy → resend invitations from **Employees**.
 
-#### Option E — Gmail SMTP (Render **paid** API only)
+#### Option E — Gmail SMTP (Render **Starter+** API only)
 
-Upgrade the API web service from **Free** to **Starter** ($7/mo). Paid instances allow SMTP on ports 465/587.
+Render **free** web services block outbound SMTP on ports **587** and **465**. Upgrade the API web service from **Free** to **Starter** ($7/mo) to use Gmail.
+
+1. In Google Account → **Security** → enable **2-Step Verification**.
+2. **App passwords** → create one for “Mail” → copy the 16-character password (no spaces).
+3. On Render **API** service → **Environment**:
 
 | Key | Value |
 |-----|--------|
@@ -204,12 +237,14 @@ Upgrade the API web service from **Free** to **Starter** ($7/mo). Paid instances
 | `MAIL_HOST` | `smtp.gmail.com` |
 | `MAIL_PORT` | `587` |
 | `MAIL_ENCRYPTION` | `tls` |
-| `MAIL_USERNAME` | `agencypulse.notifications@gmail.com` |
-| `MAIL_PASSWORD` | Gmail App Password, 16 chars, no spaces |
+| `EMAIL_USER` | `agencypulse.notifications@gmail.com` |
+| `EMAIL_PASS` | *(Gmail App Password — 16 chars, no spaces)* |
 | `MAIL_FROM_ADDRESS` | `agencypulse.notifications@gmail.com` |
 | `MAIL_FROM_NAME` | `AgencyPulse` |
 
-Port **587 + tls** is preferred over 465/ssl for Gmail.
+`EMAIL_USER` / `EMAIL_PASS` are aliases for `MAIL_USERNAME` / `MAIL_PASSWORD`. Never commit the app password to GitHub.
+
+4. Save → redeploy → **Platform** → **Send test email** → invite a team member.
 
 **After any mail change:** Save on Render → redeploy → **Platform** → **Send test email** → check inbox and spam.
 

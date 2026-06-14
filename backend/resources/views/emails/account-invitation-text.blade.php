@@ -1,15 +1,9 @@
-@if ($isAdminWelcome)
-Welcome, {{ $user->name }}
-
-Your organization {{ $organization->name }} is ready on AgencyPulse.
-Set your admin password to activate your account.
-@else
 Hi {{ $user->name }},
 
-You have been invited to join {{ $organization->name }} on AgencyPulse.
-Set your password to activate your account.
-@endif
+You have been invited to join {{ $organization->name }} on AgencyPulse as {{ $roleLabel }}.
 
-Set your password: {{ $setupUrl }}
+Accept your invitation: {{ $setupUrl }}
 
-This link expires in 24 hours and can only be used once.
+This invitation link expires in 48 hours and can only be used once.
+
+— AgencyPulse

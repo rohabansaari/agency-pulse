@@ -20,16 +20,15 @@ class AccountInvitationMail extends Mailable
         public Organization $organization,
         public string $setupUrl,
         public UserRole $role,
+        public bool $isAdminWelcome = false,
     ) {}
 
     public function envelope(): Envelope
     {
-        $subject = $this->role === UserRole::Admin
-            ? 'Welcome to AgencyPulse — set up your admin account'
-            : 'You are invited to '.$this->organization->name.' on AgencyPulse';
+        $roleLabel = $this->role->label();
 
         return new Envelope(
-            subject: $subject,
+            subject: "You're invited to join AgencyPulse as {$roleLabel}",
         );
     }
 
@@ -39,7 +38,8 @@ class AccountInvitationMail extends Mailable
             view: 'emails.account-invitation',
             text: 'emails.account-invitation-text',
             with: [
-                'isAdminWelcome' => $this->role === UserRole::Admin,
+                'isAdminWelcome' => $this->isAdminWelcome,
+                'roleLabel' => $this->role->label(),
             ],
         );
     }
