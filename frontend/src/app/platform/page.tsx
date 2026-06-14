@@ -331,6 +331,9 @@ export default function PlatformPage() {
             {mailStatus.issue ? (
               <p className="mt-2 text-sm font-medium text-amber-900 dark:text-amber-200">{mailStatus.issue}</p>
             ) : null}
+            {mailStatus.render_smtp_blocked_hint ? (
+              <p className="mt-2 text-sm text-amber-900 dark:text-amber-200">{mailStatus.render_smtp_blocked_hint}</p>
+            ) : null}
             {mailStatus.brevo_sender_verification_hint ? (
               <p className="mt-2 text-sm text-amber-900 dark:text-amber-200">{mailStatus.brevo_sender_verification_hint}</p>
             ) : null}
