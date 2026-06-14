@@ -24,7 +24,6 @@ export default function PlatformPage() {
   const [orgName, setOrgName] = useState("");
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
   const [createError, setCreateError] = useState("");
   const [createSuccess, setCreateSuccess] = useState("");
   const [savingOrg, setSavingOrg] = useState(false);
@@ -72,13 +71,11 @@ export default function PlatformPage() {
         organization_name: orgName,
         admin_name: adminName,
         admin_email: adminEmail,
-        admin_password: adminPassword,
       });
       setCreateSuccess(response.message);
       setOrgName("");
       setAdminName("");
       setAdminEmail("");
-      setAdminPassword("");
       setShowCreate(false);
       await load();
     } catch (err) {
@@ -280,7 +277,7 @@ export default function PlatformPage() {
           <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800/50">
             <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">New organization</h2>
             <p className="mt-1 text-xs text-zinc-500">
-              Creates the organization and its primary admin account.
+              Creates the organization and emails the admin an invitation to set their password.
             </p>
             <form className="mt-4 grid gap-4 sm:grid-cols-2" onSubmit={handleCreateOrganization}>
               <input
@@ -303,15 +300,6 @@ export default function PlatformPage() {
                 placeholder="Admin email"
                 value={adminEmail}
                 onChange={(event) => setAdminEmail(event.target.value)}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-              />
-              <input
-                required
-                type="password"
-                minLength={8}
-                placeholder="Admin password"
-                value={adminPassword}
-                onChange={(event) => setAdminPassword(event.target.value)}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
               />
               <div className="flex flex-wrap items-center gap-2 sm:col-span-2">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\InvitationToken;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,7 +21,28 @@ class TeamMemberResource extends JsonResource
             'email' => $this->user?->email,
             'role' => $this->role->value,
             'status' => $this->status->value,
+            'invited_at' => $this->invited_at,
             'joined_at' => $this->joined_at,
+            'invitation' => $this->when(
+                $this->status->value === 'invited',
+                function () {
+                    $token = InvitationToken::query()
+                        ->where('user_id', $this->user_id)
+                        ->where('organization_id', $this->organization_id)
+                        ->latest('id')
+                        ->first();
+
+                    if (! $token) {
+                        return null;
+                    }
+
+                    return [
+                        'sent_at' => $token->sent_at,
+                        'expires_at' => $token->expires_at,
+                        'is_expired' => $token->isExpired(),
+                    ];
+                }
+            ),
             'created_at' => $this->created_at,
             'team_id' => $this->when(isset($this->team_id), $this->team_id),
             'team_name' => $this->when(isset($this->team_name), $this->team_name),

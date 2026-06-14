@@ -27,7 +27,6 @@ export function CreateEmployeeModal({
 }: CreateEmployeeModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("employee");
   const [salaryType, setSalaryType] = useState<SalaryType>("hourly");
   const [salaryAmount, setSalaryAmount] = useState("");
@@ -39,7 +38,6 @@ export function CreateEmployeeModal({
   function resetForm() {
     setName("");
     setEmail("");
-    setPassword("");
     setRole("employee");
     setSalaryType("hourly");
     setSalaryAmount("");
@@ -69,7 +67,6 @@ export function CreateEmployeeModal({
       await createEmployee({
         name: name.trim(),
         email: email.trim(),
-        password,
         role,
         salary_type: salaryType,
         hourly_rate: salaryType === "hourly" ? amount : undefined,
@@ -86,7 +83,7 @@ export function CreateEmployeeModal({
       setError(
         err instanceof ApiError
           ? formatApiErrors(err.errors) || err.message
-          : "Failed to create employee.",
+          : "Failed to invite employee.",
       );
     } finally {
       setSaving(false);
@@ -97,8 +94,8 @@ export function CreateEmployeeModal({
 
   return (
     <Modal
-      title="Create employee"
-      description="Set up a new team member with salary and role."
+      title="Invite employee"
+      description="Send an invitation email so they can set their password and activate their account."
       onClose={handleClose}
       size="lg"
     >
@@ -116,15 +113,6 @@ export function CreateEmployeeModal({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-            />
-          </FormField>
-          <FormField label="Password" htmlFor="emp-password" required hint="Minimum 8 characters">
-            <PasswordInput
-              id="emp-password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
             />
           </FormField>
           {canSelectRole ? (
@@ -196,7 +184,7 @@ export function CreateEmployeeModal({
 
         <div className="flex gap-2 pt-2">
           <Button type="submit" disabled={saving}>
-            {saving ? "Creating…" : "Create employee"}
+            {saving ? "Sending invitation…" : "Send invitation"}
           </Button>
           <Button type="button" variant="secondary" onClick={handleClose}>
             Cancel

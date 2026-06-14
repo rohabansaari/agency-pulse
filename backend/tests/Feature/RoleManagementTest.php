@@ -7,6 +7,7 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -18,6 +19,7 @@ class RoleManagementTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolePermissionSeeder::class);
+        Mail::fake();
     }
 
     private function headers(User $user): array
@@ -138,7 +140,6 @@ class RoleManagementTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'Missing Role',
                 'email' => 'missing-role@example.com',
-                'password' => 'Password1!',
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['role']);
@@ -172,7 +173,6 @@ class RoleManagementTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'New Manager',
                 'email' => 'manager@example.com',
-                'password' => 'Password1!',
                 'role' => UserRole::Manager->value,
                 'salary_type' => 'monthly',
                 'monthly_salary' => 5000,
@@ -193,7 +193,6 @@ class RoleManagementTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'Ops Lead',
                 'email' => 'ops@example.com',
-                'password' => 'Password1!',
                 'role' => UserRole::SubAdmin->value,
                 'salary_type' => 'monthly',
                 'monthly_salary' => 6000,

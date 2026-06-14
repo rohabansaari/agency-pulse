@@ -115,6 +115,12 @@ export interface ProjectAssignee {
   assigned_at?: string;
 }
 
+export interface MemberInvitationMeta {
+  sent_at: string;
+  expires_at: string;
+  is_expired: boolean;
+}
+
 export interface TeamMember {
   id: number;
   user_id: number;
@@ -122,7 +128,9 @@ export interface TeamMember {
   email: string;
   role: UserRole;
   status: MemberStatus;
+  invited_at?: string | null;
   joined_at: string | null;
+  invitation?: MemberInvitationMeta | null;
   created_at: string;
   team_id?: number | null;
   team_name?: string | null;

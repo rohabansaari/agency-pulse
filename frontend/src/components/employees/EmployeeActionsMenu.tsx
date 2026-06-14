@@ -3,7 +3,7 @@
 import { Modal } from "@/components/ui/Modal";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { ActionMenu, ActionMenuItem } from "@/components/ui/ActionMenu";
-import { ApiError, resetEmployeePassword, updateTeamMember, formatApiErrors } from "@/lib/api";
+import { ApiError, resetEmployeePassword, resendEmployeeInvitation, updateTeamMember, formatApiErrors } from "@/lib/api";
 import {
   canChangeMemberRole,
   canEditEmployeeStatus,
@@ -21,8 +21,8 @@ const ASSIGNABLE_ROLES: UserRole[] = MUTABLE_ROLES;
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Active" },
-  { value: "invited", label: "Invited" },
-  { value: "suspended", label: "Suspended" },
+  { value: "invited", label: "Pending invitation" },
+  { value: "suspended", label: "Disabled" },
 ];
 
 type EmployeeActionsMenuProps = {
@@ -41,7 +41,12 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const canResetPassword = canManageOrgEmployees(viewer.role) && canResetMemberPassword(member.role);
+  const canResetPassword =
+    canManageOrgEmployees(viewer.role) &&
+    canResetMemberPassword(member.role) &&
+    member.status === "active";
+  const canResendInvitation =
+    canManageOrgEmployees(viewer.role) && member.status === "invited";
   const canEdit = canEditEmployeeStatus(viewer.role);
   const isSelf = viewer.id === member.user_id;
   const canEditStatus = canEdit && canEditMemberStatus(member.role);
@@ -102,6 +107,26 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
             }}
           >
             Update status
+          </ActionMenuItem>
+        ) : null}
+        {canResendInvitation ? (
+          <ActionMenuItem
+            onClick={() => {
+              void (async () => {
+                setSaving(true);
+                setError("");
+                try {
+                  await resendEmployeeInvitation(member.user_id);
+                  onUpdated();
+                } catch (err) {
+                  setError(err instanceof ApiError ? err.message : "Failed to resend invitation.");
+                } finally {
+                  setSaving(false);
+                }
+              })();
+            }}
+          >
+            Resend invitation
           </ActionMenuItem>
         ) : null}
         {canResetPassword ? (

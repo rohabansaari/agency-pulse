@@ -6,118 +6,61 @@ namespace Tests\Feature;
 
 
 
+use App\Enums\OrganizationMemberStatus;
 use App\Enums\UserRole;
-
+use App\Mail\UserInvitationMail;
 use App\Models\User;
-
 use Database\Seeders\RolePermissionSeeder;
-
 use Illuminate\Foundation\Testing\RefreshDatabase;
-
 use Illuminate\Support\Facades\Hash;
-
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
-
 use Tests\TestCase;
 
-
-
 class EmployeeManagementTest extends TestCase
-
 {
-
     use RefreshDatabase;
 
-
-
     protected function setUp(): void
-
     {
-
         parent::setUp();
-
         $this->seed(RolePermissionSeeder::class);
-
     }
-
-
 
     private function headers(User $user): array
-
     {
-
         return ['X-Organization-Id' => (string) $user->organization_id];
-
     }
 
-
-
-    public function test_admin_can_create_employee_with_password(): void
-
+    public function test_admin_can_invite_employee_without_password(): void
     {
+        Mail::fake();
 
         $admin = User::factory()->admin()->create();
-
         Sanctum::actingAs($admin);
 
-
-
         $response = $this->withHeaders($this->headers($admin))
-
             ->postJson('/api/v1/team/create-employee', [
-
                 'name' => 'New Employee',
-
                 'email' => 'employee@example.com',
-
-                'password' => 'password123',
-
                 'role' => UserRole::Employee->value,
-
                 'salary_type' => 'hourly',
-
                 'hourly_rate' => 50,
-
                 'payroll_pin' => '1234',
-
                 'payroll_pin_confirmation' => '1234',
-
             ]);
 
-
-
         $response->assertCreated()
-
             ->assertJsonPath('member.email', 'employee@example.com')
-
             ->assertJsonPath('member.role', UserRole::Employee->value)
+            ->assertJsonPath('member.status', OrganizationMemberStatus::Invited->value);
 
-            ->assertJsonPath('member.status', 'active');
+        Mail::assertSent(UserInvitationMail::class);
 
-
-
-        $employee = User::query()->where('email', 'employee@example.com')->first();
-
-        $this->assertNotNull($employee);
-
-        $this->assertTrue(Hash::check('password123', $employee->password));
-
-
-
-        $this->withHeaders($this->headers($admin))
-
-            ->postJson('/api/v1/auth/login', [
-
-                'email' => 'employee@example.com',
-
-                'password' => 'password123',
-
-            ])
-
-            ->assertOk()
-
-            ->assertJsonPath('user.role', UserRole::Employee->value);
-
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'employee@example.com',
+            'password' => 'password123',
+        ])->assertUnprocessable();
     }
 
 
@@ -131,7 +74,6 @@ class EmployeeManagementTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'Blocked',
                 'email' => 'subadmin-blocked@example.com',
-                'password' => 'password123',
             ])
             ->assertForbidden();
     }
@@ -153,8 +95,6 @@ class EmployeeManagementTest extends TestCase
                 'name' => 'Blocked',
 
                 'email' => 'blocked@example.com',
-
-                'password' => 'password123',
 
                 'salary_type' => 'hourly',
 
@@ -249,7 +189,6 @@ class EmployeeManagementTest extends TestCase
         $this->postJson('/api/v1/team/create-employee', [
             'name' => 'Blocked Admin',
             'email' => 'blocked-admin@example.com',
-            'password' => 'password123',
             'role' => UserRole::Admin->value,
             'salary_type' => 'monthly',
             'monthly_salary' => 5000,

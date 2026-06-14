@@ -7,9 +7,12 @@ use App\Enums\SalaryType;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TeamMemberResource;
+use App\Models\InvitationToken;
+use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Http\Resources\EmployeeProfileResource;
+use App\Services\Auth\InvitationService;
 use App\Services\Auth\MembershipRoleSync;
 use App\Services\Auth\RoleMutationGuard;
 use App\Services\Employee\EmployeeDirectoryService;
@@ -35,7 +38,8 @@ class TeamController extends TenantAppController
         private readonly AdminPayrollService $adminPayroll,
         private readonly PayrollVaultService $payrollVault,
         private readonly EmployeeDirectoryService $employeeDirectory,
-        private readonly OnboardingEmployeeService $employeeImport
+        private readonly OnboardingEmployeeService $employeeImport,
+        private readonly InvitationService $invitations,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -67,7 +71,6 @@ class TeamController extends TenantAppController
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', Password::defaults()],
             'salary_type' => ['required', Rule::enum(SalaryType::class)],
             'hourly_rate' => ['required_if:salary_type,hourly', 'nullable', 'numeric', 'min:0.01'],
             'monthly_salary' => ['required_if:salary_type,monthly', 'nullable', 'numeric', 'min:0.01'],
@@ -90,45 +93,29 @@ class TeamController extends TenantAppController
         RoleMutationGuard::assertCreationRoleAllowed($assignedRole);
         RoleMutationGuard::assertPrivilegedRoleAssignable($request->user(), $assignedRole);
 
-        $membership = DB::transaction(function () use ($validated, $request, $assignedRole) {
-            if (OrganizationMember::query()
-                ->where('organization_id', TenantContext::id())
-                ->whereHas('user', fn ($q) => $q->where('email', $validated['email']))
-                ->exists()) {
-                throw ValidationException::withMessages([
-                    'email' => ['This email is already a member of the organization.'],
-                ]);
-            }
+        $organization = Organization::query()->findOrFail(TenantContext::id());
 
-            $user = User::create([
-                'organization_id' => TenantContext::id(),
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'password' => $validated['password'],
-                'role' => $assignedRole,
-            ]);
+        $membership = DB::transaction(function () use ($validated, $request, $assignedRole, $organization) {
+            $pending = $this->invitations->createPendingMember(
+                $organization,
+                $validated['name'],
+                $validated['email'],
+                $assignedRole,
+            );
 
-            $membership = OrganizationMember::create([
-                'organization_id' => TenantContext::id(),
-                'user_id' => $user->id,
-                'role' => $assignedRole,
-                'status' => OrganizationMemberStatus::Active,
-                'joined_at' => now(),
-            ]);
-
-            $this->membershipRoleSync->syncFromMembership($membership);
-
-            $this->adminPayroll->createInitialContract($user, $validated, $request->user());
+            $this->adminPayroll->createInitialContract($pending['user'], $validated, $request->user());
 
             if (! empty($validated['payroll_pin'])) {
                 $this->payrollVault->setPinOnFirstEmployee($request->user(), $validated['payroll_pin']);
             }
 
-            return $membership->load('user');
+            $this->invitations->sendInvitation($pending['user'], $organization);
+
+            return $pending['membership'];
         });
 
         return response()->json([
-            'message' => 'Employee account created with salary contract.',
+            'message' => 'Employee invited. An activation email was sent.',
             'member' => new TeamMemberResource($membership),
         ], 201);
     }
@@ -139,6 +126,17 @@ class TeamController extends TenantAppController
 
         if ($user->currentRole() === UserRole::Admin) {
             abort(403, 'Admin passwords cannot be reset through this endpoint.');
+        }
+
+        $membership = OrganizationMember::query()
+            ->where('organization_id', TenantContext::id())
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        if ($membership->status === OrganizationMemberStatus::Invited) {
+            throw ValidationException::withMessages([
+                'user' => ['This member has not activated their account yet. Resend the invitation instead.'],
+            ]);
         }
 
         $validated = $request->validate([
@@ -154,6 +152,28 @@ class TeamController extends TenantAppController
         ]);
     }
 
+    public function resendInvitation(Request $request, User $user): JsonResponse
+    {
+        $this->ensureUserInTenant($user);
+
+        $organization = Organization::query()->findOrFail(TenantContext::id());
+        $membership = OrganizationMember::query()
+            ->where('organization_id', $organization->id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $this->invitations->resend(
+            $user,
+            $organization,
+            $membership->role === UserRole::Admin,
+        );
+
+        return response()->json([
+            'message' => 'Invitation email resent.',
+            'member' => new TeamMemberResource($membership->fresh()->load('user')),
+        ]);
+    }
+
     public function invite(Request $request): JsonResponse
     {
         $this->authorizeTeamManagement($request);
@@ -164,53 +184,24 @@ class TeamController extends TenantAppController
             'role' => ['required', Rule::enum(UserRole::class), Rule::notIn([UserRole::SuperAdmin->value])],
         ]);
 
+        $role = UserRole::from($validated['role']);
+
         if (in_array($validated['role'], [UserRole::Admin->value, UserRole::SubAdmin->value], true)) {
-            RoleMutationGuard::assertPrivilegedRoleAssignable($request->user(), UserRole::from($validated['role']));
+            RoleMutationGuard::assertPrivilegedRoleAssignable($request->user(), $role);
         }
 
-        $membership = DB::transaction(function () use ($validated) {
-            $user = User::query()->where('email', $validated['email'])->first();
+        $organization = Organization::query()->findOrFail(TenantContext::id());
 
-            if (! $user) {
-                $user = User::create([
-                    'organization_id' => TenantContext::id(),
-                    'name' => $validated['name'],
-                    'email' => $validated['email'],
-                    'password' => Hash::make(Str::password(16)), // legacy invite flow
-                    'role' => $validated['role'],
-                ]);
-            }
-
-            if (OrganizationMember::query()
-                ->where('organization_id', TenantContext::id())
-                ->where('user_id', $user->id)
-                ->exists()) {
-                throw ValidationException::withMessages([
-                    'email' => ['This user is already a member of the organization.'],
-                ]);
-            }
-
-            $membership = OrganizationMember::create([
-                'organization_id' => TenantContext::id(),
-                'user_id' => $user->id,
-                'role' => $validated['role'],
-                'status' => OrganizationMemberStatus::Active,
-                'joined_at' => now(),
-            ]);
-
-            $user->forceFill([
-                'organization_id' => TenantContext::id(),
-                'role' => $validated['role'],
-            ])->saveQuietly();
-
-            $this->membershipRoleSync->syncFromMembership($membership);
-
-            return $membership->load('user');
-        });
+        $result = $this->invitations->createInvitedMember(
+            $organization,
+            $validated['name'],
+            $validated['email'],
+            $role,
+        );
 
         return response()->json([
-            'message' => 'Employee added.',
-            'member' => new TeamMemberResource($membership),
+            'message' => 'Invitation sent.',
+            'member' => new TeamMemberResource($result['membership']),
         ], 201);
     }
 

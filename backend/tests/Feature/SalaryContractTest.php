@@ -8,6 +8,7 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -19,6 +20,7 @@ class SalaryContractTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolePermissionSeeder::class);
+        Mail::fake();
     }
 
     private function headers(User $user, string $pin = '1234'): array
@@ -34,7 +36,6 @@ class SalaryContractTest extends TestCase
         return array_merge([
             'name' => 'New Employee',
             'email' => 'employee@example.com',
-            'password' => 'password123',
             'role' => 'employee',
             'salary_type' => SalaryType::Hourly->value,
             'hourly_rate' => 75,
@@ -52,7 +53,6 @@ class SalaryContractTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'No Salary',
                 'email' => 'nosalary@example.com',
-                'password' => 'password123',
                 'role' => 'employee',
                 'payroll_pin' => '1234',
                 'payroll_pin_confirmation' => '1234',

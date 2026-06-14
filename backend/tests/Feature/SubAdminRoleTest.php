@@ -52,7 +52,6 @@ class SubAdminRoleTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'Blocked Employee',
                 'email' => 'blocked@example.com',
-                'password' => 'password123',
             ])
             ->assertForbidden();
     }

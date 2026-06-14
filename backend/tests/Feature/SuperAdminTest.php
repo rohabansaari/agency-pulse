@@ -8,7 +8,7 @@ use App\Services\Auth\SuperAdminBootstrap;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class SuperAdminTest extends TestCase
@@ -111,7 +111,6 @@ class SuperAdminTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'Fake Super',
                 'email' => 'fake-super@example.com',
-                'password' => 'Password1!',
                 'role' => UserRole::SuperAdmin->value,
             ])
             ->assertUnprocessable()
@@ -154,6 +153,8 @@ class SuperAdminTest extends TestCase
 
     public function test_super_admin_can_create_organization_with_admin(): void
     {
+        Mail::fake();
+
         SuperAdminBootstrap::ensureExists();
         $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
 
@@ -163,7 +164,6 @@ class SuperAdminTest extends TestCase
             'organization_name' => 'Acme Agency',
             'admin_name' => 'Acme Admin',
             'admin_email' => 'acme-admin@example.com',
-            'admin_password' => 'Password1!',
         ])
             ->assertCreated()
             ->assertJsonPath('organization.name', 'Acme Agency')
@@ -175,6 +175,8 @@ class SuperAdminTest extends TestCase
             'email' => 'acme-admin@example.com',
             'role' => UserRole::Admin->value,
         ]);
+
+        Mail::assertSent(\App\Mail\AdminWelcomeMail::class);
     }
 
     public function test_tenant_admin_cannot_access_platform_organizations(): void

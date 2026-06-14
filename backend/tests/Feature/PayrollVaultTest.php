@@ -7,6 +7,7 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -18,6 +19,7 @@ class PayrollVaultTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolePermissionSeeder::class);
+        Mail::fake();
     }
 
     private function headers(User $user, ?string $payrollPin = null): array
@@ -52,7 +54,6 @@ class PayrollVaultTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'First Employee',
                 'email' => 'first@example.com',
-                'password' => 'password123',
                 'role' => 'employee',
                 'salary_type' => 'hourly',
                 'hourly_rate' => 50,
@@ -64,7 +65,6 @@ class PayrollVaultTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'First Employee',
                 'email' => 'first@example.com',
-                'password' => 'password123',
                 'role' => 'employee',
                 'salary_type' => 'hourly',
                 'hourly_rate' => 50,
@@ -92,7 +92,6 @@ class PayrollVaultTest extends TestCase
             ->postJson('/api/v1/team/create-employee', [
                 'name' => 'Employee',
                 'email' => 'employee@example.com',
-                'password' => 'password123',
                 'role' => 'employee',
                 'salary_type' => 'hourly',
                 'hourly_rate' => 80,

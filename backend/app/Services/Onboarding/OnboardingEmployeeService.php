@@ -5,8 +5,10 @@ namespace App\Services\Onboarding;
 use App\Enums\OrganizationMemberStatus;
 use App\Enums\SalaryType;
 use App\Enums\UserRole;
+use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use App\Services\Auth\InvitationService;
 use App\Services\Auth\MembershipRoleSync;
 use App\Services\Auth\RoleMutationGuard;
 use App\Services\Payroll\AdminPayrollService;
@@ -31,7 +33,8 @@ class OnboardingEmployeeService
 
     public function __construct(
         private readonly MembershipRoleSync $membershipRoleSync,
-        private readonly AdminPayrollService $adminPayroll
+        private readonly AdminPayrollService $adminPayroll,
+        private readonly InvitationService $invitations,
     ) {}
 
     /**
@@ -43,43 +46,27 @@ class OnboardingEmployeeService
         $role = UserRole::tryFrom($validated['role'] ?? UserRole::Employee->value) ?? UserRole::Employee;
         RoleMutationGuard::assertPrivilegedRoleAssignable($admin, $role);
 
-        $membership = DB::transaction(function () use ($validated, $admin, $role) {
-            if (OrganizationMember::query()
-                ->where('organization_id', TenantContext::id())
-                ->whereHas('user', fn ($q) => $q->where('email', $validated['email']))
-                ->exists()) {
-                throw ValidationException::withMessages([
-                    'email' => ['This email is already a member of the organization.'],
-                ]);
-            }
+        $organization = Organization::query()->findOrFail(TenantContext::id());
 
-            $user = User::create([
-                'organization_id' => TenantContext::id(),
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'password' => Hash::make(Str::password(16)),
-                'role' => $role,
-            ]);
-
-            $membership = OrganizationMember::create([
-                'organization_id' => TenantContext::id(),
-                'user_id' => $user->id,
-                'role' => $role,
-                'status' => OrganizationMemberStatus::Active,
-                'joined_at' => now(),
-            ]);
-
-            $this->membershipRoleSync->syncFromMembership($membership);
+        $membership = DB::transaction(function () use ($validated, $admin, $role, $organization) {
+            $pending = $this->invitations->createPendingMember(
+                $organization,
+                $validated['name'],
+                $validated['email'],
+                $role,
+            );
 
             $contractPayload = $this->contractPayloadFromSalary($validated);
-            $this->adminPayroll->createInitialContract($user, $contractPayload, $admin);
+            $this->adminPayroll->createInitialContract($pending['user'], $contractPayload, $admin);
 
-            return $membership->load('user');
+            $this->invitations->sendInvitation($pending['user'], $organization);
+
+            return $pending['membership'];
         });
 
         return [
             'member' => $membership,
-            'message' => 'Employee added with active status. They can set a password when they first sign in.',
+            'message' => 'Employee invited. An activation email was sent.',
         ];
     }
 
@@ -197,8 +184,8 @@ class OnboardingEmployeeService
 
         $failedCount = count($failed);
         $message = $failedCount === 0
-            ? "{$created} employee(s) imported."
-            : "{$created} employee(s) imported. {$failedCount} record(s) require attention.";
+            ? "{$created} employee invitation(s) sent."
+            : "{$created} employee invitation(s) sent. {$failedCount} record(s) require attention.";
 
         return [
             'created' => $created,

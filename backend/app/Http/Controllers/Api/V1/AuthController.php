@@ -79,6 +79,29 @@ class AuthController extends Controller
             ]);
         }
 
+        if (! $user->isSuperAdmin()) {
+            $membership = OrganizationMember::query()
+                ->where('user_id', $user->id)
+                ->when(
+                    $user->organization_id,
+                    fn ($query) => $query->where('organization_id', $user->organization_id)
+                )
+                ->orderByDesc('id')
+                ->first();
+
+            if ($membership?->status === OrganizationMemberStatus::Invited) {
+                throw ValidationException::withMessages([
+                    'email' => ['Your account is pending activation. Check your email for the invitation link.'],
+                ]);
+            }
+
+            if ($membership?->status === OrganizationMemberStatus::Suspended) {
+                throw ValidationException::withMessages([
+                    'email' => ['Your account has been disabled. Contact your administrator.'],
+                ]);
+            }
+        }
+
         $token = $user->createToken('api-token')->plainTextToken;
         $memberships = $user->isSuperAdmin()
             ? collect()

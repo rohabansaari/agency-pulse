@@ -162,6 +162,34 @@ export async function login(
   return response;
 }
 
+export interface InvitationPreview {
+  name: string;
+  email: string;
+  organization_name: string;
+  expires_at: string;
+}
+
+export async function fetchInvitationPreview(token: string): Promise<{ invitation: InvitationPreview }> {
+  const params = new URLSearchParams({ token });
+  return apiFetch<{ invitation: InvitationPreview }>(`/auth/invitation?${params.toString()}`, {
+    auth: false,
+    tenant: false,
+  });
+}
+
+export async function acceptInvitation(
+  token: string,
+  password: string,
+  password_confirmation: string,
+): Promise<{ message: string; email: string }> {
+  return apiFetch<{ message: string; email: string }>("/auth/accept-invitation", {
+    method: "POST",
+    auth: false,
+    tenant: false,
+    body: JSON.stringify({ token, password, password_confirmation }),
+  });
+}
+
 export async function fetchMe(): Promise<MeResponse> {
   const response = await apiFetch<MeResponse>("/auth/me", {
     tenant: false,
@@ -368,7 +396,6 @@ export async function fetchTeam(): Promise<TeamMember[]> {
 export async function createEmployee(data: {
   name: string;
   email: string;
-  password: string;
   role: UserRole;
   salary_type: SalaryType;
   hourly_rate?: number;
@@ -379,6 +406,13 @@ export async function createEmployee(data: {
   const response = await apiFetch<{ member: TeamMember }>("/team/create-employee", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+  return response.member;
+}
+
+export async function resendEmployeeInvitation(userId: number): Promise<TeamMember> {
+  const response = await apiFetch<{ member: TeamMember }>(`/team/${userId}/resend-invitation`, {
+    method: "POST",
   });
   return response.member;
 }
@@ -448,7 +482,6 @@ export async function createPlatformOrganization(data: {
   organization_name: string;
   admin_name: string;
   admin_email: string;
-  admin_password: string;
 }): Promise<{ message: string; organization: PlatformOrganization }> {
   return apiFetch<{ message: string; organization: PlatformOrganization }>(
     "/platform/organizations",

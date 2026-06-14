@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use App\Services\Auth\InvitationService;
 use App\Services\Auth\MembershipRoleSync;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,8 @@ use Illuminate\Validation\ValidationException;
 class PlatformOrganizationService
 {
     public function __construct(
-        private readonly MembershipRoleSync $membershipRoleSync
+        private readonly MembershipRoleSync $membershipRoleSync,
+        private readonly InvitationService $invitations,
     ) {}
 
     /**
@@ -52,27 +54,17 @@ class PlatformOrganizationService
                 'status' => OrganizationStatus::Active,
             ]);
 
-            $admin = User::create([
-                'organization_id' => $organization->id,
-                'name' => $validated['admin_name'],
-                'email' => $validated['admin_email'],
-                'password' => $validated['admin_password'],
-                'role' => UserRole::Admin,
-            ]);
-
-            $membership = OrganizationMember::create([
-                'organization_id' => $organization->id,
-                'user_id' => $admin->id,
-                'role' => UserRole::Admin,
-                'status' => OrganizationMemberStatus::Active,
-                'joined_at' => now(),
-            ]);
-
-            $this->membershipRoleSync->syncFromMembership($membership);
+            $result = $this->invitations->createInvitedMember(
+                $organization,
+                $validated['admin_name'],
+                $validated['admin_email'],
+                UserRole::Admin,
+                isAdminWelcome: true,
+            );
 
             return [
                 'organization' => $organization->fresh(),
-                'admin' => $admin->fresh(),
+                'admin' => $result['user']->fresh(),
             ];
         });
     }

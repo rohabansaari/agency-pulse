@@ -91,10 +91,25 @@ Do **not** leave placeholder text like `<paste MYSQLHOST>` — Laravel will try 
 | Key | Value |
 |-----|--------|
 | `APP_URL` | `https://agencypulse-api.onrender.com` |
-| `FRONTEND_URL` | `https://agencypulse-web.onrender.com` *(your frontend URL — also enables CORS for signup/login)* |
+| `FRONTEND_URL` | `https://agencypulse-web.onrender.com` *(your frontend URL — also enables CORS and invitation links)* |
 | `CORS_ALLOWED_ORIGINS` | *(optional)* extra origins, comma-separated, if you use a custom domain |
+| `MAIL_MAILER` | `smtp` |
+| `MAIL_HOST` | `smtp.gmail.com` |
+| `MAIL_PORT` | `587` |
+| `MAIL_USERNAME` | Your Gmail address |
+| `MAIL_PASSWORD` | Google App Password (16 chars) |
+| `MAIL_ENCRYPTION` | `tls` |
+| `MAIL_FROM_ADDRESS` | Same as `MAIL_USERNAME` |
+| `MAIL_FROM_NAME` | `AgencyPulse` |
 
 Save to redeploy.
+
+### Invitation email flow
+
+- Super-admin creates an organization → admin receives a **Set password** email.
+- Org admin invites employees → each person receives an invitation email.
+- Links open `{FRONTEND_URL}/set-password?token=…` and expire after **24 hours**.
+- No passwords are ever sent by email.
 
 ---
 
@@ -127,7 +142,7 @@ Replace with **your** API URL from Part 2, including `/api/v1`.
 
 4. Click **Deploy Web Service**.
 5. When **Live**, open `https://agencypulse-web.onrender.com`.
-6. **Register** your admin account.
+6. Open the app and sign in as super-admin, or use an invitation link from email after creating an org.
 
 7. Update API service `FRONTEND_URL` to your frontend URL if you used a placeholder in Part 2.
 
