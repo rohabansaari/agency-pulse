@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { authHeaders, registerAdmin } from "./helpers/api";
+import { activateTeamMember, authHeaders, registerAdmin } from "./helpers/api";
 
 const apiBase = process.env.E2E_API_URL ?? "http://localhost:8080/api/v1";
 
@@ -28,17 +28,7 @@ test.describe("Manual time visibility", () => {
     const managerMembership = members.find((m: { email: string }) => m.email === managerEmail);
     expect(managerMembership).toBeTruthy();
 
-    const activate = await request.patch(`${apiBase}/team/${managerMembership.id}`, {
-      headers,
-      data: { status: "active" },
-    });
-    expect(activate.ok()).toBeTruthy();
-
-    const reset = await request.patch(`${apiBase}/team/${managerMembership.user_id}/reset-password`, {
-      headers,
-      data: { new_password: "password123" },
-    });
-    expect(reset.ok()).toBeTruthy();
+    await activateTeamMember(request, managerEmail);
 
     const employeeEmail = `qa-emp-${Date.now()}@example.com`;
     const employeeCreate = await request.post(`${apiBase}/team/create-employee`, {
@@ -46,7 +36,6 @@ test.describe("Manual time visibility", () => {
       data: {
         name: "QA Employee",
         email: employeeEmail,
-        password: "password123",
         salary_type: "hourly",
         hourly_rate: 50,
         payroll_pin: "1234",
@@ -55,6 +44,8 @@ test.describe("Manual time visibility", () => {
     });
     expect(employeeCreate.status()).toBe(201);
     const employeeId = (await employeeCreate.json()).member.user_id as number;
+
+    await activateTeamMember(request, employeeEmail);
 
     const teamCreate = await request.post(`${apiBase}/teams`, {
       headers,

@@ -28,6 +28,7 @@ class PlatformOrganizationController extends Controller
             'organization_name' => ['required', 'string', 'max:255'],
             'admin_name' => ['required', 'string', 'max:255'],
             'admin_email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'admin_password' => ['prohibited'],
         ]);
 
         $result = $this->platformOrganizations->createOrganizationWithAdmin($validated);

@@ -18,7 +18,6 @@ Route::middleware('rbac:admin')->group(function () {
     Route::post('/create-employee', [TeamController::class, 'createEmployee']);
     Route::post('/import-employees', [TeamController::class, 'importEmployees']);
     Route::get('/import-employees/sample.csv', [TeamController::class, 'sampleCsv']);
-    Route::patch('/{user}/reset-password', [TeamController::class, 'resetPassword']);
     Route::post('/{user}/resend-invitation', [TeamController::class, 'resendInvitation']);
     Route::post('/invite', [TeamController::class, 'invite']);
 });

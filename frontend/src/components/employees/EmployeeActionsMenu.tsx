@@ -3,13 +3,12 @@
 import { Modal } from "@/components/ui/Modal";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { ActionMenu, ActionMenuItem } from "@/components/ui/ActionMenu";
-import { ApiError, resetEmployeePassword, resendEmployeeInvitation, updateTeamMember, formatApiErrors } from "@/lib/api";
+import { ApiError, resendEmployeeInvitation, updateTeamMember, formatApiErrors } from "@/lib/api";
 import {
   canChangeMemberRole,
   canEditEmployeeStatus,
   canEditMemberStatus,
   canManageOrgEmployees,
-  canResetMemberPassword,
   MUTABLE_ROLES,
   ROLE_LABELS,
 } from "@/lib/navigation";
@@ -33,18 +32,13 @@ type EmployeeActionsMenuProps = {
 
 export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActionsMenuProps) {
   const router = useRouter();
-  const [modal, setModal] = useState<"edit" | "role" | "status" | "password" | null>(null);
-  const [newPassword, setNewPassword] = useState("");
+  const [modal, setModal] = useState<"edit" | "role" | "status" | null>(null);
   const [name, setName] = useState(member.name);
   const [selectedRole, setSelectedRole] = useState<UserRole>(member.role);
   const [selectedStatus, setSelectedStatus] = useState<MemberStatus>(member.status);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const canResetPassword =
-    canManageOrgEmployees(viewer.role) &&
-    canResetMemberPassword(member.role) &&
-    member.status === "active";
   const canResendInvitation =
     canManageOrgEmployees(viewer.role) && member.status === "invited";
   const canEdit = canEditEmployeeStatus(viewer.role);
@@ -129,16 +123,6 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
             Resend invitation
           </ActionMenuItem>
         ) : null}
-        {canResetPassword ? (
-          <ActionMenuItem
-            onClick={() => {
-              setNewPassword("");
-              setModal("password");
-            }}
-          >
-            Reset password
-          </ActionMenuItem>
-        ) : null}
       </ActionMenu>
 
       {modal === "edit" ? (
@@ -218,45 +202,6 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
             >
               Save status
-            </button>
-          </form>
-        </Modal>
-      ) : null}
-
-      {modal === "password" ? (
-        <Modal onClose={() => setModal(null)} title="Reset password">
-          <form
-            className="space-y-3"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setSaving(true);
-              setError("");
-              try {
-                await resetEmployeePassword(member.user_id, newPassword);
-                setModal(null);
-                onUpdated();
-              } catch (err) {
-                setError(err instanceof ApiError ? err.message : "Password reset failed.");
-              } finally {
-                setSaving(false);
-              }
-            }}
-          >
-            <input
-              required
-              type="password"
-              minLength={8}
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-            />
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
-            >
-              Update password
             </button>
           </form>
         </Modal>

@@ -24,10 +24,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -71,6 +69,7 @@ class TeamController extends TenantAppController
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['prohibited'],
             'salary_type' => ['required', Rule::enum(SalaryType::class)],
             'hourly_rate' => ['required_if:salary_type,hourly', 'nullable', 'numeric', 'min:0.01'],
             'monthly_salary' => ['required_if:salary_type,monthly', 'nullable', 'numeric', 'min:0.01'],
@@ -120,38 +119,6 @@ class TeamController extends TenantAppController
         ], 201);
     }
 
-    public function resetPassword(Request $request, User $user): JsonResponse
-    {
-        $this->ensureUserInTenant($user);
-
-        if ($user->currentRole() === UserRole::Admin) {
-            abort(403, 'Admin passwords cannot be reset through this endpoint.');
-        }
-
-        $membership = OrganizationMember::query()
-            ->where('organization_id', TenantContext::id())
-            ->where('user_id', $user->id)
-            ->firstOrFail();
-
-        if ($membership->status === OrganizationMemberStatus::Invited) {
-            throw ValidationException::withMessages([
-                'user' => ['This member has not activated their account yet. Resend the invitation instead.'],
-            ]);
-        }
-
-        $validated = $request->validate([
-            'new_password' => ['required', 'string', Password::defaults()],
-        ]);
-
-        $user->forceFill([
-            'password' => Hash::make($validated['new_password']),
-        ])->save();
-
-        return response()->json([
-            'message' => 'Password updated successfully.',
-        ]);
-    }
-
     public function resendInvitation(Request $request, User $user): JsonResponse
     {
         $this->ensureUserInTenant($user);
@@ -181,6 +148,7 @@ class TeamController extends TenantAppController
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
+            'password' => ['prohibited'],
             'role' => ['required', Rule::enum(UserRole::class), Rule::notIn([UserRole::SuperAdmin->value])],
         ]);
 

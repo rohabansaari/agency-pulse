@@ -7,6 +7,20 @@ export type AuthSession = {
   email: string;
 };
 
+async function activateInvitedUser(
+  request: import("@playwright/test").APIRequestContext,
+  email: string,
+  password: string,
+): Promise<void> {
+  const activate = await request.post(`${apiBase}/testing/activate-invited-user`, {
+    data: { email, password },
+  });
+
+  if (!activate.ok()) {
+    throw new Error(`Activate invited user failed: ${activate.status()} ${await activate.text()}`);
+  }
+}
+
 export async function registerAdmin(
   request: import("@playwright/test").APIRequestContext,
   suffix = Date.now(),
@@ -37,13 +51,14 @@ export async function registerAdmin(
       organization_name: `QA Org ${suffix}`,
       admin_name: "QA Admin",
       admin_email: email,
-      admin_password: password,
     },
   });
 
   if (!createOrg.ok()) {
     throw new Error(`Create org failed: ${createOrg.status()} ${await createOrg.text()}`);
   }
+
+  await activateInvitedUser(request, email, password);
 
   const login = await request.post(`${apiBase}/auth/login`, {
     data: { email, password },
@@ -61,6 +76,14 @@ export async function registerAdmin(
     userId: body.user.id,
     email,
   };
+}
+
+export async function activateTeamMember(
+  request: import("@playwright/test").APIRequestContext,
+  email: string,
+  password = "password123",
+): Promise<void> {
+  await activateInvitedUser(request, email, password);
 }
 
 export function authHeaders(session: AuthSession): Record<string, string> {

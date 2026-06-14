@@ -12,7 +12,6 @@ use App\Mail\UserInvitationMail;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -63,7 +62,41 @@ class EmployeeManagementTest extends TestCase
         ])->assertUnprocessable();
     }
 
+    public function test_create_employee_rejects_password_field(): void
+    {
+        Mail::fake();
 
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/team/create-employee', [
+                'name' => 'New Employee',
+                'email' => 'employee@example.com',
+                'password' => 'password123',
+                'role' => UserRole::Employee->value,
+                'salary_type' => 'hourly',
+                'hourly_rate' => 50,
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['password']);
+    }
+
+    public function test_reset_password_endpoint_is_removed(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $employee = User::factory()->create(['organization_id' => $admin->organization_id]);
+
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson("/api/v1/team/{$employee->id}/reset-password", [
+                'new_password' => 'newpassword123',
+            ])
+            ->assertNotFound();
+    }
 
     public function test_sub_admin_cannot_create_employee(): void
     {
@@ -79,106 +112,19 @@ class EmployeeManagementTest extends TestCase
     }
 
     public function test_manager_cannot_create_employee(): void
-
     {
-
         $manager = User::factory()->manager()->create();
-
         Sanctum::actingAs($manager);
 
-
-
         $this->withHeaders($this->headers($manager))
-
             ->postJson('/api/v1/team/create-employee', [
-
                 'name' => 'Blocked',
-
                 'email' => 'blocked@example.com',
-
                 'salary_type' => 'hourly',
-
                 'hourly_rate' => 50,
-
             ])
-
             ->assertForbidden();
-
     }
-
-
-
-    public function test_admin_can_reset_employee_password(): void
-
-    {
-
-        $admin = User::factory()->admin()->create();
-
-        $employee = User::factory()->create(['organization_id' => $admin->organization_id]);
-
-
-
-        Sanctum::actingAs($admin);
-
-
-
-        $this->withHeaders($this->headers($admin))
-
-            ->patchJson("/api/v1/team/{$employee->id}/reset-password", [
-
-                'new_password' => 'newpassword123',
-
-            ])
-
-            ->assertOk();
-
-
-
-        $employee->refresh();
-
-        $this->assertTrue(Hash::check('newpassword123', $employee->password));
-
-    }
-
-    public function test_admin_can_reset_manager_password(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $manager = User::factory()->manager()->create([
-            'organization_id' => $admin->organization_id,
-        ]);
-
-        Sanctum::actingAs($admin);
-
-        $this->withHeaders($this->headers($admin))
-            ->patchJson("/api/v1/team/{$manager->id}/reset-password", [
-                'new_password' => 'managerpass123',
-            ])
-            ->assertOk();
-
-        $manager->refresh();
-        $this->assertTrue(Hash::check('managerpass123', $manager->password));
-    }
-
-    public function test_admin_can_reset_sub_admin_password(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $subAdmin = User::factory()->subAdmin()->create([
-            'organization_id' => $admin->organization_id,
-        ]);
-
-        Sanctum::actingAs($admin);
-
-        $this->withHeaders($this->headers($admin))
-            ->patchJson("/api/v1/team/{$subAdmin->id}/reset-password", [
-                'new_password' => 'subadminpass123',
-            ])
-            ->assertOk();
-
-        $subAdmin->refresh();
-        $this->assertTrue(Hash::check('subadminpass123', $subAdmin->password));
-    }
-
-
 
     public function test_admin_role_cannot_be_created_via_employee_endpoint(): void
     {
@@ -194,6 +140,4 @@ class EmployeeManagementTest extends TestCase
             'monthly_salary' => 5000,
         ])->assertStatus(422);
     }
-
 }
-

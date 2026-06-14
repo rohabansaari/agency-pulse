@@ -417,16 +417,6 @@ export async function resendEmployeeInvitation(userId: number): Promise<TeamMemb
   return response.member;
 }
 
-export async function resetEmployeePassword(
-  userId: number,
-  newPassword: string,
-): Promise<void> {
-  await apiFetch(`/team/${userId}/reset-password`, {
-    method: "PATCH",
-    body: JSON.stringify({ new_password: newPassword }),
-  });
-}
-
 export async function inviteTeamMember(data: {
   name: string;
   email: string;
