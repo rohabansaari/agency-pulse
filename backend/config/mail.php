@@ -32,6 +32,10 @@ return [
             'transport' => 'resend',
         ],
 
+        'mailersend' => [
+            'transport' => 'mailersend',
+        ],
+
     ],
 
     'from' => [

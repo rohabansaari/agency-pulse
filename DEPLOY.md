@@ -106,7 +106,28 @@ This is **not** a wrong password — it is Render’s network policy ([changelog
 
 Pick **one** path:
 
-#### Option A — Resend (recommended on Render **free** tier)
+#### Option A — MailerSend (recommended on Render **free** tier)
+
+Uses HTTPS (port 443), works on all Render plans. Free tier: 3,000 emails/month.
+
+1. Sign up at [mailersend.com](https://www.mailersend.com) → **Email** → **Domains** → add and verify your domain (DNS records).
+2. **Email** → **Domains** → your domain → **API tokens** → create a token (`mlsn.…`).
+3. On Render **API** service → **Environment**:
+
+| Key | Value |
+|-----|--------|
+| `MAIL_MAILER` | `mailersend` |
+| `MAILERSEND_API_KEY` | `mlsn.…` *(your MailerSend API token)* |
+| `MAIL_FROM_ADDRESS` | `noreply@yourdomain.com` *(must be on your verified MailerSend domain)* |
+| `MAIL_FROM_NAME` | `AgencyPulse` |
+
+Remove Gmail SMTP variables (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`) — they will not work on Render free tier anyway.
+
+4. Save → wait for redeploy → **Platform** → **Send test email**.
+
+You cannot send `from` `@gmail.com` via MailerSend — the From address must use your verified domain.
+
+#### Option B — Resend (alternative HTTP API)
 
 Uses HTTPS (port 443), works on all Render plans. Free tier: 3,000 emails/month.
 
@@ -121,11 +142,9 @@ Uses HTTPS (port 443), works on all Render plans. Free tier: 3,000 emails/month.
 | `MAIL_FROM_ADDRESS` | `noreply@yourdomain.com` *(verified domain in Resend)* |
 | `MAIL_FROM_NAME` | `AgencyPulse` |
 
-Remove or ignore `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` when using Resend.
-
 4. Save → wait for redeploy → **Platform** → **Send test email**.
 
-#### Option B — Gmail SMTP (Render **paid** API only)
+#### Option C — Gmail SMTP (Render **paid** API only)
 
 Upgrade the API web service from **Free** to **Starter** ($7/mo). Paid instances allow SMTP on ports 465/587.
 

@@ -30,7 +30,32 @@ class MailConfigurationTest extends TestCase
         $issue = app(MailConfiguration::class)->configurationIssue();
 
         $this->assertNotNull($issue);
-        $this->assertStringContainsString('MAIL_MAILER must be resend', $issue);
+        $this->assertStringContainsString('MAIL_MAILER must be mailersend', $issue);
+    }
+
+    public function test_mailersend_mailer_requires_api_key(): void
+    {
+        Config::set('mail.default', 'mailersend');
+        Config::set('services.mailersend.key', '');
+        Config::set('mail.from.address', 'noreply@example.com');
+
+        $issue = app(MailConfiguration::class)->configurationIssue();
+
+        $this->assertSame(
+            'MAILERSEND_API_KEY is not set. Create an API token in the MailerSend dashboard.',
+            $issue,
+        );
+    }
+
+    public function test_mailersend_mailer_rejects_gmail_from_address(): void
+    {
+        Config::set('mail.default', 'mailersend');
+        Config::set('services.mailersend.key', 'mlsn_test_key');
+        Config::set('mail.from.address', 'agencypulse.notifications@gmail.com');
+
+        $issue = app(MailConfiguration::class)->configurationIssue();
+
+        $this->assertStringContainsString('Gmail addresses cannot be used', $issue);
     }
 
     public function test_resend_mailer_requires_api_key(): void
@@ -65,7 +90,7 @@ class MailConfigurationTest extends TestCase
         $hint = app(MailConfiguration::class)->renderSmtpBlockedHint();
 
         $this->assertNotNull($hint);
-        $this->assertStringContainsString('Render free tier blocks outbound SMTP', $hint);
+        $this->assertStringContainsString('MAIL_MAILER=mailersend', $hint);
     }
 
     public function test_smtp_mailer_requires_matching_from_address(): void

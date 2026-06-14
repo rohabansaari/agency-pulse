@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 class MailConfiguration
 {
     /** @var list<string> */
-    private const REAL_DELIVERY_MAILERS = ['smtp', 'ses', 'postmark', 'resend'];
+    private const REAL_DELIVERY_MAILERS = ['mailersend', 'smtp', 'ses', 'postmark', 'resend'];
 
     public function applyRuntimeFixes(): void
     {
@@ -42,18 +42,15 @@ class MailConfiguration
         $mailer = $this->mailer();
 
         if (! in_array($mailer, self::REAL_DELIVERY_MAILERS, true)) {
-            return 'MAIL_MAILER must be resend (recommended on Render free tier) or smtp on a paid host. Currently "'.$mailer.'" only writes to logs.';
+            return 'MAIL_MAILER must be mailersend (recommended on Render), resend, or smtp on a paid host. Currently "'.$mailer.'" only writes to logs.';
         }
 
-        if ($mailer === 'resend') {
-            return $this->resendConfigurationIssue();
-        }
-
-        if ($mailer !== 'smtp') {
-            return null;
-        }
-
-        return $this->smtpConfigurationIssue();
+        return match ($mailer) {
+            'mailersend' => $this->mailersendConfigurationIssue(),
+            'resend' => $this->resendConfigurationIssue(),
+            'smtp' => $this->smtpConfigurationIssue(),
+            default => null,
+        };
     }
 
     public function renderSmtpBlockedHint(): ?string
@@ -62,7 +59,27 @@ class MailConfiguration
             return null;
         }
 
-        return 'Render free tier blocks outbound SMTP (ports 465/587). Upgrade the API to a paid instance, or switch to MAIL_MAILER=resend with a Resend API key.';
+        return 'Render free tier blocks outbound SMTP (ports 465/587). Switch to MAIL_MAILER=mailersend with MAILERSEND_API_KEY, or upgrade the API to paid.';
+    }
+
+    private function mailersendConfigurationIssue(): ?string
+    {
+        $apiKey = (string) config('services.mailersend.key', '');
+        $fromAddress = (string) config('mail.from.address', '');
+
+        if ($apiKey === '') {
+            return 'MAILERSEND_API_KEY is not set. Create an API token in the MailerSend dashboard.';
+        }
+
+        if ($fromAddress === '') {
+            return 'MAIL_FROM_ADDRESS is not set. Use an address on a domain you verified in MailerSend (e.g. noreply@yourdomain.com).';
+        }
+
+        if (str_ends_with(strtolower($fromAddress), '@gmail.com')) {
+            return 'Gmail addresses cannot be used as the sender with MailerSend. Verify your domain in MailerSend and set MAIL_FROM_ADDRESS to e.g. noreply@yourdomain.com.';
+        }
+
+        return null;
     }
 
     private function resendConfigurationIssue(): ?string

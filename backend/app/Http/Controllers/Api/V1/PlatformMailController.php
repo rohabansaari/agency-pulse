@@ -57,7 +57,7 @@ class PlatformMailController extends Controller
             $hint = $this->mailConfiguration->renderSmtpBlockedHint();
 
             if ($hint && $this->isSmtpConnectionFailure($exception->getMessage())) {
-                $message = 'SMTP connection timed out. Render free tier blocks ports 465/587 — upgrade the API or switch to MAIL_MAILER=resend.';
+                $message = 'SMTP connection timed out. Render free tier blocks ports 465/587 — set MAIL_MAILER=mailersend with MAILERSEND_API_KEY.';
             }
 
             return response()->json([
