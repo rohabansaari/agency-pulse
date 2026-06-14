@@ -7,13 +7,15 @@ import {
   createPlatformOrganization,
   deletePlatformOrganization,
   fetchPlatformDashboard,
+  fetchPlatformMailStatus,
   fetchPlatformOrganizations,
   formatApiErrors,
   resendPlatformAdminInvitation,
+  sendPlatformMailTest,
   updatePlatformOrganization,
   updateSuperAdminPassword,
 } from "@/lib/api";
-import type { PlatformDashboard, PlatformOrganization } from "@/lib/types";
+import type { PlatformDashboard, PlatformMailStatus, PlatformOrganization } from "@/lib/types";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 export default function PlatformPage() {
@@ -41,16 +43,23 @@ export default function PlatformPage() {
   const [rowActionId, setRowActionId] = useState<number | null>(null);
   const [rowMessage, setRowMessage] = useState("");
   const [rowMessageIsError, setRowMessageIsError] = useState(false);
+  const [mailStatus, setMailStatus] = useState<PlatformMailStatus | null>(null);
+  const [mailTestEmail, setMailTestEmail] = useState("");
+  const [mailTestMessage, setMailTestMessage] = useState("");
+  const [mailTestError, setMailTestError] = useState("");
+  const [sendingMailTest, setSendingMailTest] = useState(false);
 
   const load = useCallback(async () => {
     setError("");
     try {
-      const [dashboard, orgs] = await Promise.all([
+      const [dashboard, orgs, mail] = await Promise.all([
         fetchPlatformDashboard(),
         fetchPlatformOrganizations(),
+        fetchPlatformMailStatus(),
       ]);
       setData(dashboard);
       setOrganizations(orgs);
+      setMailStatus(mail);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Unable to load platform dashboard.");
     } finally {
@@ -73,6 +82,11 @@ export default function PlatformPage() {
         admin_name: adminName,
         admin_email: adminEmail,
       });
+      if (response.invitation_email_sent === false) {
+        setCreateError(
+          "Organization was created, but the invitation email was not delivered. Use Resend invitation after fixing mail settings.",
+        );
+      }
       setCreateSuccess(response.message);
       setOrgName("");
       setAdminName("");
@@ -87,6 +101,25 @@ export default function PlatformPage() {
       );
     } finally {
       setSavingOrg(false);
+    }
+  }
+
+  async function handleMailTest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMailTestMessage("");
+    setMailTestError("");
+    setSendingMailTest(true);
+    try {
+      const response = await sendPlatformMailTest(mailTestEmail.trim() || undefined);
+      setMailTestMessage(response.message);
+    } catch (err) {
+      setMailTestError(
+        err instanceof ApiError
+          ? formatApiErrors(err.errors) || err.message
+          : "Mail test failed.",
+      );
+    } finally {
+      setSendingMailTest(false);
     }
   }
 
@@ -283,6 +316,54 @@ export default function PlatformPage() {
           >
             {rowMessage}
           </p>
+        ) : null}
+
+        {mailStatus && !mailStatus.configured ? (
+          <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
+            <h2 className="font-semibold text-amber-900 dark:text-amber-200">Email delivery not configured</h2>
+            <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+              Invitations will not reach inboxes until SMTP is set on the API service (Render environment variables).
+            </p>
+            {mailStatus.issue ? (
+              <p className="mt-2 text-sm font-medium text-amber-900 dark:text-amber-200">{mailStatus.issue}</p>
+            ) : null}
+            <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
+              Current mailer: <span className="font-mono">{mailStatus.mailer}</span>
+              {mailStatus.host ? (
+                <>
+                  {" "}
+                  · {mailStatus.host}:{mailStatus.port}
+                </>
+              ) : null}
+            </p>
+          </section>
+        ) : null}
+
+        {mailStatus?.configured ? (
+          <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Test email delivery</h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Sends a test message via {mailStatus.from_address} before inviting admins.
+            </p>
+            <form className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleMailTest}>
+              <input
+                type="email"
+                placeholder="Recipient email (optional — defaults to you)"
+                value={mailTestEmail}
+                onChange={(event) => setMailTestEmail(event.target.value)}
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950"
+              />
+              <button
+                type="submit"
+                disabled={sendingMailTest}
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              >
+                {sendingMailTest ? "Sending…" : "Send test email"}
+              </button>
+            </form>
+            {mailTestError ? <p className="mt-2 text-sm text-red-600">{mailTestError}</p> : null}
+            {mailTestMessage ? <p className="mt-2 text-sm text-green-600">{mailTestMessage}</p> : null}
+          </section>
         ) : null}
 
         {data ? (

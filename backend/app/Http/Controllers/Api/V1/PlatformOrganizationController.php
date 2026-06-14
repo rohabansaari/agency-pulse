@@ -43,6 +43,7 @@ class PlatformOrganizationController extends Controller
             'message' => $message,
             'organization' => $this->platformOrganizations->formatOrganization($result['organization']),
             'invitation_email_sent' => $result['invitation_email_sent'],
+            'delivery_issue' => $result['invitation_email_sent'] ? null : $this->invitations->mailDeliveryIssue(),
         ], 201);
     }
 

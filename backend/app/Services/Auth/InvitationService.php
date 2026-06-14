@@ -10,6 +10,7 @@ use App\Models\InvitationToken;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use App\Services\Mail\MailConfiguration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -23,6 +24,7 @@ class InvitationService
 
     public function __construct(
         private readonly MembershipRoleSync $membershipRoleSync,
+        private readonly MailConfiguration $mailConfiguration,
     ) {}
 
     public function createPlaceholderPassword(): string
@@ -167,6 +169,18 @@ class InvitationService
         string $plainToken,
         bool $isAdminWelcome = false,
     ): bool {
+        if ($issue = $this->mailConfiguration->configurationIssue()) {
+            Log::error('Invitation email not sent — mail misconfigured.', [
+                'user_id' => $user->id,
+                'organization_id' => $organization->id,
+                'email' => $user->email,
+                'issue' => $issue,
+                'mailer' => $this->mailConfiguration->mailer(),
+            ]);
+
+            return false;
+        }
+
         try {
             $this->sendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
 
@@ -181,6 +195,11 @@ class InvitationService
 
             return false;
         }
+    }
+
+    public function mailDeliveryIssue(): ?string
+    {
+        return $this->mailConfiguration->configurationIssue();
     }
 
     public function setupPasswordUrl(string $plainToken): string

@@ -32,6 +32,7 @@ import type {
   OvertimeRequest,
   EmployeeProfile,
   PlatformDashboard,
+  PlatformMailStatus,
   PlatformOrganization,
   CsvImportResult,
   OnboardingStatus,
@@ -458,6 +459,21 @@ function dateRangeQuery(range?: ReportDateRange): string {
 
 export async function fetchPlatformDashboard(): Promise<PlatformDashboard> {
   return apiFetch<PlatformDashboard>("/platform/dashboard", { tenant: false });
+}
+
+export async function fetchPlatformMailStatus(): Promise<PlatformMailStatus> {
+  const response = await apiFetch<{ mail: PlatformMailStatus }>("/platform/mail/status", {
+    tenant: false,
+  });
+  return response.mail;
+}
+
+export async function sendPlatformMailTest(email?: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/platform/mail/test", {
+    method: "POST",
+    tenant: false,
+    body: JSON.stringify(email ? { email } : {}),
+  });
 }
 
 export async function fetchPlatformOrganizations(): Promise<PlatformOrganization[]> {

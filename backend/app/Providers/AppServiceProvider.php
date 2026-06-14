@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Mail\MailConfiguration;
 use App\Services\Payroll\Deductions\PayrollDeductionEngine;
 use App\Services\Payroll\Deductions\PercentagePayrollDeductionCalculator;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -21,5 +22,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         JsonResource::withoutWrapping();
+
+        $mailConfiguration = $this->app->make(MailConfiguration::class);
+        $mailConfiguration->applyRuntimeFixes();
+        $mailConfiguration->logProductionMisconfiguration();
     }
 }

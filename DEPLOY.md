@@ -93,14 +93,20 @@ Do **not** leave placeholder text like `<paste MYSQLHOST>` — Laravel will try 
 | `APP_URL` | `https://agencypulse-api.onrender.com` |
 | `FRONTEND_URL` | `https://agencypulse-web.onrender.com` *(your frontend URL — also enables CORS and invitation links)* |
 | `CORS_ALLOWED_ORIGINS` | *(optional)* extra origins, comma-separated, if you use a custom domain |
-| `MAIL_MAILER` | `smtp` |
+| `MAIL_MAILER` | `smtp` *(required — `log` writes to server logs only and never delivers to inboxes)* |
 | `MAIL_HOST` | `smtp.gmail.com` |
 | `MAIL_PORT` | `587` |
-| `MAIL_USERNAME` | Your Gmail address |
-| `MAIL_PASSWORD` | Google App Password (16 chars) |
+| `MAIL_USERNAME` | `agencypulse.notifications@gmail.com` |
+| `MAIL_PASSWORD` | Gmail App Password — **16 characters, no spaces** (Google shows it as `xxxx xxxx xxxx xxxx`; paste without spaces or the app strips them) |
 | `MAIL_ENCRYPTION` | `tls` |
-| `MAIL_FROM_ADDRESS` | Same as `MAIL_USERNAME` |
+| `MAIL_FROM_ADDRESS` | `agencypulse.notifications@gmail.com` *(must exactly match `MAIL_USERNAME`)* |
 | `MAIL_FROM_NAME` | `AgencyPulse` |
+
+**After changing any mail variable:** click **Save Changes** on Render so the API redeploys and runs `php artisan config:cache` with the new values.
+
+**Verify delivery:** sign in as super admin → **Platform** → use **Send test email** before creating organizations.
+
+If org creation says invitation sent but nothing arrives, open **Platform** — a yellow banner means `MAIL_MAILER` is still `log` or SMTP is incomplete.
 
 Save to redeploy.
 

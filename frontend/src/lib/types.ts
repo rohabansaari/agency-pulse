@@ -497,6 +497,15 @@ export interface PlatformDashboard {
   tenant_users_total: number;
 }
 
+export interface PlatformMailStatus {
+  mailer: string;
+  configured: boolean;
+  issue: string | null;
+  from_address: string | null;
+  host: string | null;
+  port: number | string | null;
+}
+
 export interface PlatformOrganization {
   id: number;
   name: string;
