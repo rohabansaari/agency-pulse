@@ -94,7 +94,7 @@ class TeamController extends TenantAppController
 
         $organization = Organization::query()->findOrFail(TenantContext::id());
 
-        $membership = DB::transaction(function () use ($validated, $request, $assignedRole, $organization) {
+        $bundle = DB::transaction(function () use ($validated, $request, $assignedRole, $organization) {
             $pending = $this->invitations->createPendingMember(
                 $organization,
                 $validated['name'],
@@ -108,14 +108,28 @@ class TeamController extends TenantAppController
                 $this->payrollVault->setPinOnFirstEmployee($request->user(), $validated['payroll_pin']);
             }
 
-            $this->invitations->sendInvitation($pending['user'], $organization);
+            $plainToken = $this->invitations->issueToken($pending['user'], $organization, resent: false);
 
-            return $pending['membership'];
+            return [
+                'membership' => $pending['membership'],
+                'plain_token' => $plainToken,
+            ];
         });
 
+        $emailSent = $this->invitations->trySendInvitationEmail(
+            $bundle['membership']->user,
+            $organization,
+            $bundle['plain_token'],
+        );
+
+        $message = $emailSent
+            ? 'Employee invited. An activation email was sent.'
+            : 'Employee invited. The activation email could not be sent — resend the invitation from the team page.';
+
         return response()->json([
-            'message' => 'Employee invited. An activation email was sent.',
-            'member' => new TeamMemberResource($membership),
+            'message' => $message,
+            'member' => new TeamMemberResource($bundle['membership']),
+            'invitation_email_sent' => $emailSent,
         ], 201);
     }
 
@@ -167,9 +181,14 @@ class TeamController extends TenantAppController
             $role,
         );
 
+        $message = $result['invitation_email_sent']
+            ? 'Invitation sent.'
+            : 'Member invited. The invitation email could not be sent — resend it from the team page.';
+
         return response()->json([
-            'message' => 'Invitation sent.',
+            'message' => $message,
             'member' => new TeamMemberResource($result['membership']),
+            'invitation_email_sent' => $result['invitation_email_sent'],
         ], 201);
     }
 

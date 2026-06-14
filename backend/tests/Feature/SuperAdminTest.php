@@ -9,6 +9,7 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class SuperAdminTest extends TestCase
@@ -168,7 +169,7 @@ class SuperAdminTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('organization.name', 'Acme Agency')
             ->assertJsonPath('organization.admin_email', 'acme-admin@example.com')
-            ->assertJsonPath('organization.employee_count', 1);
+            ->assertJsonPath('organization.employee_count', 0);
 
         $this->assertDatabaseHas('organizations', ['name' => 'Acme Agency']);
         $this->assertDatabaseHas('users', [

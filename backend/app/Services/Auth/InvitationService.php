@@ -12,6 +12,7 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -84,13 +85,13 @@ class InvitationService
     public function sendInvitation(User $user, Organization $organization, bool $isAdminWelcome = false): string
     {
         $plainToken = $this->issueToken($user, $organization, resent: false);
-        $this->sendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
+        $this->trySendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
 
         return $plainToken;
     }
 
     /**
-     * @return array{user: User, membership: OrganizationMember, plain_token: string}
+     * @return array{user: User, membership: OrganizationMember, plain_token: string, invitation_email_sent: bool}
      */
     public function createInvitedMember(
         Organization $organization,
@@ -99,20 +100,29 @@ class InvitationService
         UserRole $role,
         bool $isAdminWelcome = false,
     ): array {
-        return DB::transaction(function () use ($organization, $name, $email, $role, $isAdminWelcome) {
+        $bundle = DB::transaction(function () use ($organization, $name, $email, $role) {
             $pending = $this->createPendingMember($organization, $name, $email, $role);
-            $plainToken = $this->sendInvitation(
-                $pending['user'],
-                $organization,
-                $isAdminWelcome,
-            );
+            $plainToken = $this->issueToken($pending['user'], $organization, resent: false);
 
             return [
-                'user' => $pending['user'],
-                'membership' => $pending['membership'],
+                'pending' => $pending,
                 'plain_token' => $plainToken,
             ];
         });
+
+        $emailSent = $this->trySendInvitationEmail(
+            $bundle['pending']['user'],
+            $organization,
+            $bundle['plain_token'],
+            $isAdminWelcome,
+        );
+
+        return [
+            'user' => $bundle['pending']['user'],
+            'membership' => $bundle['pending']['membership'],
+            'plain_token' => $bundle['plain_token'],
+            'invitation_email_sent' => $emailSent,
+        ];
     }
 
     public function issueToken(User $user, Organization $organization, bool $resent): string
@@ -149,6 +159,28 @@ class InvitationService
             : new UserInvitationMail($user, $organization, $setupUrl);
 
         Mail::to($user->email)->send($mailable);
+    }
+
+    public function trySendInvitationEmail(
+        User $user,
+        Organization $organization,
+        string $plainToken,
+        bool $isAdminWelcome = false,
+    ): bool {
+        try {
+            $this->sendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::error('Invitation email failed to send.', [
+                'user_id' => $user->id,
+                'organization_id' => $organization->id,
+                'email' => $user->email,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     public function setupPasswordUrl(string $plainToken): string
@@ -269,7 +301,7 @@ class InvitationService
             'resent_count' => $previousCount + 1,
         ]);
 
-        $this->sendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
+        $this->trySendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
 
         return $token;
     }

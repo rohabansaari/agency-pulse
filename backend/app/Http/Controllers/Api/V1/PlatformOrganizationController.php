@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
+use App\Services\Auth\InvitationService;
 use App\Services\Platform\PlatformOrganizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,8 @@ use Illuminate\Validation\Rule;
 class PlatformOrganizationController extends Controller
 {
     public function __construct(
-        private readonly PlatformOrganizationService $platformOrganizations
+        private readonly PlatformOrganizationService $platformOrganizations,
+        private readonly InvitationService $invitations,
     ) {}
 
     public function index(): JsonResponse
@@ -33,10 +35,30 @@ class PlatformOrganizationController extends Controller
 
         $result = $this->platformOrganizations->createOrganizationWithAdmin($validated);
 
+        $message = $result['invitation_email_sent']
+            ? 'Organization created. An invitation email was sent to the admin.'
+            : 'Organization created. The invitation email could not be sent — check mail settings and resend the invitation.';
+
         return response()->json([
-            'message' => 'Organization created. An invitation email was sent to the admin.',
+            'message' => $message,
             'organization' => $this->platformOrganizations->formatOrganization($result['organization']),
+            'invitation_email_sent' => $result['invitation_email_sent'],
         ], 201);
+    }
+
+    public function resendAdminInvitation(Organization $organization): JsonResponse
+    {
+        $admin = $this->platformOrganizations->resolvePrimaryAdmin($organization);
+
+        if (! $admin) {
+            abort(404, 'This organization has no admin account.');
+        }
+
+        $this->invitations->resend($admin, $organization, isAdminWelcome: true);
+
+        return response()->json([
+            'message' => 'Admin invitation email resent.',
+        ]);
     }
 
     public function update(Request $request, Organization $organization): JsonResponse

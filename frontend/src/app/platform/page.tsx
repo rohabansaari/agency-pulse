@@ -9,6 +9,7 @@ import {
   fetchPlatformDashboard,
   fetchPlatformOrganizations,
   formatApiErrors,
+  resendPlatformAdminInvitation,
   updatePlatformOrganization,
   updateSuperAdminPassword,
 } from "@/lib/api";
@@ -191,6 +192,26 @@ export default function PlatformPage() {
     }
   }
 
+  async function handleResendAdminInvitation(organization: PlatformOrganization) {
+    setRowActionId(organization.id);
+    setRowMessage("");
+    setRowMessageIsError(false);
+    try {
+      const response = await resendPlatformAdminInvitation(organization.id);
+      setRowMessage(response.message);
+      await load();
+    } catch (err) {
+      setRowMessageIsError(true);
+      setRowMessage(
+        err instanceof ApiError
+          ? formatApiErrors(err.errors) || err.message
+          : "Failed to resend admin invitation.",
+      );
+    } finally {
+      setRowActionId(null);
+    }
+  }
+
   async function handleDelete(organization: PlatformOrganization) {
     if (
       !window.confirm(
@@ -353,6 +374,7 @@ export default function PlatformPage() {
                     onEditEmail={() => openEditEmail(organization)}
                     onSuspend={() => void handleSuspend(organization)}
                     onReactivate={() => void handleReactivate(organization)}
+                    onResendInvitation={() => void handleResendAdminInvitation(organization)}
                     onDelete={() => void handleDelete(organization)}
                   />
                 ))
@@ -447,6 +469,7 @@ function OrganizationRow({
   onEditEmail,
   onSuspend,
   onReactivate,
+  onResendInvitation,
   onDelete,
 }: {
   organization: PlatformOrganization;
@@ -454,9 +477,11 @@ function OrganizationRow({
   onEditEmail: () => void;
   onSuspend: () => void;
   onReactivate: () => void;
+  onResendInvitation: () => void;
   onDelete: () => void;
 }) {
   const isSuspended = organization.status === "suspended";
+  const adminPending = organization.admin_status === "invited";
 
   return (
     <tr>
@@ -467,6 +492,11 @@ function OrganizationRow({
       <td className="px-4 py-3" data-label="Admin">
         <p>{organization.admin_name ?? "—"}</p>
         <p className="text-xs text-zinc-500">{organization.admin_email ?? "—"}</p>
+        {adminPending ? (
+          <p className="mt-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+            Pending invitation
+          </p>
+        ) : null}
       </td>
       <td className="px-4 py-3" data-label="Employees">
         {organization.employee_count}
@@ -489,6 +519,16 @@ function OrganizationRow({
           >
             Edit email
           </button>
+          {adminPending ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onResendInvitation}
+              className="rounded-md border border-violet-300 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 disabled:opacity-50 dark:border-violet-800 dark:text-violet-300"
+            >
+              Resend invitation
+            </button>
+          ) : null}
           {isSuspended ? (
             <>
               <button

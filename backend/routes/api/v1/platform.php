@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/dashboard', [PlatformDashboardController::class, 'show']);
 Route::get('/organizations', [PlatformOrganizationController::class, 'index']);
 Route::post('/organizations', [PlatformOrganizationController::class, 'store']);
+Route::post('/organizations/{organization}/resend-admin-invitation', [PlatformOrganizationController::class, 'resendAdminInvitation']);
 Route::patch('/organizations/{organization}', [PlatformOrganizationController::class, 'update']);
 Route::delete('/organizations/{organization}', [PlatformOrganizationController::class, 'destroy']);
 Route::patch('/password', [PlatformPasswordController::class, 'update']);

@@ -472,13 +472,25 @@ export async function createPlatformOrganization(data: {
   organization_name: string;
   admin_name: string;
   admin_email: string;
-}): Promise<{ message: string; organization: PlatformOrganization }> {
-  return apiFetch<{ message: string; organization: PlatformOrganization }>(
+}): Promise<{ message: string; organization: PlatformOrganization; invitation_email_sent?: boolean }> {
+  return apiFetch<{ message: string; organization: PlatformOrganization; invitation_email_sent?: boolean }>(
     "/platform/organizations",
     {
       method: "POST",
       tenant: false,
       body: JSON.stringify(data),
+    },
+  );
+}
+
+export async function resendPlatformAdminInvitation(
+  organizationId: number,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/platform/organizations/${organizationId}/resend-admin-invitation`,
+    {
+      method: "POST",
+      tenant: false,
     },
   );
 }

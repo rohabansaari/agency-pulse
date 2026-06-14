@@ -38,7 +38,7 @@ class PlatformOrganizationService
     }
 
     /**
-     * @return array{organization: Organization, admin: User}
+     * @return array{organization: Organization, admin: User, invitation_email_sent: bool}
      */
     public function createOrganizationWithAdmin(array $validated): array
     {
@@ -48,25 +48,44 @@ class PlatformOrganizationService
             ]);
         }
 
-        return DB::transaction(function () use ($validated) {
+        $bundle = DB::transaction(function () use ($validated) {
             $organization = Organization::create([
                 'name' => $validated['organization_name'],
                 'status' => OrganizationStatus::Active,
             ]);
 
-            $result = $this->invitations->createInvitedMember(
+            $pending = $this->invitations->createPendingMember(
                 $organization,
                 $validated['admin_name'],
                 $validated['admin_email'],
                 UserRole::Admin,
-                isAdminWelcome: true,
+            );
+
+            $plainToken = $this->invitations->issueToken(
+                $pending['user'],
+                $organization,
+                resent: false,
             );
 
             return [
-                'organization' => $organization->fresh(),
-                'admin' => $result['user']->fresh(),
+                'organization' => $organization,
+                'admin' => $pending['user'],
+                'plain_token' => $plainToken,
             ];
         });
+
+        $emailSent = $this->invitations->trySendInvitationEmail(
+            $bundle['admin'],
+            $bundle['organization'],
+            $bundle['plain_token'],
+            isAdminWelcome: true,
+        );
+
+        return [
+            'organization' => $bundle['organization']->fresh(),
+            'admin' => $bundle['admin']->fresh(),
+            'invitation_email_sent' => $emailSent,
+        ];
     }
 
     /**
@@ -198,6 +217,12 @@ class PlatformOrganizationService
     public function formatOrganization(Organization $organization): array
     {
         $admin = $this->resolvePrimaryAdmin($organization);
+        $adminMembership = $admin
+            ? OrganizationMember::query()
+                ->where('organization_id', $organization->id)
+                ->where('user_id', $admin->id)
+                ->first()
+            : null;
 
         return [
             'id' => $organization->id,
@@ -208,6 +233,7 @@ class PlatformOrganizationService
             'admin_user_id' => $admin?->id,
             'admin_name' => $admin?->name,
             'admin_email' => $admin?->email,
+            'admin_status' => $adminMembership?->status->value,
             'created_at' => $organization->created_at?->toIso8601String(),
         ];
     }

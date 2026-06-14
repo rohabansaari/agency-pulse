@@ -48,7 +48,7 @@ class OnboardingEmployeeService
 
         $organization = Organization::query()->findOrFail(TenantContext::id());
 
-        $membership = DB::transaction(function () use ($validated, $admin, $role, $organization) {
+        $bundle = DB::transaction(function () use ($validated, $admin, $role, $organization) {
             $pending = $this->invitations->createPendingMember(
                 $organization,
                 $validated['name'],
@@ -59,14 +59,25 @@ class OnboardingEmployeeService
             $contractPayload = $this->contractPayloadFromSalary($validated);
             $this->adminPayroll->createInitialContract($pending['user'], $contractPayload, $admin);
 
-            $this->invitations->sendInvitation($pending['user'], $organization);
+            $plainToken = $this->invitations->issueToken($pending['user'], $organization, resent: false);
 
-            return $pending['membership'];
+            return [
+                'membership' => $pending['membership'],
+                'plain_token' => $plainToken,
+            ];
         });
 
+        $emailSent = $this->invitations->trySendInvitationEmail(
+            $bundle['membership']->user,
+            $organization,
+            $bundle['plain_token'],
+        );
+
         return [
-            'member' => $membership,
-            'message' => 'Employee invited. An activation email was sent.',
+            'member' => $bundle['membership'],
+            'message' => $emailSent
+                ? 'Employee invited. An activation email was sent.'
+                : 'Employee invited. The activation email could not be sent — resend the invitation from the team page.',
         ];
     }
 

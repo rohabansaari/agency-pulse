@@ -16,6 +16,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Services\Auth\SuperAdminBootstrap;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 class InvitationTest extends TestCase
 {
@@ -53,6 +55,29 @@ class InvitationTest extends TestCase
         );
 
         Mail::assertSent(AdminWelcomeMail::class, fn ($mail) => $mail->hasTo('jane@acme.test'));
+    }
+
+    public function test_platform_org_creation_succeeds_when_mail_fails(): void
+    {
+        Mail::shouldReceive('to')->once()->andReturnSelf();
+        Mail::shouldReceive('send')->once()->andThrow(new \RuntimeException('SMTP connection failed'));
+
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+        Sanctum::actingAs($superAdmin);
+
+        $response = $this->postJson('/api/v1/platform/organizations', [
+            'organization_name' => 'Mail Fail Org',
+            'admin_name' => 'Fail Admin',
+            'admin_email' => 'fail-admin@acme.test',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('invitation_email_sent', false)
+            ->assertJsonPath('organization.name', 'Mail Fail Org');
+
+        $this->assertDatabaseHas('organizations', ['name' => 'Mail Fail Org']);
+        $this->assertDatabaseHas('users', ['email' => 'fail-admin@acme.test']);
     }
 
     public function test_employee_creation_sends_invitation_and_blocks_login_until_activation(): void

@@ -506,6 +506,7 @@ export interface PlatformOrganization {
   admin_user_id?: number | null;
   admin_name?: string | null;
   admin_email?: string | null;
+  admin_status?: "active" | "invited" | "suspended" | null;
   created_at?: string | null;
 }
 
