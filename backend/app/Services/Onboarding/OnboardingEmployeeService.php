@@ -63,31 +63,36 @@ class OnboardingEmployeeService
 
             return [
                 'membership' => $pending['membership'],
+                'user' => $pending['user'],
                 'plain_token' => $plainToken,
             ];
         });
 
-        $emailSent = $this->invitations->trySendInvitationEmail(
-            $bundle['membership']->user,
+        $delivery = $this->invitations->trySendInvitationEmail(
+            $bundle['user'],
             $organization,
             $bundle['plain_token'],
         );
 
         return [
             'member' => $bundle['membership'],
-            'message' => $emailSent
+            'message' => $delivery['sent']
                 ? 'Employee invited. An activation email was sent.'
                 : 'Employee invited. The activation email could not be sent — resend the invitation from the team page.',
+            'invitation_email_sent' => $delivery['sent'],
+            'delivery_issue' => $delivery['error'],
         ];
     }
 
     /**
      * @return array{
      *     created: int,
+     *     emails_sent: int,
+     *     emails_failed: int,
      *     failed_count: int,
      *     total: int,
      *     failed: list<array{row: int, data: array<string, string>, errors: list<string>}>,
-     *     results: list<array{row: int, data: array<string, string>, status: string, error: string|null}>,
+     *     results: list<array{row: int, data: array<string, string>, status: string, error: string|null, invitation_email_sent?: bool}>,
      *     message: string
      * }
      */
@@ -112,6 +117,8 @@ class OnboardingEmployeeService
         }
 
         $created = 0;
+        $emailsSent = 0;
+        $emailsFailed = 0;
         $failed = [];
         $results = [];
         $seenEmails = [];
@@ -161,7 +168,7 @@ class OnboardingEmployeeService
             $seenEmails[$emailKey] = $rowNumber;
 
             try {
-                $this->createEmployee([
+                $result = $this->createEmployee([
                     'name' => $supportedRow['name'],
                     'email' => $supportedRow['email'],
                     'salary_type' => $supportedRow['salary_type'],
@@ -170,11 +177,21 @@ class OnboardingEmployeeService
                 ], $admin);
 
                 $created++;
+
+                if ($result['invitation_email_sent']) {
+                    $emailsSent++;
+                } else {
+                    $emailsFailed++;
+                }
+
                 $results[] = [
                     'row' => $rowNumber,
                     'data' => $fullRow,
                     'status' => 'imported',
-                    'error' => null,
+                    'error' => $result['invitation_email_sent']
+                        ? null
+                        : ($result['delivery_issue'] ?? 'Invitation email could not be sent.'),
+                    'invitation_email_sent' => $result['invitation_email_sent'],
                 ];
             } catch (Throwable $exception) {
                 $errors = $this->errorsFromThrowable($exception);
@@ -194,12 +211,19 @@ class OnboardingEmployeeService
         }
 
         $failedCount = count($failed);
-        $message = $failedCount === 0
-            ? "{$created} employee invitation(s) sent."
-            : "{$created} employee invitation(s) sent. {$failedCount} record(s) require attention.";
+        $message = match (true) {
+            $created === 0 => $failedCount === 0
+                ? 'No employees were imported.'
+                : "No employees imported. {$failedCount} record(s) require attention.",
+            $emailsFailed === 0 && $failedCount === 0 => "{$created} employee invitation(s) sent.",
+            $emailsFailed > 0 && $failedCount === 0 => "{$created} employee(s) created. {$emailsFailed} invitation email(s) could not be delivered — resend from Employees after fixing mail settings.",
+            default => "{$created} employee(s) created ({$emailsSent} email(s) sent, {$emailsFailed} email(s) failed). {$failedCount} record(s) require attention.",
+        };
 
         return [
             'created' => $created,
+            'emails_sent' => $emailsSent,
+            'emails_failed' => $emailsFailed,
             'failed_count' => $failedCount,
             'total' => $total,
             'failed' => $failed,

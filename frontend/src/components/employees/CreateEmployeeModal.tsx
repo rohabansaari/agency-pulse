@@ -13,7 +13,7 @@ import { useState } from "react";
 type CreateEmployeeModalProps = {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (message?: string) => void;
   vaultStatus: PayrollVaultStatus | null;
   canSelectRole: boolean;
 };
@@ -64,7 +64,7 @@ export function CreateEmployeeModal({
     }
 
     try {
-      await createEmployee({
+      const response = await createEmployee({
         name: name.trim(),
         email: email.trim(),
         role,
@@ -76,8 +76,14 @@ export function CreateEmployeeModal({
           ? payrollPinConfirmation
           : undefined,
       });
+
+      if (!response.invitation_email_sent) {
+        setError(response.delivery_issue || response.message);
+        return;
+      }
+
       resetForm();
-      onCreated();
+      onCreated(response.message);
       onClose();
     } catch (err) {
       setError(

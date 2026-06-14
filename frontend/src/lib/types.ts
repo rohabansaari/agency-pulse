@@ -66,6 +66,7 @@ export interface CsvImportResult {
   data: Record<string, string>;
   status: "imported" | "failed";
   error: string | null;
+  invitation_email_sent?: boolean;
 }
 
 export interface ApiValidationError {

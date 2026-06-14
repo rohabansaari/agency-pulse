@@ -188,6 +188,12 @@ export function OnboardingWizard() {
         role: employeeRole,
       });
       setStatus(response.status);
+
+      if (!response.invitation_email_sent) {
+        setError(response.delivery_issue || response.message);
+        return;
+      }
+
       setSuccess(response.message);
       setEmployeeName("");
       setEmployeeEmail("");

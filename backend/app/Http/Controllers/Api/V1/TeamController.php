@@ -112,24 +112,26 @@ class TeamController extends TenantAppController
 
             return [
                 'membership' => $pending['membership'],
+                'user' => $pending['user'],
                 'plain_token' => $plainToken,
             ];
         });
 
-        $emailSent = $this->invitations->trySendInvitationEmail(
-            $bundle['membership']->user,
+        $delivery = $this->invitations->trySendInvitationEmail(
+            $bundle['user'],
             $organization,
             $bundle['plain_token'],
         );
 
-        $message = $emailSent
+        $message = $delivery['sent']
             ? 'Employee invited. An activation email was sent.'
             : 'Employee invited. The activation email could not be sent — resend the invitation from the team page.';
 
         return response()->json([
             'message' => $message,
             'member' => new TeamMemberResource($bundle['membership']),
-            'invitation_email_sent' => $emailSent,
+            'invitation_email_sent' => $delivery['sent'],
+            'delivery_issue' => $delivery['error'],
         ], 201);
     }
 
@@ -143,15 +145,21 @@ class TeamController extends TenantAppController
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        $this->invitations->resend(
+        $delivery = $this->invitations->resend(
             $user,
             $organization,
             $membership->role === UserRole::Admin,
         );
 
+        $message = $delivery['invitation_email_sent']
+            ? 'Invitation email resent.'
+            : 'Invitation could not be sent. Check mail settings or use Resend again after fixing delivery.';
+
         return response()->json([
-            'message' => 'Invitation email resent.',
+            'message' => $message,
             'member' => new TeamMemberResource($membership->fresh()->load('user')),
+            'invitation_email_sent' => $delivery['invitation_email_sent'],
+            'delivery_issue' => $delivery['delivery_issue'],
         ]);
     }
 
@@ -189,6 +197,7 @@ class TeamController extends TenantAppController
             'message' => $message,
             'member' => new TeamMemberResource($result['membership']),
             'invitation_email_sent' => $result['invitation_email_sent'],
+            'delivery_issue' => $result['delivery_issue'] ?? null,
         ], 201);
     }
 
@@ -322,6 +331,8 @@ class TeamController extends TenantAppController
         return response()->json([
             'message' => $result['message'],
             'created' => $result['created'],
+            'emails_sent' => $result['emails_sent'],
+            'emails_failed' => $result['emails_failed'],
             'failed_count' => $result['failed_count'],
             'total' => $result['total'],
             'failed' => $result['failed'],

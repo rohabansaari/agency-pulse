@@ -74,7 +74,7 @@ class PlatformOrganizationService
             ];
         });
 
-        $emailSent = $this->invitations->trySendInvitationEmail(
+        $delivery = $this->invitations->trySendInvitationEmail(
             $bundle['admin'],
             $bundle['organization'],
             $bundle['plain_token'],
@@ -84,7 +84,8 @@ class PlatformOrganizationService
         return [
             'organization' => $bundle['organization']->fresh(),
             'admin' => $bundle['admin']->fresh(),
-            'invitation_email_sent' => $emailSent,
+            'invitation_email_sent' => $delivery['sent'],
+            'delivery_issue' => $delivery['error'],
         ];
     }
 

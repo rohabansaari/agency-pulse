@@ -112,7 +112,7 @@ class InvitationService
             ];
         });
 
-        $emailSent = $this->trySendInvitationEmail(
+        $delivery = $this->trySendInvitationEmail(
             $bundle['pending']['user'],
             $organization,
             $bundle['plain_token'],
@@ -123,7 +123,8 @@ class InvitationService
             'user' => $bundle['pending']['user'],
             'membership' => $bundle['pending']['membership'],
             'plain_token' => $bundle['plain_token'],
-            'invitation_email_sent' => $emailSent,
+            'invitation_email_sent' => $delivery['sent'],
+            'delivery_issue' => $delivery['error'],
         ];
     }
 
@@ -163,12 +164,26 @@ class InvitationService
         Mail::to($user->email)->send($mailable);
     }
 
+    /**
+     * @return array{sent: bool, error: string|null}
+     */
     public function trySendInvitationEmail(
         User $user,
         Organization $organization,
         string $plainToken,
         bool $isAdminWelcome = false,
-    ): bool {
+    ): array {
+        $mailable = $isAdminWelcome ? 'admin_welcome' : 'user_invitation';
+
+        Log::info('Invitation email attempt.', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'role' => $user->role?->value ?? $user->role,
+            'organization_id' => $organization->id,
+            'mailable' => $mailable,
+            'mailer' => $this->mailConfiguration->mailer(),
+        ]);
+
         if ($issue = $this->mailConfiguration->configurationIssue()) {
             Log::error('Invitation email not sent — mail misconfigured.', [
                 'user_id' => $user->id,
@@ -178,23 +193,59 @@ class InvitationService
                 'mailer' => $this->mailConfiguration->mailer(),
             ]);
 
-            return false;
+            return ['sent' => false, 'error' => $issue];
         }
 
         try {
             $this->sendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
 
-            return true;
+            Log::info('Invitation email sent.', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'role' => $user->role?->value ?? $user->role,
+                'organization_id' => $organization->id,
+                'mailable' => $mailable,
+            ]);
+
+            return ['sent' => true, 'error' => null];
         } catch (\Throwable $exception) {
+            $error = $this->formatDeliveryError($exception);
+
             Log::error('Invitation email failed to send.', [
                 'user_id' => $user->id,
                 'organization_id' => $organization->id,
                 'email' => $user->email,
+                'role' => $user->role?->value ?? $user->role,
+                'mailable' => $mailable,
                 'error' => $exception->getMessage(),
+                'delivery_issue' => $error,
             ]);
 
-            return false;
+            return ['sent' => false, 'error' => $error];
         }
+    }
+
+    private function formatDeliveryError(\Throwable $exception): string
+    {
+        $message = $exception->getMessage();
+
+        if (
+            str_contains($message, 'MS42225')
+            || str_contains($message, 'unique recipients limit')
+            || str_contains($message, 'trial domain')
+        ) {
+            return 'MailerSend trial limit reached: verify your domain at mailersend.com and move to the free Hobby plan to invite employees, managers, and sub admins.';
+        }
+
+        if (str_contains($message, 'MS42207') || str_contains($message, 'must be verified')) {
+            return 'The sender domain is not verified in MailerSend. Verify your domain and update MAIL_FROM_ADDRESS.';
+        }
+
+        if (str_contains($message, 'MS42212')) {
+            return 'MailerSend rejected this recipient. Verify your domain in MailerSend to send invitations to any email address.';
+        }
+
+        return $message;
     }
 
     public function mailDeliveryIssue(): ?string
@@ -283,7 +334,10 @@ class InvitationService
         });
     }
 
-    public function resend(User $user, Organization $organization, bool $isAdminWelcome = false): InvitationToken
+    /**
+     * @return array{token: InvitationToken, invitation_email_sent: bool, delivery_issue: string|null}
+     */
+    public function resend(User $user, Organization $organization, bool $isAdminWelcome = false): array
     {
         $membership = OrganizationMember::query()
             ->where('user_id', $user->id)
@@ -320,9 +374,13 @@ class InvitationService
             'resent_count' => $previousCount + 1,
         ]);
 
-        $this->trySendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
+        $delivery = $this->trySendInvitationEmail($user, $organization, $plainToken, $isAdminWelcome);
 
-        return $token;
+        return [
+            'token' => $token,
+            'invitation_email_sent' => $delivery['sent'],
+            'delivery_issue' => $delivery['error'],
+        ];
     }
 
     public function latestTokenForMember(OrganizationMember $member): ?InvitationToken

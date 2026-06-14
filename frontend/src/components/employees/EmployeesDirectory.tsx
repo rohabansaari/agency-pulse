@@ -49,6 +49,10 @@ export function EmployeesDirectory({ user }: { user: User }) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState<{
+    variant: "success" | "error";
+    message: string;
+  } | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [vaultStatus, setVaultStatus] = useState<PayrollVaultStatus | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -144,6 +148,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
           }
         />
 
+        {feedback ? <Alert variant={feedback.variant}>{feedback.message}</Alert> : null}
         {error ? <Alert variant="error">{error}</Alert> : null}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -185,7 +190,12 @@ export function EmployeesDirectory({ user }: { user: User }) {
         <CreateEmployeeModal
           open={showCreate}
           onClose={() => setShowCreate(false)}
-          onCreated={() => void load()}
+          onCreated={(message) => {
+            if (message) {
+              setFeedback({ variant: "success", message });
+            }
+            void load();
+          }}
           vaultStatus={vaultStatus}
           canSelectRole={canChangeEmployeeRoles(user.role)}
         />
@@ -274,7 +284,12 @@ export function EmployeesDirectory({ user }: { user: User }) {
                   <td className="px-3 py-3 font-mono text-xs">{formatDuration(member.approved_leave_seconds ?? 0)}</td>
                   <td className="px-3 py-3">{member.overtime_requests_count ?? 0}</td>
                   <td className="px-3 py-3">
-                    <EmployeeActionsMenu viewer={user} member={member} onUpdated={load} />
+                    <EmployeeActionsMenu
+                      viewer={user}
+                      member={member}
+                      onUpdated={load}
+                      onFeedback={(message, variant) => setFeedback({ message, variant })}
+                    />
                   </td>
                 </motion.tr>
               ))}

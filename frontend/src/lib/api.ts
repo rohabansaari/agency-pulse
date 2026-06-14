@@ -394,6 +394,13 @@ export async function fetchTeam(): Promise<TeamMember[]> {
   return apiFetch<TeamMember[]>("/team");
 }
 
+export type EmployeeInviteResponse = {
+  member: TeamMember;
+  message: string;
+  invitation_email_sent: boolean;
+  delivery_issue?: string | null;
+};
+
 export async function createEmployee(data: {
   name: string;
   email: string;
@@ -403,19 +410,17 @@ export async function createEmployee(data: {
   monthly_salary?: number;
   payroll_pin?: string;
   payroll_pin_confirmation?: string;
-}): Promise<TeamMember> {
-  const response = await apiFetch<{ member: TeamMember }>("/team/create-employee", {
+}): Promise<EmployeeInviteResponse> {
+  return apiFetch<EmployeeInviteResponse>("/team/create-employee", {
     method: "POST",
     body: JSON.stringify(data),
   });
-  return response.member;
 }
 
-export async function resendEmployeeInvitation(userId: number): Promise<TeamMember> {
-  const response = await apiFetch<{ member: TeamMember }>(`/team/${userId}/resend-invitation`, {
+export async function resendEmployeeInvitation(userId: number): Promise<EmployeeInviteResponse> {
+  return apiFetch<EmployeeInviteResponse>(`/team/${userId}/resend-invitation`, {
     method: "POST",
   });
-  return response.member;
 }
 
 export async function inviteTeamMember(data: {
@@ -1007,8 +1012,18 @@ export async function createOnboardingEmployee(data: {
   salary: number;
   salary_type: "monthly" | "hourly";
   role?: UserRole;
-}): Promise<{ message: string; status: OnboardingStatus }> {
-  return apiFetch<{ message: string; status: OnboardingStatus }>("/onboarding/employees", {
+}): Promise<{
+  message: string;
+  invitation_email_sent: boolean;
+  delivery_issue?: string | null;
+  status: OnboardingStatus;
+}> {
+  return apiFetch<{
+    message: string;
+    invitation_email_sent: boolean;
+    delivery_issue?: string | null;
+    status: OnboardingStatus;
+  }>("/onboarding/employees", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -1016,15 +1031,7 @@ export async function createOnboardingEmployee(data: {
 
 export async function importOnboardingEmployees(
   file: File,
-): Promise<{
-  message: string;
-  created: number;
-  failed_count: number;
-  total: number;
-  failed: { row: number; data: Record<string, string>; errors: string[] }[];
-  results: CsvImportResult[];
-  status: OnboardingStatus;
-}> {
+): Promise<EmployeeCsvImportResponse & { status: OnboardingStatus }> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -1060,6 +1067,8 @@ export async function completeOnboarding(): Promise<{ message: string; status: O
 export type EmployeeCsvImportResponse = {
   message: string;
   created: number;
+  emails_sent: number;
+  emails_failed: number;
   failed_count: number;
   total: number;
   failed: { row: number; data: Record<string, string>; errors: string[] }[];

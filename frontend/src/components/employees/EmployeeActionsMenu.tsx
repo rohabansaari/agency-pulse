@@ -28,9 +28,10 @@ type EmployeeActionsMenuProps = {
   viewer: User;
   member: TeamMember;
   onUpdated: () => void;
+  onFeedback?: (message: string, variant: "success" | "error") => void;
 };
 
-export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActionsMenuProps) {
+export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: EmployeeActionsMenuProps) {
   const router = useRouter();
   const [modal, setModal] = useState<"edit" | "role" | "status" | null>(null);
   const [name, setName] = useState(member.name);
@@ -110,10 +111,23 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated }: EmployeeActio
                 setSaving(true);
                 setError("");
                 try {
-                  await resendEmployeeInvitation(member.user_id);
+                  const response = await resendEmployeeInvitation(member.user_id);
+
+                  if (!response.invitation_email_sent) {
+                    onFeedback?.(
+                      response.delivery_issue || response.message,
+                      "error",
+                    );
+                    return;
+                  }
+
+                  onFeedback?.(response.message, "success");
                   onUpdated();
                 } catch (err) {
-                  setError(err instanceof ApiError ? err.message : "Failed to resend invitation.");
+                  const message =
+                    err instanceof ApiError ? err.message : "Failed to resend invitation.";
+                  onFeedback?.(message, "error");
+                  setError(message);
                 } finally {
                   setSaving(false);
                 }

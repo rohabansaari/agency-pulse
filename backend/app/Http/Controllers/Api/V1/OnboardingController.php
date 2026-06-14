@@ -119,6 +119,8 @@ class OnboardingController extends TenantController
         return response()->json([
             'message' => $result['message'],
             'member' => new TeamMemberResource($result['member']),
+            'invitation_email_sent' => $result['invitation_email_sent'],
+            'delivery_issue' => $result['delivery_issue'] ?? null,
             'status' => $this->onboarding->status($request->user(), $organization),
         ], 201);
     }
@@ -140,6 +142,8 @@ class OnboardingController extends TenantController
         return response()->json([
             'message' => $result['message'],
             'created' => $result['created'],
+            'emails_sent' => $result['emails_sent'],
+            'emails_failed' => $result['emails_failed'],
             'failed_count' => $result['failed_count'],
             'total' => $result['total'],
             'failed' => $result['failed'],

@@ -16,6 +16,8 @@ import { useState } from "react";
 type ImportResponse = {
   message: string;
   created: number;
+  emails_sent: number;
+  emails_failed: number;
   failed_count: number;
   total: number;
   failed: { row: number; data: Record<string, string>; errors: string[] }[];
@@ -176,14 +178,20 @@ export function EmployeeCsvImport({
       {importReport ? (
         <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
           <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Import complete</p>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {importReport.created} employee{importReport.created === 1 ? "" : "s"} imported successfully.
-          </p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{importReport.message}</p>
           <div className="mt-2 flex flex-wrap gap-4 text-xs text-zinc-500">
             <span>Total records: {importReport.total}</span>
-            <span>Valid: {importReport.created}</span>
-            <span>Invalid: {importReport.failed_count}</span>
+            <span>Created: {importReport.created}</span>
+            <span>Emails sent: {importReport.emails_sent}</span>
+            <span>Invalid rows: {importReport.failed_count}</span>
           </div>
+          {importReport.emails_failed > 0 ? (
+            <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
+              {importReport.emails_failed} invitation email
+              {importReport.emails_failed === 1 ? "" : "s"} could not be delivered. Resend from Employees
+              after verifying your MailerSend domain.
+            </p>
+          ) : null}
           {importReport.failed_count > 0 ? (
             <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
               {importReport.failed_count} record{importReport.failed_count === 1 ? "" : "s"} require attention.

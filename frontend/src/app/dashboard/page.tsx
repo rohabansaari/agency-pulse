@@ -1,7 +1,6 @@
 "use client";
 
 import { AppShell } from "@/components/dashboard/AppShell";
-import { OnboardingCompletionPanel } from "@/components/onboarding/OnboardingCompletionPanel";
 import { OnboardingFollowUpBanner } from "@/components/onboarding/OnboardingFollowUpBanner";
 import { RoleDashboard } from "@/components/dashboard/RoleDashboard";
 import { PageTransition } from "@/components/motion/PageTransition";
@@ -42,7 +41,6 @@ export default function DashboardPage() {
       <PageTransition>
         <div className="space-y-6">
           <OnboardingFollowUpBanner />
-          <OnboardingCompletionPanel />
           {loading ? (
             <Spinner label="Loading dashboard…" />
           ) : error ? (

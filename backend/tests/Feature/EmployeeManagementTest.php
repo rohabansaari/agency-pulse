@@ -52,7 +52,8 @@ class EmployeeManagementTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('member.email', 'employee@example.com')
             ->assertJsonPath('member.role', UserRole::Employee->value)
-            ->assertJsonPath('member.status', OrganizationMemberStatus::Invited->value);
+            ->assertJsonPath('member.status', OrganizationMemberStatus::Invited->value)
+            ->assertJsonPath('invitation_email_sent', true);
 
         Mail::assertSent(UserInvitationMail::class);
 
@@ -60,6 +61,33 @@ class EmployeeManagementTest extends TestCase
             'email' => 'employee@example.com',
             'password' => 'password123',
         ])->assertUnprocessable();
+    }
+
+    public function test_create_employee_reports_mail_failure_without_rolling_back(): void
+    {
+        Mail::shouldReceive('to')->once()->andReturnSelf();
+        Mail::shouldReceive('send')->once()->andThrow(new \RuntimeException('MS42225 unique recipients limit'));
+
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        $response = $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/team/create-employee', [
+                'name' => 'Mail Fail Employee',
+                'email' => 'fail-employee@example.com',
+                'role' => UserRole::Manager->value,
+                'salary_type' => 'hourly',
+                'hourly_rate' => 50,
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('invitation_email_sent', false)
+            ->assertJsonPath('member.email', 'fail-employee@example.com')
+            ->assertJsonPath('member.role', UserRole::Manager->value);
+
+        $this->assertDatabaseHas('users', ['email' => 'fail-employee@example.com']);
     }
 
     public function test_create_employee_rejects_password_field(): void

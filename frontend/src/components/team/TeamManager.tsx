@@ -78,7 +78,7 @@ export function TeamManager({ user }: { user: User }) {
     setError("");
     setSuccess("");
     try {
-      await createEmployee({
+      const response = await createEmployee({
         name: createName,
         email: createEmail,
         role: createRole,
@@ -91,13 +91,19 @@ export function TeamManager({ user }: { user: User }) {
           ? createPayrollPinConfirmation
           : undefined,
       });
+
+      if (!response.invitation_email_sent) {
+        setError(response.delivery_issue || response.message);
+        return;
+      }
+
       setShowCreate(false);
       setCreateName("");
       setCreateEmail("");
       setCreateRole("employee");
       setCreatePayrollPin("");
       setCreatePayrollPinConfirmation("");
-      setSuccess(`Invitation sent to ${createEmail}.`);
+      setSuccess(response.message);
       await load();
     } catch (err) {
       setError(
@@ -115,8 +121,14 @@ export function TeamManager({ user }: { user: User }) {
     setError("");
     setSuccess("");
     try {
-      await resendEmployeeInvitation(member.user_id);
-      setSuccess(`Invitation resent to ${member.email}.`);
+      const response = await resendEmployeeInvitation(member.user_id);
+
+      if (!response.invitation_email_sent) {
+        setError(response.delivery_issue || response.message);
+        return;
+      }
+
+      setSuccess(response.message);
       await load();
     } catch (err) {
       setError(
