@@ -11,6 +11,7 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Services\Mail\InvitationDeliveryTracer;
 use App\Services\Mail\MailConfiguration;
+use App\Services\Mail\MailerSendErrorFormatter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -26,6 +27,7 @@ class InvitationService
         private readonly MembershipRoleSync $membershipRoleSync,
         private readonly MailConfiguration $mailConfiguration,
         private readonly InvitationDeliveryTracer $deliveryTracer,
+        private readonly MailerSendErrorFormatter $mailerSendErrors,
     ) {}
 
     public function createPlaceholderPassword(): string
@@ -183,9 +185,9 @@ class InvitationService
         $setupUrl = $this->setupPasswordUrl($plainToken);
         $role = $this->resolveInvitationRole($user, $organization, $isAdminWelcome);
 
-        Mail::to($recipientEmail, (string) $user->name)->send(
-            new AccountInvitationMail($user, $organization, $setupUrl, $role),
-        );
+        Mail::mailer($this->mailConfiguration->mailer())
+            ->to($recipientEmail, (string) $user->name)
+            ->send(new AccountInvitationMail($user, $organization, $setupUrl, $role));
     }
 
     private function resolveInvitationRole(
@@ -260,7 +262,7 @@ class InvitationService
             return ['sent' => true, 'error' => null, 'meta' => $successMeta];
         } catch (\Throwable $exception) {
             $failure = $this->deliveryTracer->logMailDispatchFailure($exception, $baseContext);
-            $error = $this->formatDeliveryError($exception);
+            $error = $this->mailerSendErrors->format($exception);
 
             return [
                 'sent' => false,
@@ -272,29 +274,6 @@ class InvitationService
                 ],
             ];
         }
-    }
-
-    private function formatDeliveryError(\Throwable $exception): string
-    {
-        $message = $exception->getMessage();
-
-        if (
-            str_contains($message, 'MS42225')
-            || str_contains($message, 'unique recipients limit')
-            || str_contains($message, 'trial domain')
-        ) {
-            return 'MailerSend rejected this invitation. Check the MailerSend dashboard for domain verification and recipient limits, then resend from Employees.';
-        }
-
-        if (str_contains($message, 'MS42207') || str_contains($message, 'must be verified')) {
-            return 'The sender domain is not verified in MailerSend. Verify your domain and update MAIL_FROM_ADDRESS.';
-        }
-
-        if (str_contains($message, 'MS42212')) {
-            return 'MailerSend rejected this recipient. Verify your sending domain in MailerSend and resend the invitation.';
-        }
-
-        return $message;
     }
 
     public function mailDeliveryIssue(): ?string

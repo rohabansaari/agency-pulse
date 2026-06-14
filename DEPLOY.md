@@ -102,7 +102,7 @@ Save to redeploy, then configure **email** using one of the options below.
 
 `Unable to connect to ssl://smtp.gmail.com:465 (Operation timed out)`
 
-This is **not** a wrong password — it is Render’s network policy ([changelog](https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports)).
+This is **not** a wrong password — it is Render's network policy ([changelog](https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports)).
 
 Pick **one** path:
 
@@ -127,7 +127,7 @@ Remove Gmail SMTP variables (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PA
 
 You cannot send `from` `@gmail.com` via MailerSend — the From address must use your verified domain.
 
-**Trial recipient limit:** Before your domain is verified and you complete MailerSend’s free **Hobby** plan identity check, MailerSend only delivers to a handful of addresses (often just the email you signed up with). Admin invites to that address may work while employee, manager, and sub-admin invites to other inboxes fail with errors like `MS42225` (unique recipients limit). Fix: verify your domain → complete Hobby plan verification (free) → redeploy → resend invitations from **Employees**.
+**Trial sender domain limit:** If `MAIL_FROM_ADDRESS` uses MailerSend's trial domain (`@*.mlsender.net`), MailerSend only allows **2 unique recipients** total — admin invites to your signup email may work while employee, manager, and sub-admin invites to other inboxes fail with `MS42225`. This is separate from your monthly email quota. Fix: verify your own domain in MailerSend → set `MAIL_FROM_ADDRESS` to e.g. `noreply@yourdomain.com` (not `@mlsender.net`) → redeploy → resend invitations from **Employees**.
 
 #### Option B — Resend (alternative HTTP API)
 

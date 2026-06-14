@@ -58,6 +58,41 @@ class MailConfigurationTest extends TestCase
         $this->assertStringContainsString('Gmail addresses cannot be used', $issue);
     }
 
+    public function test_mailersend_mailer_rejects_placeholder_from_address(): void
+    {
+        Config::set('mail.default', 'mailersend');
+        Config::set('services.mailersend.key', 'mlsn_test_key');
+        Config::set('mail.from.address', 'hello@example.com');
+
+        $issue = app(MailConfiguration::class)->configurationIssue();
+
+        $this->assertStringContainsString('placeholder', $issue);
+    }
+
+    public function test_mailersend_mailer_rejects_trial_sender_domain(): void
+    {
+        Config::set('mail.default', 'mailersend');
+        Config::set('services.mailersend.key', 'mlsn_test_key');
+        Config::set('mail.from.address', 'noreply@trial-abc.mlsender.net');
+
+        $issue = app(MailConfiguration::class)->configurationIssue();
+
+        $this->assertStringContainsString('trial domain', $issue);
+        $this->assertStringContainsString('2 unique recipients', $issue);
+    }
+
+    public function test_mail_status_reports_trial_sender_domain_flag(): void
+    {
+        Config::set('mail.default', 'mailersend');
+        Config::set('services.mailersend.key', 'mlsn_test_key');
+        Config::set('mail.from.address', 'noreply@trial-abc.mlsender.net');
+
+        $status = app(MailConfiguration::class)->status();
+
+        $this->assertTrue($status['using_trial_mailersend_sender']);
+        $this->assertNotNull($status['issue']);
+    }
+
     public function test_resend_mailer_requires_api_key(): void
     {
         Config::set('mail.default', 'resend');
@@ -129,7 +164,16 @@ class MailConfigurationTest extends TestCase
         $this->getJson('/api/v1/platform/mail/status')
             ->assertOk()
             ->assertJsonStructure([
-                'mail' => ['mailer', 'configured', 'issue', 'render_smtp_blocked_hint', 'from_address', 'host', 'port'],
+                'mail' => [
+                    'mailer',
+                    'configured',
+                    'issue',
+                    'render_smtp_blocked_hint',
+                    'from_address',
+                    'using_trial_mailersend_sender',
+                    'host',
+                    'port',
+                ],
             ]);
     }
 }

@@ -46,7 +46,9 @@ class PlatformMailController extends Controller
         }
 
         try {
-            Mail::to($recipient)->send(new PlatformMailTestMail($recipient));
+            Mail::mailer($this->mailConfiguration->mailer())
+                ->to($recipient)
+                ->send(new PlatformMailTestMail($recipient));
         } catch (\Throwable $exception) {
             Log::error('Platform mail test failed.', [
                 'recipient' => $recipient,

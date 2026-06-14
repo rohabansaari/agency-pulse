@@ -55,10 +55,16 @@ class PlatformOrganizationController extends Controller
             abort(404, 'This organization has no admin account.');
         }
 
-        $this->invitations->resend($admin, $organization, isAdminWelcome: true);
+        $delivery = $this->invitations->resend($admin, $organization, isAdminWelcome: true);
+
+        $message = $delivery['invitation_email_sent']
+            ? 'Admin invitation email resent.'
+            : 'Admin invitation could not be sent. Check mail settings and try again.';
 
         return response()->json([
-            'message' => 'Admin invitation email resent.',
+            'message' => $message,
+            'invitation_email_sent' => $delivery['invitation_email_sent'],
+            'delivery_issue' => $delivery['delivery_issue'],
         ]);
     }
 

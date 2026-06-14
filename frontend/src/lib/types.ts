@@ -504,6 +504,7 @@ export interface PlatformMailStatus {
   issue: string | null;
   render_smtp_blocked_hint: string | null;
   from_address: string | null;
+  using_trial_mailersend_sender?: boolean;
   host: string | null;
   port: number | string | null;
 }

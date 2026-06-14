@@ -9,6 +9,13 @@ class MailConfiguration
     /** @var list<string> */
     private const REAL_DELIVERY_MAILERS = ['mailersend', 'smtp', 'ses', 'postmark', 'resend'];
 
+    /** @var list<string> */
+    private const PLACEHOLDER_FROM_ADDRESSES = [
+        'hello@example.com',
+        'example@example.com',
+        'noreply@example.com',
+    ];
+
     public function applyRuntimeFixes(): void
     {
         $password = config('mail.mailers.smtp.password');
@@ -62,21 +69,55 @@ class MailConfiguration
         return 'Render free tier blocks outbound SMTP (ports 465/587). Switch to MAIL_MAILER=mailersend with MAILERSEND_API_KEY, or upgrade the API to paid.';
     }
 
+    public function fromAddress(): ?string
+    {
+        $fromAddress = config('mail.from.address');
+
+        if (! is_string($fromAddress)) {
+            return null;
+        }
+
+        $fromAddress = strtolower(trim($fromAddress));
+
+        return $fromAddress === '' ? null : $fromAddress;
+    }
+
+    public function isTrialMailerSendSender(): bool
+    {
+        $fromAddress = $this->fromAddress();
+
+        if ($fromAddress === null) {
+            return false;
+        }
+
+        $domain = substr(strrchr($fromAddress, '@') ?: '', 1);
+
+        return $domain === 'mlsender.net' || str_ends_with($domain, '.mlsender.net');
+    }
+
     private function mailersendConfigurationIssue(): ?string
     {
         $apiKey = (string) config('services.mailersend.key', '');
-        $fromAddress = (string) config('mail.from.address', '');
+        $fromAddress = $this->fromAddress();
 
         if ($apiKey === '') {
             return 'MAILERSEND_API_KEY is not set. Create an API token in the MailerSend dashboard.';
         }
 
-        if ($fromAddress === '') {
+        if ($fromAddress === null) {
             return 'MAIL_FROM_ADDRESS is not set. Use an address on a domain you verified in MailerSend (e.g. noreply@yourdomain.com).';
         }
 
-        if (str_ends_with(strtolower($fromAddress), '@gmail.com')) {
+        if (in_array($fromAddress, self::PLACEHOLDER_FROM_ADDRESSES, true)) {
+            return 'MAIL_FROM_ADDRESS is still a placeholder. Set it to an address on your verified MailerSend domain (e.g. noreply@yourdomain.com).';
+        }
+
+        if (str_ends_with($fromAddress, '@gmail.com')) {
             return 'Gmail addresses cannot be used as the sender with MailerSend. Verify your domain in MailerSend and set MAIL_FROM_ADDRESS to e.g. noreply@yourdomain.com.';
+        }
+
+        if ($this->isTrialMailerSendSender()) {
+            return 'MAIL_FROM_ADDRESS uses MailerSend\'s trial domain (@mlsender.net), which only allows 2 unique recipients. Set MAIL_FROM_ADDRESS to your verified domain (e.g. noreply@yourdomain.com) and redeploy.';
         }
 
         return null;
@@ -85,17 +126,21 @@ class MailConfiguration
     private function resendConfigurationIssue(): ?string
     {
         $apiKey = (string) config('services.resend.key', '');
-        $fromAddress = (string) config('mail.from.address', '');
+        $fromAddress = $this->fromAddress();
 
         if ($apiKey === '') {
             return 'RESEND_KEY is not set. Create a free API key at resend.com/api-keys.';
         }
 
-        if ($fromAddress === '') {
+        if ($fromAddress === null) {
             return 'MAIL_FROM_ADDRESS is not set. Use an address on a domain you verified in Resend (e.g. noreply@yourdomain.com).';
         }
 
-        if (str_ends_with(strtolower($fromAddress), '@gmail.com')) {
+        if (in_array($fromAddress, self::PLACEHOLDER_FROM_ADDRESSES, true)) {
+            return 'MAIL_FROM_ADDRESS is still a placeholder. Set it to an address on your verified Resend domain (e.g. noreply@yourdomain.com).';
+        }
+
+        if (str_ends_with($fromAddress, '@gmail.com')) {
             return 'Gmail addresses cannot be used as the sender with Resend. Verify your own domain in Resend and set MAIL_FROM_ADDRESS to e.g. noreply@yourdomain.com.';
         }
 
@@ -134,6 +179,7 @@ class MailConfiguration
      *     issue: string|null,
      *     render_smtp_blocked_hint: string|null,
      *     from_address: string|null,
+     *     using_trial_mailersend_sender: bool,
      *     host: string|null,
      *     port: int|string|null
      * }
@@ -145,7 +191,8 @@ class MailConfiguration
             'configured' => $this->isRealDeliveryConfigured(),
             'issue' => $this->configurationIssue(),
             'render_smtp_blocked_hint' => $this->renderSmtpBlockedHint(),
-            'from_address' => config('mail.from.address'),
+            'from_address' => $this->fromAddress(),
+            'using_trial_mailersend_sender' => $this->isTrialMailerSendSender(),
             'host' => $this->mailer() === 'smtp' ? config('mail.mailers.smtp.host') : null,
             'port' => $this->mailer() === 'smtp' ? config('mail.mailers.smtp.port') : null,
         ];
