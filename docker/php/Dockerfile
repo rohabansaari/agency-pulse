@@ -4,11 +4,11 @@ FROM php:8.3-fpm-alpine
 RUN apk add --no-cache \
     bash curl git unzip \
     icu-dev libzip-dev oniguruma-dev \
-    freetype-dev libjpeg-turbo-dev libpng-dev \
+    freetype-dev libjpeg-turbo-dev libpng-dev postgresql-dev \
     $PHPIZE_DEPS \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
-        pdo_mysql mbstring exif pcntl bcmath gd zip intl opcache \
+        pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip intl opcache \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del $PHPIZE_DEPS

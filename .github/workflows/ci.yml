@@ -9,15 +9,16 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:16-alpine
         env:
-          MYSQL_ROOT_PASSWORD: rootsecret
-          MYSQL_DATABASE: agencypulse_test
+          POSTGRES_DB: agencypulse_test
+          POSTGRES_USER: agencypulse
+          POSTGRES_PASSWORD: secret
         ports:
-          - 3306:3306
+          - 5432:5432
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -uroot -prootsecret"
+          --health-cmd="pg_isready -U agencypulse -d agencypulse_test"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -30,7 +31,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: mbstring, pdo_mysql, redis
+          extensions: mbstring, pdo_pgsql, redis
           coverage: none
       - name: Install backend dependencies
         working-directory: backend
@@ -44,19 +45,31 @@ jobs:
           php artisan key:generate
       - name: Validate Laravel boot
         working-directory: backend
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: agencypulse_test
+          DB_USERNAME: agencypulse
+          DB_PASSWORD: secret
+          DB_SCHEMA: public
+          DB_SSLMODE: prefer
         run: |
           php artisan optimize:clear --no-interaction
           php artisan route:list --no-ansi
-          php artisan migrate --pretend --no-interaction
+          php artisan migrate --force --no-interaction
+          php artisan migrate:status --no-ansi
       - name: Run backend tests
         working-directory: backend
         env:
-          DB_CONNECTION: mysql
+          DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
-          DB_PORT: 3306
+          DB_PORT: 5432
           DB_DATABASE: agencypulse_test
-          DB_USERNAME: root
-          DB_PASSWORD: rootsecret
+          DB_USERNAME: agencypulse
+          DB_PASSWORD: secret
+          DB_SCHEMA: public
+          DB_SSLMODE: prefer
           REDIS_HOST: 127.0.0.1
         run: php artisan test tests/Feature
 

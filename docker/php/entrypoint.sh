@@ -19,18 +19,29 @@ if [ ! -f vendor/autoload.php ]; then
     composer install --no-interaction --prefer-dist --optimize-autoloader
 fi
 
-# ── 3. Wait for MySQL (queue/scheduler/workers start before app is warm) ─────
+# ── 3. Wait for database (queue/scheduler/workers start before app is warm) ───
 if [ -n "$DB_HOST" ]; then
-    echo "Waiting for database at ${DB_HOST}:${DB_PORT:-3306}..."
+    DB_DRIVER="${DB_CONNECTION:-pgsql}"
+    DB_PORT="${DB_PORT:-5432}"
+    echo "Waiting for database (${DB_DRIVER}) at ${DB_HOST}:${DB_PORT}..."
     for i in $(seq 1 30); do
         if php -r "
+            \$driver = getenv('DB_CONNECTION') ?: 'pgsql';
+            \$host = getenv('DB_HOST');
+            \$port = getenv('DB_PORT') ?: '5432';
+            \$database = getenv('DB_DATABASE');
+            \$username = getenv('DB_USERNAME');
+            \$password = getenv('DB_PASSWORD');
+            \$sslmode = getenv('DB_SSLMODE') ?: 'prefer';
             try {
-                new PDO(
-                    'mysql:host=${DB_HOST};port=${DB_PORT:-3306};dbname=${DB_DATABASE}',
-                    '${DB_USERNAME}',
-                    '${DB_PASSWORD}',
-                    [PDO::ATTR_TIMEOUT => 2]
-                );
+                if (\$driver === 'pgsql') {
+                    \$dsn = \"pgsql:host={\$host};port={\$port};dbname={\$database};sslmode={\$sslmode}\";
+                } elseif (\$driver === 'mysql') {
+                    \$dsn = \"mysql:host={\$host};port={\$port};dbname={\$database}\";
+                } else {
+                    exit(0);
+                }
+                new PDO(\$dsn, \$username, \$password, [PDO::ATTR_TIMEOUT => 2]);
                 exit(0);
             } catch (Exception \$e) {
                 exit(1);

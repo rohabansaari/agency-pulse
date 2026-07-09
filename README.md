@@ -19,7 +19,7 @@ cp frontend/.env.example frontend/.env.local
 # 3. Build and start all services
 docker compose up -d --build
 
-# 4. Run migrations (after Laravel skeleton is complete)
+# 4. Run migrations
 docker compose exec app php artisan migrate
 
 # 5. Verify services
@@ -34,14 +34,14 @@ open http://localhost:8080                     # Full app (UI + API)
 |------------|-------------------------|----------------------------|
 | nginx      | http://localhost:8080   | App entry (UI proxied + API) |
 | frontend   | http://localhost:3000   | Next.js dev server (direct)  |
-| mysql      | internal:3306           | Primary database           |
+| postgres   | internal:5432           | Primary database (PostgreSQL 16) |
 | redis      | internal:6379           | Cache, sessions, queues    |
 | queue      | —                       | `queue:work` worker        |
 | scheduler  | —                       | `schedule:work` runner     |
 
 ## Persistence
 
-- **MySQL:** `mysql_data` Docker volume — survives `docker compose down`
+- **PostgreSQL:** `postgres_data` Docker volume — survives `docker compose down`
 - **Redis:** `redis_data` volume with AOF (`appendonly yes`) — queue/cache survive restarts
 
 ## Common Commands
@@ -74,12 +74,15 @@ docs/             Architecture & domain rules
 _bmad-output/     Planning artifacts
 ```
 
-## Deploy to production (Render)
+## Deploy to production (Render + Supabase)
 
-See **[DEPLOY.md](DEPLOY.md)** for free-tier Render + Railway MySQL setup (no Blueprint required).
+See **[DEPLOY.md](DEPLOY.md)** for Render web services + **Supabase PostgreSQL**.
+
+Migrating existing Railway MySQL data? See **[docs/database-migration-railway-to-supabase.md](docs/database-migration-railway-to-supabase.md)**.
 
 ## Documentation
 
 - [Domain rules](docs/architecture/domain-rules.md) — canonical business logic
+- [Railway → Supabase migration](docs/database-migration-railway-to-supabase.md)
 - [System architecture](_bmad-output/planning-artifacts/system-architecture-final.md)
 - [Epics & stories](_bmad-output/planning-artifacts/epics.md)

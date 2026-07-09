@@ -1,7 +1,7 @@
 # AgencyPulse — Render Blueprint (PAID Render plan required)
 # Free tier: use manual deploy — see DEPLOY.md
 #
-# BEFORE deploying: create MySQL on Railway (see DEPLOY.md), then add DB_* env vars
+# BEFORE deploying: create PostgreSQL on Supabase (see DEPLOY.md), then add DB_* env vars
 # on the agencypulse-api service in Render after the first blueprint sync.
 
 previews:
@@ -40,17 +40,21 @@ services:
           name: agencypulse-web
           envVarKey: RENDER_EXTERNAL_URL
       - key: DB_CONNECTION
-        value: mysql
+        value: pgsql
       - key: DB_HOST
         sync: false
       - key: DB_PORT
-        value: "3306"
+        value: "5432"
       - key: DB_DATABASE
-        sync: false
+        value: postgres
       - key: DB_USERNAME
-        sync: false
+        value: postgres
       - key: DB_PASSWORD
         sync: false
+      - key: DB_SCHEMA
+        value: public
+      - key: DB_SSLMODE
+        value: require
       - key: CACHE_STORE
         value: database
       - key: SESSION_DRIVER

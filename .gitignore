@@ -38,5 +38,5 @@ desktop-agent/dist/
 desktop-agent/*.spec
 
 # Docker volumes (local)
-mysql_data/
+postgres_data/
 redis_data/

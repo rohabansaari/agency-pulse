@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\DatabaseMigration;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -31,13 +32,7 @@ return new class extends Migration
             ]);
         }
 
-        if (Schema::getConnection()->getDriverName() === 'mysql') {
-            DB::statement('ALTER TABLE organizations MODIFY slug VARCHAR(255) NOT NULL');
-        } else {
-            Schema::table('organizations', function (Blueprint $table) {
-                $table->string('slug')->nullable(false)->change();
-            });
-        }
+        DatabaseMigration::setStringNotNull('organizations', 'slug');
     }
 
     public function down(): void

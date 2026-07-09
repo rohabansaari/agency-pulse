@@ -1,8 +1,7 @@
 <?php
 
+use App\Support\DatabaseMigration;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -17,43 +16,19 @@ return new class extends Migration
             return;
         }
 
-        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+        if (! in_array(DatabaseMigration::driver(), ['mysql', 'pgsql'], true)) {
             return;
         }
 
-        if ($this->organizationIdIsNullable()) {
+        if (DatabaseMigration::columnIsNullable('users', 'organization_id')) {
             return;
         }
 
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-        });
-
-        DB::statement('ALTER TABLE users MODIFY organization_id BIGINT UNSIGNED NULL');
-
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreign('organization_id')
-                ->references('id')
-                ->on('organizations')
-                ->nullOnDelete();
-        });
+        DatabaseMigration::makeOrganizationIdNullable('users');
     }
 
     public function down(): void
     {
         // Intentionally empty — handled by the primary migration down().
-    }
-
-    private function organizationIdIsNullable(): bool
-    {
-        $result = DB::selectOne("
-            SELECT IS_NULLABLE
-            FROM information_schema.COLUMNS
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'users'
-              AND COLUMN_NAME = 'organization_id'
-        ");
-
-        return ($result->IS_NULLABLE ?? 'NO') === 'YES';
     }
 };

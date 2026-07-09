@@ -4,11 +4,11 @@
 
 Use **manual Web Services** on the **Free** plan. Do **not** use Blueprint (`render.yaml`) — Blueprint requires a paid Render plan.
 
-You need **2 free Render web services** + **1 free MySQL database on Railway** (Render does not offer MySQL).
+You need **2 free Render web services** + **1 Supabase PostgreSQL database** (Render does not offer managed Postgres on free tier).
 
 | What | Where | Cost |
 |------|--------|------|
-| MySQL database | **Railway** | Free tier |
+| PostgreSQL database | **Supabase** | Free tier |
 | Laravel API | **Render** Web Service (Docker, Free) | $0 |
 | Next.js frontend | **Render** Web Service (Node, Free) | $0 |
 
@@ -16,29 +16,28 @@ Free tier note: services **sleep after ~15 min idle**. First visit after sleep m
 
 ---
 
-## Part 1 — Create MySQL on Railway (SQL database)
+## Part 1 — Create PostgreSQL on Supabase
 
-1. Go to **https://railway.app** → sign in with GitHub.
-2. Click **New Project** → **Provision MySQL**.
-3. Click the **MySQL** tile → **Settings** → **Networking**.
-4. Enable **Public Networking** (TCP proxy). Railway will show a **public hostname** and **port** (e.g. `roundhouse.proxy.rlwy.net` and `12345`).
+1. Go to **https://supabase.com** → sign in → **New project**.
+2. Choose a name (e.g. `agencypulse`), set a **strong database password**, pick a region close to your Render API (e.g. US West).
+3. Wait until the project finishes provisioning (~2 minutes).
+4. Open **Project Settings** → **Database**.
+5. Under **Connection string** → **URI**, copy the values (or use the **Session pooler** / **Direct** host — both work with Laravel; **Direct** is fine for Render).
 
-   **Important:** Do **not** use `mysql.railway.internal` or any `*.railway.internal` host on Render. That hostname only works inside Railway. Render is outside Railway and will fail with `Name does not resolve`.
+| Render variable | Supabase source |
+|-----------------|-----------------|
+| `DB_CONNECTION` | `pgsql` |
+| `DB_HOST` | Host from connection string (e.g. `db.xxxxx.supabase.co`) |
+| `DB_PORT` | `5432` |
+| `DB_DATABASE` | `postgres` |
+| `DB_USERNAME` | `postgres` |
+| `DB_PASSWORD` | Your project database password |
+| `DB_SCHEMA` | `public` |
+| `DB_SSLMODE` | `require` |
 
-5. Click the **MySQL** tile → **Variables** (or **Connect**) tab.
-6. After public networking is on, use the **public** connection values:
+**SSL is required** for Supabase. Always set `DB_SSLMODE=require` on Render.
 
-| Render variable | Where to get it on Railway |
-|-----------------|---------------------------|
-| `DB_HOST` | Public proxy hostname (e.g. `roundhouse.proxy.rlwy.net`) — **not** `mysql.railway.internal` |
-| `DB_PORT` | Public proxy port from Networking (often **not** `3306`) |
-| `DB_DATABASE` | `MYSQLDATABASE` (usually `railway`) |
-| `DB_USERNAME` | `MYSQLUSER` (usually `root`) |
-| `DB_PASSWORD` | `MYSQLPASSWORD` |
-
-If `MYSQLHOST` still shows `mysql.railway.internal`, ignore it for Render — use the **public** host + port from **Settings → Networking** instead.
-
-Keep this tab open.
+Keep this tab open. If you are migrating from Railway MySQL, see **[docs/database-migration-railway-to-supabase.md](docs/database-migration-railway-to-supabase.md)**.
 
 ---
 
@@ -67,12 +66,14 @@ Keep this tab open.
 | `APP_KEY` | `base64:...` *(required — generate locally: `docker compose exec app php artisan key:generate --show`)* |
 | `APP_DEBUG` | `false` |
 | `LOG_CHANNEL` | `stderr` |
-| `DB_CONNECTION` | `mysql` |
-| `DB_HOST` | Copy the **value** of Railway `MYSQLHOST` (e.g. `containers-us-west-123.railway.app`) — not the word `MYSQLHOST` |
-| `DB_PORT` | Copy Railway `MYSQLPORT` (usually `3306`) |
-| `DB_DATABASE` | Copy Railway `MYSQLDATABASE` value |
-| `DB_USERNAME` | Copy Railway `MYSQLUSER` value |
-| `DB_PASSWORD` | Copy Railway `MYSQLPASSWORD` value |
+| `DB_CONNECTION` | `pgsql` |
+| `DB_HOST` | Supabase host (e.g. `db.xxxxx.supabase.co`) |
+| `DB_PORT` | `5432` |
+| `DB_DATABASE` | `postgres` |
+| `DB_USERNAME` | `postgres` |
+| `DB_PASSWORD` | Your Supabase database password |
+| `DB_SCHEMA` | `public` |
+| `DB_SSLMODE` | `require` |
 
 Do **not** leave placeholder text like `<paste MYSQLHOST>` — Laravel will try to connect to that literal string and fail.
 | `CACHE_STORE` | `database` |
@@ -363,7 +364,7 @@ Use the **frontend** URL for the app — not the API URL.
 | Spins down when idle | First load after idle is slow |
 | 750 hours/month per service | Enough for one API + one frontend |
 | No background workers | Queues use `database` driver (fine for MVP) |
-| Railway MySQL | Free credits / usage limits — check Railway dashboard |
+| Supabase Postgres | Free tier project limits — check Supabase dashboard |
 
 ---
 
@@ -372,9 +373,9 @@ Use the **frontend** URL for the app — not the API URL.
 | Problem | Fix |
 |---------|-----|
 | API build fails | Open **Logs** on Render; ensure Dockerfile path is `docker/render/Dockerfile.api` |
-| `getaddrinfo for mysql.railway.internal failed` | `DB_HOST` is Railway's **private** host — enable **Public Networking** on Railway and use the **public** proxy hostname + port |
-| `getaddrinfo for <paste MYSQLHOST> failed` | `DB_HOST` still has placeholder text — paste the real Railway hostname |
-| Database connection error | Railway **Public Networking** on; double-check all `DB_*` **values** from Railway Variables |
+| `SQLSTATE[08006] Connection refused` / SSL errors | Set `DB_SSLMODE=require`; confirm Supabase host and password |
+| `password authentication failed` | Re-copy password from Supabase → Settings → Database |
+| Database connection error | Confirm `DB_CONNECTION=pgsql`, port `5432`, and project is not paused in Supabase |
 | Frontend `Missing script: "build"` + Playwright download in logs | **Root Directory** must be `frontend`, not repo root |
 | Signup/login fails with generic error | Set `FRONTEND_URL` on API to your frontend URL, redeploy API; confirm `NEXT_PUBLIC_API_URL` on frontend and redeploy web |
 | Frontend API errors | `NEXT_PUBLIC_API_URL` must be `https://YOUR-API.onrender.com/api/v1` then **Manual Deploy** frontend |

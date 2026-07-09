@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\DatabaseMigration;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -40,13 +41,7 @@ return new class extends Migration
                 ->update(['organization_id' => $organizationId]);
         }
 
-        if (Schema::getConnection()->getDriverName() === 'mysql') {
-            DB::statement('ALTER TABLE users MODIFY organization_id BIGINT UNSIGNED NOT NULL');
-        } else {
-            Schema::table('users', function (Blueprint $table) {
-                $table->unsignedBigInteger('organization_id')->nullable(false)->change();
-            });
-        }
+        DatabaseMigration::setBigIntNotNull('users', 'organization_id');
     }
 
     public function down(): void

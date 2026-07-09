@@ -10,12 +10,14 @@ x-laravel-env: &laravel-env
   LOG_CHANNEL: stderr
   LOG_LEVEL: debug
 
-  DB_CONNECTION: mysql
-  DB_HOST: mysql
-  DB_PORT: 3306
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
   DB_DATABASE: agencypulse
   DB_USERNAME: agencypulse
   DB_PASSWORD: secret
+  DB_SCHEMA: public
+  DB_SSLMODE: prefer
 
   REDIS_CLIENT: phpredis
   REDIS_HOST: redis
@@ -48,7 +50,7 @@ services:
       <<: *laravel-env
 
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -106,22 +108,21 @@ services:
       - agencypulse
 
 
-  mysql:
-    image: mysql:8.0
-    container_name: agencypulse-mysql
+  postgres:
+    image: postgres:16-alpine
+    container_name: agencypulse-postgres
     restart: unless-stopped
 
     environment:
-      MYSQL_DATABASE: agencypulse
-      MYSQL_USER: agencypulse
-      MYSQL_PASSWORD: secret
-      MYSQL_ROOT_PASSWORD: rootsecret
+      POSTGRES_DB: agencypulse
+      POSTGRES_USER: agencypulse
+      POSTGRES_PASSWORD: secret
 
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootsecret"]
+      test: ["CMD-SHELL", "pg_isready -U agencypulse -d agencypulse"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -171,7 +172,7 @@ services:
 
     depends_on:
       - app
-      - mysql
+      - postgres
       - redis
 
     networks:
@@ -199,7 +200,7 @@ services:
 
     depends_on:
       - app
-      - mysql
+      - postgres
       - redis
 
     networks:
@@ -207,7 +208,7 @@ services:
 
 
 volumes:
-  mysql_data:
+  postgres_data:
   redis_data:
   frontend_node_modules:
 
