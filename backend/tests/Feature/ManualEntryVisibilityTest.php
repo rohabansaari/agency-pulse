@@ -184,7 +184,7 @@ class ManualEntryVisibilityTest extends TestCase
             ->assertOk()
             ->assertJsonPath('total_tracked_seconds', self::MANUAL_SECONDS)
             ->assertJsonPath('hours_today_seconds', self::MANUAL_SECONDS)
-            ->assertJsonPath('employee_contributions.0.total_seconds', (string) self::MANUAL_SECONDS)
+            ->assertJsonPath('employee_contributions.0.total_seconds', self::MANUAL_SECONDS)
             ->assertJsonPath('team_contributions.0.total_seconds', self::MANUAL_SECONDS);
     }
 

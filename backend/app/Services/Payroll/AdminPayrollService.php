@@ -309,7 +309,8 @@ class AdminPayrollService
         $exists = OrganizationMember::query()
             ->where('organization_id', TenantContext::id())
             ->where('user_id', $employee->id)
-            ->where('status', OrganizationMemberStatus::Active)
+            // Salary is set at create-employee time, before the invitation is accepted.
+            ->whereIn('status', [OrganizationMemberStatus::Active, OrganizationMemberStatus::Invited])
             ->exists();
 
         if (! $exists) {

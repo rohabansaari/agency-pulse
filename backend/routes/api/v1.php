@@ -27,3 +27,6 @@ Route::middleware(['auth:sanctum', 'super.admin'])->prefix('platform')->group(
 Route::middleware(['auth:sanctum', 'block.super.admin', 'tenant', 'idempotency'])->group(
     base_path('routes/api/v1/tenant.php')
 );
+
+// Unknown API paths are 404 for every HTTP method (the web fallback only matches GET).
+Route::any('{path}', fn () => abort(404))->where('path', '.*');

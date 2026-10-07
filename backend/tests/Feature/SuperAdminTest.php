@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Mail\AccountInvitationMail;
 use App\Models\User;
 use App\Services\Auth\SuperAdminBootstrap;
 use Database\Seeders\RolePermissionSeeder;

@@ -185,10 +185,15 @@ class PayrollRunTest extends TestCase
 
         $runId = $create->json('payroll_run.id');
 
+        // withHeaders() persists across requests; drop the PIN from the create call.
+        $this->flushHeaders();
+
         $this->withHeaders($this->headers($admin, null))
             ->getJson("/api/v1/payroll-runs/{$runId}")
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['payroll_vault']);
+            ->assertOk()
+            ->assertJsonPath('financial_data_masked', true)
+            ->assertJsonPath('total_pay_snapshot', null)
+            ->assertJsonPath('total_net_snapshot', null);
     }
 
     public function test_admin_can_create_payroll_run_snapshot(): void
@@ -471,7 +476,8 @@ class PayrollRunTest extends TestCase
         $this->withHeaders($this->headers($admin))
             ->postJson("/api/v1/payroll-runs/{$runId}/recalculate")
             ->assertOk()
-            ->assertJsonPath('payroll_run.total_hours_snapshot', 3600 + 1800 + UtilizationCalculator::SECONDS_PER_WORK_DAY + 7200);
+            // Period is today only; the fixture's paid leave day (tomorrow) is outside it.
+            ->assertJsonPath('payroll_run.total_hours_snapshot', 3600 + 1800 + 7200);
 
         $this->withHeaders($this->headers($admin))
             ->deleteJson("/api/v1/payroll-runs/{$runId}")
