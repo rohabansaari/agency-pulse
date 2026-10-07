@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CronController;
 use App\Http\Controllers\Api\V1\HealthController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/health', [HealthController::class, 'show']);
+Route::get('/cron/daily', [CronController::class, 'daily']);
 
 if (app()->environment(['local', 'testing'])) {
     Route::post('/testing/activate-invited-user', [

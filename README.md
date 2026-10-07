@@ -74,9 +74,11 @@ docs/             Architecture & domain rules
 _bmad-output/     Planning artifacts
 ```
 
-## Deploy to production (Render + Supabase)
+## Deploy to production (Vercel + Neon)
 
-See **[DEPLOY.md](DEPLOY.md)** for Render web services + **Supabase PostgreSQL**.
+See **[DEPLOY-VERCEL.md](DEPLOY-VERCEL.md)**: one Vercel project with the Next.js frontend and the Laravel API container, Neon Postgres, and Vercel Cron.
+
+The previous Render + Supabase setup is documented in **[DEPLOY.md](DEPLOY.md)** (legacy).
 
 Migrating existing Railway MySQL data? See **[docs/database-migration-railway-to-supabase.md](docs/database-migration-railway-to-supabase.md)**.
 

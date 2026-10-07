@@ -23,4 +23,11 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+
+    /*
+    | Initial password for the platform super admin (superadmin@gmail.com).
+    | Required in production; the account is not created without it.
+    */
+    'super_admin_password' => env('SUPER_ADMIN_PASSWORD'),
+
 ];

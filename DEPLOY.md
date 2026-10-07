@@ -1,5 +1,7 @@
 # Deploy AgencyPulse on Render (Free Tier)
 
+> **Legacy.** Production is moving to Vercel + Neon. See [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md).
+
 **GitHub repo:** https://github.com/Rohabansari/agency-pulse
 
 Use **manual Web Services** on the **Free** plan. Do **not** use Blueprint (`render.yaml`) — Blueprint requires a paid Render plan.
