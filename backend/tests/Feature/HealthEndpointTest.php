@@ -17,10 +17,12 @@ class HealthEndpointTest extends TestCase
                 'timestamp',
                 'screenshot_disk',
                 'screenshot_s3_configured',
+                'checks' => ['app_key_configured', 'database', 'database_error_code', 'migrated'],
             ])
             ->assertJson([
                 'status' => 'ok',
                 'service' => 'AgencyPulse API',
+                'checks' => ['app_key_configured' => true, 'database' => 'ok'],
             ]);
     }
 }

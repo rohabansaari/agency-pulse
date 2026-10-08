@@ -15,7 +15,7 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts --no-autoloader --no-progress
 
 COPY . .
-RUN composer dump-autoload --no-dev --optimize --classmap-authoritative \
+RUN composer dump-autoload --no-dev --optimize \
     && php artisan package:discover --ansi \
     && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chmod +x vercel/start.sh
@@ -31,7 +31,16 @@ ENV APP_ENV=production \
     CACHE_STORE=database \
     QUEUE_CONNECTION=sync \
     SESSION_DRIVER=cookie \
-    VIEW_COMPILED_PATH=/tmp/views \
     PORT=8080
+
+# Only /tmp is guaranteed writable: move Laravel storage, bootstrap caches and Caddy state there.
+ENV LARAVEL_STORAGE_PATH=/tmp/laravel/storage \
+    APP_SERVICES_CACHE=/tmp/laravel/cache/services.php \
+    APP_PACKAGES_CACHE=/tmp/laravel/cache/packages.php \
+    APP_CONFIG_CACHE=/tmp/laravel/cache/config.php \
+    APP_ROUTES_CACHE=/tmp/laravel/cache/routes-v7.php \
+    APP_EVENTS_CACHE=/tmp/laravel/cache/events.php \
+    XDG_CONFIG_HOME=/tmp/caddy/config \
+    XDG_DATA_HOME=/tmp/caddy/data
 
 CMD ["/app/vercel/start.sh"]

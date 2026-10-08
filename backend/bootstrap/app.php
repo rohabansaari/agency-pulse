@@ -12,7 +12,7 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -47,3 +47,10 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->create();
+
+// Serverless containers (Vercel) only guarantee /tmp is writable.
+if ($storagePath = getenv('LARAVEL_STORAGE_PATH')) {
+    $app->useStoragePath($storagePath);
+}
+
+return $app;
