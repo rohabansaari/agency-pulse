@@ -29,7 +29,9 @@ MAX_IMAGE_WIDTH = 1600
 JPEG_QUALITY = 60
 MAX_RETRIES = 3
 RETRY_DELAYS_SECONDS = (2, 4, 8)
-DEFAULT_API_BASE_URL = "https://agencypulse-api.onrender.com/api/v1"
+DEFAULT_API_BASE_URL = "https://agency-pulse-six.vercel.app/api/v1"
+# Saved configs pointing here are moved to DEFAULT_API_BASE_URL (API moved off Render).
+LEGACY_API_BASE_URLS = {"https://agencypulse-api.onrender.com/api/v1"}
 PROTOCOL = "agencypulse"
 
 CONFIG_DIR = Path.home() / ".agencypulse"
@@ -351,7 +353,7 @@ def verify_api_reachable(api_base_url: str) -> str | None:
     if response.status_code == 404:
         return (
             "API health check returned 404. The API URL is probably wrong — use the same URL "
-            "as the website (for example https://agencypulse-api.onrender.com/api/v1)."
+            "as the website (for example https://agency-pulse-six.vercel.app/api/v1)."
         )
 
     if response.status_code >= 400:
@@ -764,6 +766,10 @@ def ensure_config(*, interactive: bool = False) -> dict:
     config = load_config()
     if config.get("api_base_url"):
         config["api_base_url"] = normalize_api_base_url(str(config["api_base_url"]))
+        if config["api_base_url"] in LEGACY_API_BASE_URLS:
+            log(f"Moving saved API URL to {DEFAULT_API_BASE_URL}.")
+            config["api_base_url"] = DEFAULT_API_BASE_URL
+            save_config(config)
     config = run_first_run_setup(config)
 
     if not config.get("device_id"):
