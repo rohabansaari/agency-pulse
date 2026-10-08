@@ -56,7 +56,8 @@ Project → **Settings → Environment Variables** (Production and Preview):
 | `APP_URL` | `https://<your-domain>` |
 | `FRONTEND_URL` | `https://<your-domain>` (used in invitation links) |
 | `CRON_SECRET` | Long random string. Vercel Cron sends it automatically. |
-| `SUPER_ADMIN_PASSWORD` | ≥ 12 characters. Creates `superadmin@gmail.com` on first boot. |
+| `SUPER_ADMIN_EMAIL` | Platform super admin login (default `superadmin@gmail.com`). |
+| `SUPER_ADMIN_PASSWORD` | ≥ 12 characters. Creates the super admin on first boot. |
 | `SCREENSHOT_DISK` | `s3` |
 | `UPLOADS_DISK` | `s3_public` |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | R2 token |
@@ -79,7 +80,9 @@ Set `RUN_MIGRATIONS_ON_BOOT=false` if you'd rather run `php artisan migrate --fo
 2. Check:
    - `https://<your-domain>/api/v1/health` → `{"status":"ok", ... "screenshot_s3_configured": true}`
    - `https://<your-domain>/` → login page
-3. Sign in as `superadmin@gmail.com` with `SUPER_ADMIN_PASSWORD` and create the first organization.
+3. Sign in with `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` and create the first organization.
+
+**Reset super admin credentials:** set `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD`, add `SUPER_ADMIN_RESET=true`, redeploy and open `/api/v1/health` once. Then delete `SUPER_ADMIN_RESET` and redeploy again.
 4. Project → **Settings → Cron Jobs** shows `/api/v1/cron/daily`. Use **Run** to test it.
 
 ## 6. Desktop agent

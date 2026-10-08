@@ -21,11 +21,17 @@ final class SuperAdminBootstrap
             return;
         }
 
-        if (User::query()->where('role', UserRole::SuperAdmin)->exists()) {
+        $existing = User::query()->where('role', UserRole::SuperAdmin)->first();
+
+        if ($existing) {
+            if (config('app.super_admin_reset')) {
+                self::resetFromConfig($existing);
+            }
+
             return;
         }
 
-        if (User::query()->where('email', self::EMAIL)->exists()) {
+        if (User::query()->where('email', self::email())->exists()) {
             return;
         }
 
@@ -40,10 +46,49 @@ final class SuperAdminBootstrap
         User::create([
             'organization_id' => null,
             'name' => self::NAME,
-            'email' => self::EMAIL,
+            'email' => self::email(),
             'password' => Hash::make($password),
             'role' => UserRole::SuperAdmin,
         ]);
+    }
+
+    public static function email(): string
+    {
+        $configured = strtolower(trim((string) config('app.super_admin_email', '')));
+
+        return $configured !== '' ? $configured : self::EMAIL;
+    }
+
+    /**
+     * One-off recovery (SUPER_ADMIN_RESET=true): apply SUPER_ADMIN_EMAIL and
+     * SUPER_ADMIN_PASSWORD to the existing super admin and revoke its tokens.
+     */
+    private static function resetFromConfig(User $superAdmin): void
+    {
+        $password = self::initialPassword();
+
+        if ($password === null) {
+            Log::warning('Super admin reset skipped: SUPER_ADMIN_PASSWORD must be at least 12 characters in production.');
+
+            return;
+        }
+
+        $email = self::email();
+
+        if (User::query()->where('email', $email)->whereKeyNot($superAdmin->getKey())->exists()) {
+            Log::warning('Super admin reset skipped: SUPER_ADMIN_EMAIL is already used by another account.');
+
+            return;
+        }
+
+        $superAdmin->forceFill([
+            'email' => $email,
+            'password' => Hash::make($password),
+        ])->save();
+
+        $superAdmin->tokens()->delete();
+
+        Log::warning('Super admin credentials were reset from the environment. Remove SUPER_ADMIN_RESET now.');
     }
 
     /**

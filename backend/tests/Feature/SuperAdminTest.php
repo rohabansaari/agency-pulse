@@ -23,6 +23,41 @@ class SuperAdminTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
+    public function test_reset_flag_applies_configured_email_and_password(): void
+    {
+        SuperAdminBootstrap::ensureExists();
+        $superAdmin = User::query()->where('email', SuperAdminBootstrap::EMAIL)->firstOrFail();
+        $superAdmin->createToken('old-session');
+
+        config([
+            'app.super_admin_email' => 'Owner@AgencyPulse.com',
+            'app.super_admin_password' => 'a-fresh-password-123',
+            'app.super_admin_reset' => true,
+        ]);
+        SuperAdminBootstrap::ensureExists();
+
+        $superAdmin->refresh();
+        $this->assertSame('owner@agencypulse.com', $superAdmin->email);
+        $this->assertTrue(Hash::check('a-fresh-password-123', $superAdmin->password));
+        $this->assertSame(0, $superAdmin->tokens()->count());
+        $this->assertSame(1, User::query()->where('role', UserRole::SuperAdmin)->count());
+    }
+
+    public function test_existing_super_admin_is_unchanged_without_reset_flag(): void
+    {
+        SuperAdminBootstrap::ensureExists();
+
+        config([
+            'app.super_admin_email' => 'owner@agencypulse.com',
+            'app.super_admin_password' => 'a-fresh-password-123',
+        ]);
+        SuperAdminBootstrap::ensureExists();
+
+        $superAdmin = User::query()->where('role', UserRole::SuperAdmin)->sole();
+        $this->assertSame(SuperAdminBootstrap::EMAIL, $superAdmin->email);
+        $this->assertFalse(Hash::check('a-fresh-password-123', $superAdmin->password));
+    }
+
     public function test_super_admin_is_created_only_once(): void
     {
         $this->assertTrue(SuperAdminBootstrap::organizationIdAllowsNull());
