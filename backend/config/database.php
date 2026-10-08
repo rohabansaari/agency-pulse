@@ -19,8 +19,10 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            // Neon (Vercel Marketplace) injects DATABASE_URL.
-            'url' => env('DB_URL', env('DATABASE_URL')),
+            // Neon (Vercel Marketplace) injects DATABASE_URL (pooled) and DATABASE_URL_UNPOOLED.
+            // Prefer the direct connection: Laravel's server-side prepared statements break
+            // inside transactions behind Neon's PgBouncer pooler (SQLSTATE 25P02 in migrations).
+            'url' => env('DB_URL', env('DATABASE_URL_UNPOOLED', env('DATABASE_URL'))),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'agencypulse'),

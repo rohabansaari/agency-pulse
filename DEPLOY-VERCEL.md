@@ -33,7 +33,7 @@ Frontend and API share one domain, so there is no CORS setup and the frontend ca
 
 1. Project → **Storage → Create Database → Neon** (or `vercel integration add neon`).
 2. Connect it to **Production** and **Preview**.
-3. Neon adds `DATABASE_URL` (pooled) and related vars. Laravel reads `DATABASE_URL` automatically.
+3. Neon adds `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` and related vars. Laravel uses `DATABASE_URL_UNPOOLED` (direct connection); Laravel prepared statements break inside transactions behind the pooler.
 
 Optionally enable Neon's preview branching so each preview deployment gets its own database copy.
 
