@@ -61,13 +61,15 @@ class OnboardingController extends TenantController
         $organization = TenantContext::get();
         $file = $validated['logo'];
         $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension());
+        $disk = (string) config('filesystems.uploads_disk', 'public');
         $path = $file->storeAs(
             'organization-logos',
             "{$organization->id}.{$extension}",
-            'public'
+            $disk
         );
 
-        $logoUrl = rtrim((string) config('app.url'), '/').Storage::disk('public')->url($path);
+        // Disk URLs are already absolute (APP_URL/storage locally, AWS_PUBLIC_URL on s3_public).
+        $logoUrl = Storage::disk($disk)->url($path);
 
         $organization = $this->onboarding->updateOrganization($organization, [
             'name' => $organization->name,

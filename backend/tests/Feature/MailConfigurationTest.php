@@ -127,7 +127,7 @@ class MailConfigurationTest extends TestCase
         $issue = app(MailConfiguration::class)->configurationIssue();
 
         $this->assertSame(
-            'BREVO_API_KEY is not set. Create a free API key at app.brevo.com → SMTP & API → API keys.',
+            'BREVO_API_KEY is not set. Create an HTTP API key at app.brevo.com → SMTP & API → API keys (starts with xkeysib-).',
             $issue,
         );
     }

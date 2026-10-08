@@ -61,9 +61,11 @@ class EmployeeDirectoryTest extends TestCase
         $this->withHeaders($this->headers($admin))
             ->getJson("/api/v1/team/{$employee->id}/profile")
             ->assertOk()
-            ->assertJsonPath('user.id', $employee->id)
+            ->assertJsonPath('user_id', $employee->id)
             ->assertJsonStructure([
-                'user' => ['id', 'name', 'email'],
+                'user_id',
+                'name',
+                'email',
                 'team',
                 'assigned_projects',
                 'leave_history',

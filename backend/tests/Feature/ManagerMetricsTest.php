@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\Employee\EmployeeDirectoryService;
+use App\Services\Tenant\TenantContext;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -56,6 +57,8 @@ class ManagerMetricsTest extends TestCase
 
         $sharedProject->members()->attach([$employeeA->id, $employeeB->id]);
         $teamOnlyProject->members()->attach([$employeeA->id]);
+
+        TenantContext::set($admin->organization);
 
         $metrics = app(EmployeeDirectoryService::class)->managerMetricsForUser($manager);
 

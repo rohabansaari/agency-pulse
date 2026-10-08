@@ -160,8 +160,22 @@ class InvitationTest extends TestCase
 
         Mail::assertSent(AccountInvitationMail::class, fn ($mail) => $mail->hasTo('same-mail-admin@acme.test'));
 
+        // Invited admins must activate before acting within the tenant.
+        $this->postJson('/api/v1/testing/activate-invited-user', [
+            'email' => 'same-mail-admin@acme.test',
+            'password' => 'password123',
+        ])->assertOk();
+
         $admin = User::query()->where('email', 'same-mail-admin@acme.test')->firstOrFail();
         Sanctum::actingAs($admin);
+
+        // Required onboarding step before the admin can add team members.
+        $this->withHeaders(['X-Organization-Id' => (string) $admin->organization_id])
+            ->postJson('/api/v1/payroll/vault/initialize', [
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
+            ])
+            ->assertCreated();
 
         $this->withHeaders(['X-Organization-Id' => (string) $admin->organization_id])
             ->postJson('/api/v1/team/create-employee', [

@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\User;
 use App\Support\DatabaseMigration;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 final class SuperAdminBootstrap
@@ -28,13 +29,35 @@ final class SuperAdminBootstrap
             return;
         }
 
+        $password = self::initialPassword();
+
+        if ($password === null) {
+            Log::warning('Platform super admin not created: set SUPER_ADMIN_PASSWORD (min 12 characters) in production.');
+
+            return;
+        }
+
         User::create([
             'organization_id' => null,
             'name' => self::NAME,
             'email' => self::EMAIL,
-            'password' => Hash::make('12345678'),
+            'password' => Hash::make($password),
             'role' => UserRole::SuperAdmin,
         ]);
+    }
+
+    /**
+     * Production never falls back to a well-known default password.
+     */
+    private static function initialPassword(): ?string
+    {
+        $configured = (string) config('app.super_admin_password', '');
+
+        if (app()->environment('production')) {
+            return strlen($configured) >= 12 ? $configured : null;
+        }
+
+        return $configured !== '' ? $configured : '12345678';
     }
 
     public static function organizationIdAllowsNull(): bool

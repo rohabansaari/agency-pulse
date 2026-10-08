@@ -194,11 +194,7 @@ class OvertimeRequestTest extends TestCase
             ])
             ->assertCreated();
 
-        $this->withHeaders($this->headers($admin))
-            ->postJson('/api/v1/payroll/vault/unlock', ['payroll_pin' => '1234'])
-            ->assertOk();
-
-        $this->withHeaders($this->headers($admin))
+        $this->withHeaders([...$this->headers($admin), 'X-Payroll-Pin' => '1234'])
             ->patchJson('/api/v1/payroll/settings', [
                 'overtime_enabled' => true,
                 'overtime_rate_percentage' => 200,

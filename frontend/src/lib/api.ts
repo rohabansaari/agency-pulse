@@ -49,8 +49,10 @@ import type {
   EmployeePayrollAdjustment,
 } from "./types";
 
+// Production defaults to same-origin (Vercel routes /api/* to the Laravel service).
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
+  process.env.NEXT_PUBLIC_API_URL ??
+  (process.env.NODE_ENV === "production" ? "/api/v1" : "http://localhost:8080/api/v1");
 
 /** Stateless API client — Bearer token + tenant header. */
 

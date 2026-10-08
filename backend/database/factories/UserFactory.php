@@ -70,6 +70,11 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => UserRole::Manager]);
     }
 
+    public function employee(): static
+    {
+        return $this->state(fn () => ['role' => UserRole::Employee]);
+    }
+
     public function unverified(): static
     {
         return $this->state(fn () => [

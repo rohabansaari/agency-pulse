@@ -8,6 +8,16 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: agencypulse_test
+      DB_USERNAME: agencypulse
+      DB_PASSWORD: secret
+      DB_SCHEMA: public
+      DB_SSLMODE: prefer
+      REDIS_HOST: 127.0.0.1
     services:
       postgres:
         image: postgres:16-alpine
@@ -35,9 +45,7 @@ jobs:
           coverage: none
       - name: Install backend dependencies
         working-directory: backend
-        run: |
-          composer update league/flysystem-aws-s3-v3 --with-all-dependencies --no-interaction --prefer-dist --no-scripts
-          composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist
       - name: Prepare environment
         working-directory: backend
         run: |
@@ -45,15 +53,6 @@ jobs:
           php artisan key:generate
       - name: Validate Laravel boot
         working-directory: backend
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: agencypulse_test
-          DB_USERNAME: agencypulse
-          DB_PASSWORD: secret
-          DB_SCHEMA: public
-          DB_SSLMODE: prefer
         run: |
           php artisan optimize:clear --no-interaction
           php artisan route:list --no-ansi
@@ -61,16 +60,6 @@ jobs:
           php artisan migrate:status --no-ansi
       - name: Run backend tests
         working-directory: backend
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: agencypulse_test
-          DB_USERNAME: agencypulse
-          DB_PASSWORD: secret
-          DB_SCHEMA: public
-          DB_SSLMODE: prefer
-          REDIS_HOST: 127.0.0.1
         run: php artisan test tests/Feature
 
   frontend:

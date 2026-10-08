@@ -323,7 +323,12 @@ class ReportingService
             ->groupBy('users.id', 'users.name')
             ->select('users.id as user_id', 'users.name', DB::raw('SUM(time_entries.duration) as total_seconds'))
             ->orderByDesc('total_seconds')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                $row->total_seconds = (int) $row->total_seconds;
+
+                return $row;
+            });
 
         $assigneeIds = $project->members()->pluck('users.id');
 

@@ -1,0 +1,37 @@
+# Laravel API image for the Vercel "api" service (see /vercel.json).
+# FrankenPHP serves public/ on $PORT; build context is backend/.
+FROM dunglas/frankenphp:1-php8.3-alpine
+
+RUN install-php-extensions pdo_pgsql pgsql bcmath gd intl zip exif pcntl opcache
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# Install dependencies first so they cache independently of app code.
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts --no-autoloader --no-progress
+
+COPY . .
+RUN composer dump-autoload --no-dev --optimize --classmap-authoritative \
+    && php artisan package:discover --ansi \
+    && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && chmod +x vercel/start.sh
+
+COPY vercel/php.ini /usr/local/etc/php/conf.d/99-agencypulse.ini
+
+# Serverless defaults; Vercel project env vars override these at runtime.
+ENV APP_ENV=production \
+    APP_DEBUG=false \
+    LOG_CHANNEL=stderr \
+    LOG_LEVEL=info \
+    DB_CONNECTION=pgsql \
+    CACHE_STORE=database \
+    QUEUE_CONNECTION=sync \
+    SESSION_DRIVER=cookie \
+    VIEW_COMPILED_PATH=/tmp/views \
+    PORT=8080
+
+CMD ["/app/vercel/start.sh"]

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Onboarding\OnboardingService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -129,7 +130,8 @@ class OnboardingTest extends TestCase
             ->getJson('/api/v1/onboarding/status')
             ->assertOk()
             ->assertJsonPath('requirements_met', true)
-            ->assertJsonPath('onboarding_step', 3);
+            ->assertJsonPath('onboarding_completed', true)
+            ->assertJsonPath('onboarding_step', OnboardingService::TOTAL_STEPS);
 
         $this->withHeaders($this->headers($admin))
             ->postJson('/api/v1/onboarding/employees', [
@@ -139,7 +141,7 @@ class OnboardingTest extends TestCase
                 'salary_type' => 'monthly',
             ])
             ->assertCreated()
-            ->assertJsonPath('status.onboarding_step', 3);
+            ->assertJsonPath('status.onboarding_step', OnboardingService::TOTAL_STEPS);
 
         $this->withHeaders($this->headers($admin))
             ->postJson('/api/v1/teams', ['name' => 'Delivery'])

@@ -73,6 +73,7 @@ class LeaveTimeEntryTest extends TestCase
 
         $this->withHeaders($this->headers($employee))
             ->postJson('/api/v1/time/leave', [
+                'leave_category' => 'annual',
                 'date' => $this->displayDate(Carbon::today()),
                 'reason' => 'Vacation',
             ])
@@ -88,6 +89,7 @@ class LeaveTimeEntryTest extends TestCase
 
         $this->withHeaders($this->headers($employee))
             ->postJson('/api/v1/time/leave', [
+                'leave_category' => 'annual',
                 'date' => $this->displayDate(Carbon::yesterday()),
                 'reason' => 'Retroactive leave',
             ])
@@ -108,6 +110,7 @@ class LeaveTimeEntryTest extends TestCase
 
         $this->withHeaders($this->headers($manager))
             ->postJson('/api/v1/time/leave', [
+                'leave_category' => 'annual',
                 'user_id' => $employee->id,
                 'date' => $this->displayDate(Carbon::yesterday()),
                 'reason' => 'Backdated PTO',
@@ -125,6 +128,7 @@ class LeaveTimeEntryTest extends TestCase
 
         $this->withHeaders($this->headers($employee))
             ->postJson('/api/v1/time/leave', [
+                'leave_category' => 'annual',
                 'date' => Carbon::today()->toDateString(),
                 'reason' => 'Wrong format',
             ])
@@ -140,6 +144,7 @@ class LeaveTimeEntryTest extends TestCase
 
         $this->withHeaders($this->headers($employee))
             ->postJson('/api/v1/time/leave', [
+                'leave_category' => 'annual',
                 'date' => $this->displayDate(Carbon::today()),
                 'reason' => 'Doctor appointment',
             ])
@@ -173,6 +178,7 @@ class LeaveTimeEntryTest extends TestCase
 
         $this->withHeaders($this->headers($employee))
             ->postJson('/api/v1/time/leave', [
+                'leave_category' => 'annual',
                 'start_date' => $start,
                 'end_date' => $end,
                 'reason' => 'Family trip',
@@ -297,6 +303,7 @@ class LeaveTimeEntryTest extends TestCase
 
         $this->withHeaders($this->headers($manager))
             ->postJson('/api/v1/time/leave', [
+                'leave_category' => 'annual',
                 'user_id' => $employee->id,
                 'date' => $this->displayDate(Carbon::today()),
                 'reason' => 'Approved PTO',
@@ -315,6 +322,7 @@ class LeaveTimeEntryTest extends TestCase
 
         $this->withHeaders($this->headers($admin))
             ->postJson('/api/v1/time/leave', [
+                'leave_category' => 'annual',
                 'user_id' => $employee->id,
                 'date' => $this->displayDate(Carbon::today()),
                 'reason' => 'HR backdated leave',

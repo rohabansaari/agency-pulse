@@ -24,7 +24,7 @@
 
 | Layer | Role | TTL / Lifetime |
 |-------|------|----------------|
-| **MySQL `time_entries`** | Authoritative record of all sessions; legal/audit source | Permanent |
+| **PostgreSQL `time_entries`** | Authoritative record of all sessions; legal/audit source | Permanent |
 | **Redis `org:{org_id}:timer:{employee_id}`** | Hot path for active timer reads; distributed lock | 24h; deleted on STOP |
 | **Redis `org:{org_id}:timer:lock:{employee_id}`** | Mutex for start/stop/pause/resume | 5s lease |
 

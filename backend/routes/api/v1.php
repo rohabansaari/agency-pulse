@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CronController;
 use App\Http\Controllers\Api\V1\HealthController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/health', [HealthController::class, 'show']);
+Route::get('/cron/daily', [CronController::class, 'daily']);
 
 if (app()->environment(['local', 'testing'])) {
     Route::post('/testing/activate-invited-user', [
@@ -27,3 +29,6 @@ Route::middleware(['auth:sanctum', 'super.admin'])->prefix('platform')->group(
 Route::middleware(['auth:sanctum', 'block.super.admin', 'tenant', 'idempotency'])->group(
     base_path('routes/api/v1/tenant.php')
 );
+
+// Unknown API paths are 404 for every HTTP method (the web fallback only matches GET).
+Route::any('{path}', fn () => abort(404))->where('path', '.*');

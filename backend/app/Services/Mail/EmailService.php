@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Mail;
 
 class EmailService
 {
-    private const RETRY_DELAY_SECONDS = 3;
-
     public function __construct(
         private readonly MailConfiguration $mailConfiguration,
     ) {}
@@ -37,9 +35,8 @@ class EmailService
             throw new \InvalidArgumentException('A valid recipient email is required.');
         }
 
-        $this->sendWithRetry(function () use ($payload, $recipient): void {
-            Mail::mailer($this->mailConfiguration->mailer())
-                ->to($recipient, $payload['name'])
+        try {
+            Mail::to($recipient, $payload['name'])
                 ->send(new AccountInvitationMail(
                     $payload['user'],
                     $payload['organization'],
@@ -47,31 +44,16 @@ class EmailService
                     $payload['role'],
                     $payload['isAdminWelcome'] ?? false,
                 ));
-        }, [
-            'to' => $recipient,
-            'role' => $payload['role']->value,
-            'company' => $payload['companyName'],
-            'mailer' => $this->mailConfiguration->mailer(),
-        ]);
-    }
-
-    /**
-     * @param  array<string, mixed>  $context
-     */
-    private function sendWithRetry(callable $send, array $context): void
-    {
-        try {
-            $send();
-        } catch (\Throwable $firstFailure) {
-            Log::warning('Invitation email send failed — retrying once.', [
-                ...$context,
-                'error' => $firstFailure->getMessage(),
-                'retry_in_seconds' => self::RETRY_DELAY_SECONDS,
+        } catch (\Throwable $exception) {
+            Log::warning('Invitation email send failed.', [
+                'to' => $recipient,
+                'role' => $payload['role']->value,
+                'company' => $payload['companyName'],
+                'mailer' => $this->mailConfiguration->mailer(),
+                'error' => $exception->getMessage(),
             ]);
 
-            sleep(self::RETRY_DELAY_SECONDS);
-
-            $send();
+            throw $exception;
         }
     }
 }

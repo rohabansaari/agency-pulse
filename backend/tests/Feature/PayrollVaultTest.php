@@ -150,12 +150,22 @@ class PayrollVaultTest extends TestCase
 
         $this->withHeaders($this->headers($admin))
             ->getJson('/api/v1/payroll/settings')
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['payroll_vault']);
+            ->assertOk()
+            ->assertJsonPath('financial_data_masked', true)
+            ->assertJsonPath('income_tax_percent', null);
 
         $this->withHeaders($this->headers($admin, '1234'))
             ->getJson('/api/v1/payroll/settings')
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonPath('financial_data_masked', false);
+
+        // withHeaders() persists across requests; drop the PIN before the locked write.
+        $this->flushHeaders();
+
+        $this->withHeaders($this->headers($admin))
+            ->patchJson('/api/v1/payroll/settings', ['income_tax_percent' => 5])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['payroll_vault']);
     }
 
     public function test_admin_can_change_payroll_pin(): void

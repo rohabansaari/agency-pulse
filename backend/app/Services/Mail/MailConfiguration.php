@@ -48,6 +48,11 @@ class MailConfiguration
     {
         $mailer = $this->mailer();
 
+        // The test suite uses the array mailer with Mail::fake() / mocks.
+        if ($mailer === 'array' && app()->runningUnitTests()) {
+            return null;
+        }
+
         if (! in_array($mailer, self::REAL_DELIVERY_MAILERS, true)) {
             return 'MAIL_MAILER must be piisend (no domain), resend, brevo, mailersend, or smtp on a paid host. Currently "'.$mailer.'" only writes to logs.';
         }
