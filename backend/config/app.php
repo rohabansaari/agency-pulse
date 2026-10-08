@@ -25,9 +25,12 @@ return [
     ],
 
     /*
-    | Initial password for the platform super admin (superadmin@gmail.com).
-    | Required in production; the account is not created without it.
+    | Platform super admin. The password is required in production; the account
+    | is not created without it. SUPER_ADMIN_RESET=true re-applies the email and
+    | password to the existing super admin on next boot (remove it afterwards).
     */
+    'super_admin_email' => env('SUPER_ADMIN_EMAIL'),
     'super_admin_password' => env('SUPER_ADMIN_PASSWORD'),
+    'super_admin_reset' => (bool) env('SUPER_ADMIN_RESET', false),
 
 ];
