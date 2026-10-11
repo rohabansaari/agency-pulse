@@ -7,11 +7,12 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\ConnectsDesktopAgent;
 use Tests\TestCase;
 
 class IdempotencyTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ConnectsDesktopAgent;
 
     protected function setUp(): void
     {
@@ -24,6 +25,7 @@ class IdempotencyTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
+        $this->connectDesktopAgent($user);
 
         $key = (string) Str::uuid();
 

@@ -3,7 +3,14 @@
 import { Modal } from "@/components/ui/Modal";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { ActionMenu, ActionMenuItem } from "@/components/ui/ActionMenu";
-import { ApiError, resendEmployeeInvitation, updateTeamMember, formatApiErrors } from "@/lib/api";
+import { Button } from "@/components/ui/Button";
+import {
+  ApiError,
+  deleteTeamMember,
+  formatApiErrors,
+  resendEmployeeInvitation,
+  updateTeamMember,
+} from "@/lib/api";
 import {
   canChangeMemberRole,
   canEditEmployeeStatus,
@@ -33,8 +40,11 @@ type EmployeeActionsMenuProps = {
 
 export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: EmployeeActionsMenuProps) {
   const router = useRouter();
-  const [modal, setModal] = useState<"edit" | "role" | "status" | null>(null);
+  const [modal, setModal] = useState<
+    "edit" | "role" | "status" | "deactivate" | "delete" | null
+  >(null);
   const [name, setName] = useState(member.name);
+  const [email, setEmail] = useState(member.email);
   const [selectedRole, setSelectedRole] = useState<UserRole>(member.role);
   const [selectedStatus, setSelectedStatus] = useState<MemberStatus>(member.status);
   const [saving, setSaving] = useState(false);
@@ -47,8 +57,36 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
   const canEditStatus = canEdit && canEditMemberStatus(member.role);
   const canEditThis = canEditStatus && (viewer.role === "admin" || member.role !== "admin");
   const canChangeThisRole = canChangeMemberRole(viewer.role, member.role, isSelf);
+  const canDeleteThis =
+    canManageOrgEmployees(viewer.role) && canEditMemberStatus(member.role) && !isSelf;
 
-  async function saveUpdate(payload: Partial<{ name: string; role: UserRole; status: MemberStatus }>) {
+  function openModal(next: NonNullable<typeof modal>) {
+    setError("");
+    setModal(next);
+  }
+
+  async function removeMember() {
+    setSaving(true);
+    setError("");
+    try {
+      await deleteTeamMember(member.id);
+      setModal(null);
+      onFeedback?.(`${member.name} was deleted.`, "success");
+      onUpdated();
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? formatApiErrors(err.errors) || err.message
+          : "Delete failed.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveUpdate(
+    payload: Partial<{ name: string; email: string; role: UserRole; status: MemberStatus }>,
+  ) {
     setSaving(true);
     setError("");
     try {
@@ -78,7 +116,8 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
           <ActionMenuItem
             onClick={() => {
               setName(member.name);
-              setModal("edit");
+              setEmail(member.email);
+              openModal("edit");
             }}
           >
             Edit profile
@@ -88,7 +127,7 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
           <ActionMenuItem
             onClick={() => {
               setSelectedRole(member.role);
-              setModal("role");
+              openModal("role");
             }}
           >
             Change role
@@ -98,10 +137,40 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
           <ActionMenuItem
             onClick={() => {
               setSelectedStatus(member.status);
-              setModal("status");
+              openModal("status");
             }}
           >
             Update status
+          </ActionMenuItem>
+        ) : null}
+        {canEditStatus && !isSelf && member.status === "active" ? (
+          <ActionMenuItem onClick={() => openModal("deactivate")}>Deactivate</ActionMenuItem>
+        ) : null}
+        {canEditStatus && !isSelf && member.status === "suspended" ? (
+          <ActionMenuItem
+            onClick={() => {
+              void (async () => {
+                try {
+                  await updateTeamMember(member.id, { status: "active" });
+                  onFeedback?.(`${member.name} was reactivated.`, "success");
+                  onUpdated();
+                } catch (err) {
+                  onFeedback?.(
+                    err instanceof ApiError
+                      ? formatApiErrors(err.errors) || err.message
+                      : "Reactivation failed.",
+                    "error",
+                  );
+                }
+              })();
+            }}
+          >
+            Reactivate
+          </ActionMenuItem>
+        ) : null}
+        {canDeleteThis ? (
+          <ActionMenuItem className="text-[var(--danger)]" onClick={() => openModal("delete")}>
+            Delete employee
           </ActionMenuItem>
         ) : null}
         {canResendInvitation ? (
@@ -145,15 +214,37 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
             className="space-y-3"
             onSubmit={(event) => {
               event.preventDefault();
-              void saveUpdate({ name });
+              const trimmedEmail = email.trim();
+              void saveUpdate(
+                trimmedEmail.toLowerCase() === member.email.toLowerCase()
+                  ? { name }
+                  : { name, email: trimmedEmail },
+              );
             }}
           >
-            <input
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-            />
+            <label className="block space-y-1 text-sm">
+              <span className="text-label">Name</span>
+              <input
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              />
+            </label>
+            <label className="block space-y-1 text-sm">
+              <span className="text-label">Email</span>
+              <input
+                required
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+              />
+              <span className="block text-xs text-[var(--muted)]">
+                The employee signs in with this email.
+                {member.status === "invited" ? " Resend the invitation after changing it." : ""}
+              </span>
+            </label>
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <button
               type="submit"
@@ -192,6 +283,55 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
               Save role
             </button>
           </form>
+        </Modal>
+      ) : null}
+
+      {modal === "deactivate" ? (
+        <Modal onClose={() => setModal(null)} title={`Deactivate ${member.name}?`}>
+          <div className="space-y-3 text-sm">
+            <p>
+              They lose access right away and can&apos;t sign in or track time until you reactivate
+              them. A running timer is stopped. Their time, screenshots and payroll history are
+              kept.
+            </p>
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setModal(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                disabled={saving}
+                onClick={() => void saveUpdate({ status: "suspended" })}
+              >
+                {saving ? "Deactivating…" : "Deactivate"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
+      {modal === "delete" ? (
+        <Modal onClose={() => setModal(null)} title={`Delete ${member.name}?`}>
+          <div className="space-y-3 text-sm">
+            <p>
+              This permanently removes {member.email} and their time entries, screenshots, leave
+              and salary records. It can&apos;t be undone.
+            </p>
+            <p className="text-[var(--muted)]">
+              Employees included in a finalized payroll run can&apos;t be deleted. Deactivate them
+              instead to keep their history.
+            </p>
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setModal(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" disabled={saving} onClick={() => void removeMember()}>
+                {saving ? "Deleting…" : "Delete permanently"}
+              </Button>
+            </div>
+          </div>
         </Modal>
       ) : null}
 

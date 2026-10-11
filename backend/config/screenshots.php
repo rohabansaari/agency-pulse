@@ -7,4 +7,6 @@ return [
     'rate_limit_per_minute' => (int) env('SCREENSHOT_RATE_LIMIT', 10),
     'agent_heartbeat_threshold_minutes' => (int) env('SCREENSHOT_AGENT_HEARTBEAT_THRESHOLD_MINUTES', 10),
     'agent_upload_threshold_minutes' => (int) env('SCREENSHOT_AGENT_UPLOAD_THRESHOLD_MINUTES', 60),
+    // Timers can only start while the user's desktop agent is connected (recent heartbeat).
+    'timer_requires_agent' => (bool) env('TIMER_REQUIRES_DESKTOP_AGENT', true),
 ];

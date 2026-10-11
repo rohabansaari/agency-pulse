@@ -9,11 +9,12 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\ConnectsDesktopAgent;
 use Tests\TestCase;
 
 class TimeEntryTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ConnectsDesktopAgent;
 
     protected function setUp(): void
     {
@@ -33,6 +34,7 @@ class TimeEntryTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
+        $this->connectDesktopAgent($user);
 
         $response = $this->withHeaders($this->tenantHeaders($user))
             ->postJson('/api/v1/time/start');
@@ -46,6 +48,41 @@ class TimeEntryTest extends TestCase
         ]);
     }
 
+    public function test_timer_cannot_start_until_desktop_agent_connects(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/time/start')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('timer');
+
+        $this->assertDatabaseCount('time_entries', 0);
+
+        $this->connectDesktopAgent($user);
+
+        $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/time/start')
+            ->assertCreated();
+    }
+
+    public function test_agent_requirement_can_be_disabled(): void
+    {
+        config(['screenshots.timer_requires_agent' => false]);
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/time/start')
+            ->assertCreated();
+
+        $this->withHeaders($this->tenantHeaders($user))
+            ->getJson('/api/v1/screenshots/agent-status')
+            ->assertOk()
+            ->assertJsonPath('timer_requires_agent', false);
+    }
+
     public function test_user_can_start_timer_with_project(): void
     {
         $user = User::factory()->create();
@@ -55,6 +92,7 @@ class TimeEntryTest extends TestCase
         $project->members()->attach($user->id);
 
         Sanctum::actingAs($user);
+        $this->connectDesktopAgent($user);
 
         $response = $this->withHeaders($this->tenantHeaders($user))
             ->postJson('/api/v1/time/start', [

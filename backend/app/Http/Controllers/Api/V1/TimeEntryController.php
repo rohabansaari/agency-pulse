@@ -13,6 +13,7 @@ use App\Models\TimeEntry;
 use App\Services\Payroll\PayrollPeriodLockService;
 use App\Services\Projects\ProjectAccessService;
 use App\Services\Reporting\ReportingService;
+use App\Services\Screenshots\ScreenshotAgentService;
 use App\Services\Tenant\TenantContext;
 use App\Support\WorkforceMembers;
 use Illuminate\Http\JsonResponse;
@@ -27,7 +28,8 @@ class TimeEntryController extends TenantAppController
     public function __construct(
         private readonly ProjectAccessService $projectAccess,
         private readonly ReportingService $reporting,
-        private readonly PayrollPeriodLockService $payrollLock
+        private readonly PayrollPeriodLockService $payrollLock,
+        private readonly ScreenshotAgentService $agent
     ) {}
 
     public function start(Request $request): JsonResponse
@@ -77,6 +79,12 @@ class TimeEntryController extends TenantAppController
         if ($activeTimer) {
             throw ValidationException::withMessages([
                 'timer' => ['You already have a running timer. Stop it before starting a new one.'],
+            ]);
+        }
+
+        if (config('screenshots.timer_requires_agent') && ! $this->agent->status($user)['connected']) {
+            throw ValidationException::withMessages([
+                'timer' => ['Install and sign in to the AgencyPulse desktop agent before starting the timer.'],
             ]);
         }
 
