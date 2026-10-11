@@ -146,7 +146,10 @@ class ScreenshotController extends TenantAppController
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        return response()->json($this->agent->status($user));
+        return response()->json([
+            ...$this->agent->status($user),
+            'timer_requires_agent' => (bool) config('screenshots.timer_requires_agent'),
+        ]);
     }
 
     public function index(Request $request): AnonymousResourceCollection|JsonResponse

@@ -18,6 +18,7 @@ type TimerFocusPanelProps = {
   onStart: () => void;
   onStop: () => void;
   actionLoading: boolean;
+  startBlocked?: boolean;
   projectsNotice?: string;
   screenshotActive?: boolean;
   hourlyRate?: number | null;
@@ -37,6 +38,7 @@ export function TimerFocusPanel({
   onStart,
   onStop,
   actionLoading,
+  startBlocked = false,
   projectsNotice,
   screenshotActive = false,
   hourlyRate,
@@ -107,7 +109,7 @@ export function TimerFocusPanel({
               <Button
                 size="lg"
                 onClick={onStart}
-                disabled={actionLoading}
+                disabled={actionLoading || startBlocked}
                 className="min-w-[160px] bg-[var(--accent-emerald)] hover:opacity-90"
               >
                 <Play className="h-4 w-4" />

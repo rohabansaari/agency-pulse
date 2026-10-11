@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\OrganizationMemberStatus;
+use App\Enums\PayrollRunStatus;
 use App\Enums\SalaryType;
+use App\Enums\TimeEntryStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TeamMemberResource;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
+use App\Models\PayrollRunEmployeeRecord;
+use App\Models\Screenshot;
+use App\Models\TimeEntry;
 use App\Models\User;
 use App\Http\Resources\EmployeeProfileResource;
 use App\Services\Auth\InvitationService;
@@ -18,10 +23,12 @@ use App\Services\Employee\EmployeeDirectoryService;
 use App\Services\Onboarding\OnboardingEmployeeService;
 use App\Services\Payroll\AdminPayrollService;
 use App\Services\Payroll\PayrollVaultService;
+use App\Services\Screenshots\ScreenshotStorageService;
 use App\Services\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -35,6 +42,7 @@ class TeamController extends TenantAppController
         private readonly EmployeeDirectoryService $employeeDirectory,
         private readonly OnboardingEmployeeService $employeeImport,
         private readonly InvitationService $invitations,
+        private readonly ScreenshotStorageService $screenshotStorage,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -209,12 +217,14 @@ class TeamController extends TenantAppController
             $validated = $request->validate([
                 'status' => ['sometimes', Rule::enum(OrganizationMemberStatus::class)],
                 'name' => ['sometimes', 'string', 'max:255'],
+                'email' => $this->emailRules($member),
             ]);
         } else {
             $validated = $request->validate([
                 'role' => ['sometimes', Rule::enum(UserRole::class), Rule::notIn([UserRole::SuperAdmin->value])],
                 'status' => ['sometimes', Rule::enum(OrganizationMemberStatus::class)],
                 'name' => ['sometimes', 'string', 'max:255'],
+                'email' => $this->emailRules($member),
             ]);
 
             if (isset($validated['role'])) {
@@ -245,7 +255,16 @@ class TeamController extends TenantAppController
             unset($validated['name']);
         }
 
+        if (isset($validated['email'])) {
+            $this->updateEmail($member, $validated['email']);
+            unset($validated['email']);
+        }
+
         $member->update($validated);
+
+        if (($validated['status'] ?? null) === OrganizationMemberStatus::Suspended->value) {
+            $this->stopRunningTimer($member->user_id);
+        }
 
         if (isset($validated['role'])) {
             $member->user->forceFill(['role' => $validated['role']])->saveQuietly();
@@ -255,6 +274,95 @@ class TeamController extends TenantAppController
         return response()->json([
             'message' => 'Team member updated.',
             'member' => new TeamMemberResource($member->fresh()->load('user')),
+        ]);
+    }
+
+    public function destroy(Request $request, OrganizationMember $member): JsonResponse
+    {
+        $this->ensureMemberInTenant($member);
+
+        if ($request->user()->id === $member->user_id) {
+            abort(403, 'You cannot delete your own account.');
+        }
+
+        if (in_array($member->role, RoleMutationGuard::IMMUTABLE_ROLES, true)) {
+            abort(403, 'Admin and sub admin accounts cannot be deleted.');
+        }
+
+        $inClosedPayroll = PayrollRunEmployeeRecord::query()
+            ->where('user_id', $member->user_id)
+            ->whereHas('payrollRun', fn ($query) => $query
+                ->where('organization_id', TenantContext::id())
+                ->whereIn('status', [PayrollRunStatus::Finalized, PayrollRunStatus::Locked]))
+            ->exists();
+
+        if ($inClosedPayroll) {
+            throw ValidationException::withMessages([
+                'member' => ['This employee is part of a finalized payroll run, so their records must be kept. Deactivate them instead.'],
+            ]);
+        }
+
+        $user = $member->user;
+        $screenshots = Screenshot::query()->where('user_id', $user->id)->get();
+
+        DB::transaction(function () use ($member, $user): void {
+            $member->delete();
+
+            if (! $user->memberships()->exists()) {
+                $user->tokens()->delete();
+                $user->delete();
+            }
+        });
+
+        foreach ($screenshots as $screenshot) {
+            $this->screenshotStorage->delete($screenshot);
+        }
+
+        return response()->json(['message' => 'Employee deleted.']);
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function emailRules(OrganizationMember $member): array
+    {
+        return [
+            'sometimes',
+            'email',
+            'max:255',
+            Rule::unique('users', 'email')->ignore($member->user_id),
+        ];
+    }
+
+    private function updateEmail(OrganizationMember $member, string $email): void
+    {
+        $user = $member->user;
+
+        if (strcasecmp($user->email, $email) === 0) {
+            return;
+        }
+
+        if ($user->memberships()->where('organization_id', '!=', $member->organization_id)->exists()) {
+            throw ValidationException::withMessages([
+                'email' => ['This person belongs to another organization, so only they can change their email.'],
+            ]);
+        }
+
+        $user->forceFill(['email' => $email])->saveQuietly();
+    }
+
+    private function stopRunningTimer(int $userId): void
+    {
+        $entry = TimeEntry::query()
+            ->trackedTimers()
+            ->where('user_id', $userId)
+            ->where('status', TimeEntryStatus::Running)
+            ->first();
+
+        $entry?->update([
+            'end_time' => now(),
+            'duration' => (int) $entry->start_time->diffInSeconds(now()),
+            'status' => TimeEntryStatus::Stopped,
         ]);
     }
 

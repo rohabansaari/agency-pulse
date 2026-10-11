@@ -448,7 +448,7 @@ export async function inviteTeamMember(data: {
 
 export async function updateTeamMember(
   memberId: number,
-  data: Partial<{ role: UserRole; status: MemberStatus; name: string }>,
+  data: Partial<{ role: UserRole; status: MemberStatus; name: string; email: string }>,
 ): Promise<TeamMember> {
   const response = await apiFetch<{ member: TeamMember }>(
     `/team/${memberId}`,
@@ -458,6 +458,10 @@ export async function updateTeamMember(
     },
   );
   return response.member;
+}
+
+export async function deleteTeamMember(memberId: number): Promise<void> {
+  await apiFetch<{ message: string }>(`/team/${memberId}`, { method: "DELETE" });
 }
 
 function dateRangeQuery(range?: ReportDateRange): string {
@@ -1164,6 +1168,7 @@ export interface ScreenshotAgentStatus {
   connected: boolean;
   last_heartbeat_at: string | null;
   last_upload_at: string | null;
+  timer_requires_agent?: boolean;
 }
 
 export async function fetchScreenshotAgentStatus(): Promise<ScreenshotAgentStatus> {

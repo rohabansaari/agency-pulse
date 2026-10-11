@@ -19,6 +19,8 @@ import { TimerFocusPanel } from "@/components/time/TimerFocusPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { wakeDesktopAgent } from "@/lib/desktop-agent";
+import { AGENT_DOWNLOAD_FILENAME, getAgentDownloadUrl } from "@/lib/desktop-agent-config";
+import { useDesktopAgentStatus } from "@/hooks/useDesktopAgentStatus";
 import type { Project, TimeEntry, User } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -180,6 +182,14 @@ export function TimeTracker({ user }: { user?: User }) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [projectsNotice, setProjectsNotice] = useState("");
+  const requiresAgent = isEmployee || isManager;
+  const {
+    connected: agentConnected,
+    checking: agentChecking,
+    refresh: refreshAgentStatus,
+    timerRequiresAgent,
+  } = useDesktopAgentStatus(requiresAgent);
+  const agentMissing = requiresAgent && timerRequiresAgent && !agentConnected;
 
   const loadToday = useCallback(async () => {
     setError("");
@@ -324,6 +334,7 @@ export function TimeTracker({ user }: { user?: User }) {
     } catch (err) {
       if (err instanceof ApiError) {
         setError(formatApiErrors(err.errors) || err.message);
+        void refreshAgentStatus();
       } else {
         setError("Unable to start timer.");
       }
@@ -509,9 +520,35 @@ export function TimeTracker({ user }: { user?: User }) {
         onStart={() => void handleStart()}
         onStop={() => void handleStop()}
         actionLoading={actionLoading}
+        startBlocked={agentMissing}
         projectsNotice={projectsNotice}
         screenshotActive={Boolean(activeTimer)}
       />
+
+      {agentMissing && !activeTimer ? (
+        <div className="mx-auto max-w-3xl rounded-xl border border-[var(--warning)]/30 bg-[var(--card)] px-4 py-3 text-center text-sm text-[var(--foreground)]">
+          {agentChecking ? (
+            "Checking for the desktop agent…"
+          ) : (
+            <>
+              The timer starts only after the desktop agent is installed and signed in on this
+              computer.{" "}
+              <a href={getAgentDownloadUrl()} className="font-medium underline hover:no-underline">
+                Download {AGENT_DOWNLOAD_FILENAME}
+              </a>
+              , run <span className="font-mono text-xs">AgencyPulseAgent.exe</span>, sign in, then{" "}
+              <button
+                type="button"
+                onClick={() => void refreshAgentStatus()}
+                className="font-medium underline hover:no-underline"
+              >
+                check again
+              </button>
+              .
+            </>
+          )}
+        </div>
+      ) : null}
 
       {successMessage ? (
         <p className="text-center text-sm font-medium text-[var(--accent-emerald)]">{successMessage}</p>

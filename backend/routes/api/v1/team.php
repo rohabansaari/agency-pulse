@@ -20,5 +20,6 @@ Route::middleware('rbac:admin')->group(function () {
     Route::get('/import-employees/sample.csv', [TeamController::class, 'sampleCsv']);
     Route::post('/{user}/resend-invitation', [TeamController::class, 'resendInvitation']);
     Route::post('/invite', [TeamController::class, 'invite']);
+    Route::delete('/{member}', [TeamController::class, 'destroy']);
 });
 

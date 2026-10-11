@@ -9,11 +9,12 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\ConnectsDesktopAgent;
 use Tests\TestCase;
 
 class TenantResolutionTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ConnectsDesktopAgent;
 
     protected function setUp(): void
     {
@@ -31,6 +32,7 @@ class TenantResolutionTest extends TestCase
         Project::factory()->create();
 
         Sanctum::actingAs($user);
+        $this->connectDesktopAgent($user);
 
         $this->withHeader('X-Organization-Id', (string) $user->organization_id)
             ->postJson('/api/v1/time/start')

@@ -7,6 +7,7 @@ const POLL_INTERVAL_MS = 30_000;
 
 export function useDesktopAgentStatus(enabled: boolean) {
   const [connected, setConnected] = useState<boolean | null>(null);
+  const [timerRequiresAgent, setTimerRequiresAgent] = useState(true);
   const [checking, setChecking] = useState(enabled);
 
   const refresh = useCallback(async () => {
@@ -21,6 +22,7 @@ export function useDesktopAgentStatus(enabled: boolean) {
     try {
       const status = await fetchScreenshotAgentStatus();
       setConnected(status.connected);
+      setTimerRequiresAgent(status.timer_requires_agent !== false);
     } catch {
       setConnected(false);
     } finally {
@@ -46,6 +48,7 @@ export function useDesktopAgentStatus(enabled: boolean) {
   return {
     connected: connected === true,
     checking: enabled && checking,
+    timerRequiresAgent,
     refresh,
   };
 }
