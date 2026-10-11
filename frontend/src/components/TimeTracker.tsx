@@ -5,6 +5,8 @@ import {
   fetchProjects,
   fetchTodayTime,
   formatApiErrors,
+  pauseTimer,
+  resumeTimer,
   startTimer,
   stopTimer,
 } from "@/lib/api";
@@ -175,6 +177,8 @@ export function TimeTracker({ user }: { user?: User }) {
   const [selectedProjectId, setSelectedProjectId] = useState(GENERAL_TIME_VALUE);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [activeTimer, setActiveTimer] = useState<TimeEntry | null>(null);
+  const [pausedTimer, setPausedTimer] = useState<TimeEntry | null>(null);
+  const [sessionElapsed, setSessionElapsed] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
   const [liveElapsed, setLiveElapsed] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -199,14 +203,18 @@ export function TimeTracker({ user }: { user?: User }) {
       setEntries(response.data ?? []);
       setTotalDuration(response.meta.total_duration);
       setActiveTimer(response.meta.active_timer);
+      setPausedTimer(response.meta.paused_timer ?? null);
+      setSessionElapsed(response.meta.session_elapsed ?? 0);
       setLiveElapsed(
         response.meta.active_timer
           ? elapsedSeconds(response.meta.active_timer.start_time)
           : 0,
       );
 
-      if (response.meta.active_timer?.project_id) {
-        setSelectedProjectId(String(response.meta.active_timer.project_id));
+      const sessionProjectId =
+        response.meta.active_timer?.project_id ?? response.meta.paused_timer?.project_id;
+      if (sessionProjectId) {
+        setSelectedProjectId(String(sessionProjectId));
       }
     } catch (err) {
       if (err instanceof ApiError) {
@@ -264,13 +272,14 @@ export function TimeTracker({ user }: { user?: User }) {
   }, [successMessage]);
 
   const activeProjectName = useMemo(() => {
-    if (!activeTimer) return null;
+    const sessionEntry = activeTimer ?? pausedTimer;
+    if (!sessionEntry) return null;
     return (
-      activeTimer.project_name ??
-      projects.find((p) => p.id === activeTimer.project_id)?.name ??
+      sessionEntry.project_name ??
+      projects.find((p) => p.id === sessionEntry.project_id)?.name ??
       "General time"
     );
-  }, [activeTimer, projects]);
+  }, [activeTimer, pausedTimer, projects]);
 
   const sortedEntries = useMemo(
     () =>
@@ -343,6 +352,45 @@ export function TimeTracker({ user }: { user?: User }) {
     }
   }
 
+  async function runTimerAction(
+    action: () => Promise<unknown>,
+    success: string,
+    fallbackError: string,
+  ) {
+    setActionLoading(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      await action();
+      await loadToday();
+      setSuccessMessage(success);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(formatApiErrors(err.errors) || err.message);
+      } else {
+        setError(fallbackError);
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function handlePause() {
+    void runTimerAction(pauseTimer, "Timer paused — screenshots paused too", "Unable to pause timer.");
+  }
+
+  function handleResume() {
+    void runTimerAction(
+      async () => {
+        await resumeTimer();
+        wakeDesktopAgent();
+      },
+      "Timer resumed",
+      "Unable to resume timer.",
+    );
+  }
+
   async function handleStop() {
     setActionLoading(true);
     setError("");
@@ -404,9 +452,12 @@ export function TimeTracker({ user }: { user?: User }) {
     );
   }
 
-  const displayTime = activeTimer
-    ? formatDuration(liveElapsed)
-    : formatDuration(totalDuration);
+  const sessionSeconds = activeTimer
+    ? sessionElapsed + liveElapsed
+    : pausedTimer
+      ? sessionElapsed
+      : 0;
+  const displayTime = formatDuration(sessionSeconds);
 
   return (
     <div className="space-y-8">
@@ -487,13 +538,15 @@ export function TimeTracker({ user }: { user?: User }) {
         />
         <SummaryCard
           label="Active session"
-          value={activeTimer ? "Running" : "Idle"}
+          value={activeTimer ? "Running" : pausedTimer ? "Paused" : "Idle"}
           sub={
             activeTimer
               ? `Started ${formatTime(activeTimer.start_time)}`
-              : "No timer active"
+              : pausedTimer?.end_time
+                ? `Paused at ${formatTime(pausedTimer.end_time)}`
+                : "No timer active"
           }
-          accent={activeTimer ? "green" : "zinc"}
+          accent={activeTimer ? "green" : pausedTimer ? "blue" : "zinc"}
         />
         <SummaryCard
           label="Sessions today"
@@ -506,8 +559,9 @@ export function TimeTracker({ user }: { user?: User }) {
 
       <TimerFocusPanel
         isRunning={Boolean(activeTimer)}
+        isPaused={!activeTimer && Boolean(pausedTimer)}
         displayTime={displayTime}
-        liveSeconds={activeTimer ? liveElapsed : totalDuration}
+        liveSeconds={sessionSeconds}
         projectName={
           activeProjectName ??
           (selectedProjectId === GENERAL_TIME_VALUE
@@ -518,6 +572,8 @@ export function TimeTracker({ user }: { user?: User }) {
         selectedProjectId={selectedProjectId}
         onProjectChange={setSelectedProjectId}
         onStart={() => void handleStart()}
+        onPause={handlePause}
+        onResume={handleResume}
         onStop={() => void handleStop()}
         actionLoading={actionLoading}
         startBlocked={agentMissing}

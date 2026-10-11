@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\V1\TimeEntryController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/start', [TimeEntryController::class, 'start']);
+Route::post('/pause', [TimeEntryController::class, 'pause']);
+Route::post('/resume', [TimeEntryController::class, 'resume']);
 Route::post('/stop', [TimeEntryController::class, 'stop']);
 Route::get('/today', [TimeEntryController::class, 'today']);
 Route::get('/personal-report', [TimeEntryController::class, 'personalReport']);

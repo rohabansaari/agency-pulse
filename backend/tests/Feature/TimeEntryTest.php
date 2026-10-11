@@ -48,6 +48,81 @@ class TimeEntryTest extends TestCase
         ]);
     }
 
+    public function test_pause_and_resume_continue_the_same_session(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        $this->connectDesktopAgent($user);
+        $headers = $this->tenantHeaders($user);
+
+        $this->travelTo(now()->setTime(10, 0));
+        $this->withHeaders($headers)->postJson('/api/v1/time/start')->assertCreated();
+
+        $this->travelTo(now()->setTime(10, 20));
+        $this->withHeaders($headers)->postJson('/api/v1/time/pause')
+            ->assertOk()
+            ->assertJsonPath('entry.paused', true)
+            ->assertJsonPath('entry.duration', 1200);
+
+        $this->withHeaders($headers)->getJson('/api/v1/time/today')
+            ->assertOk()
+            ->assertJsonPath('meta.active_timer', null)
+            ->assertJsonPath('meta.paused_timer.paused', true)
+            ->assertJsonPath('meta.session_elapsed', 1200)
+            ->assertJsonPath('meta.total_duration', 1200);
+
+        $this->travelTo(now()->setTime(10, 45));
+        $this->withHeaders($headers)->postJson('/api/v1/time/resume')
+            ->assertCreated()
+            ->assertJsonPath('entry.status', TimeEntryStatus::Running->value);
+
+        $this->travelTo(now()->setTime(10, 55));
+        $this->withHeaders($headers)->getJson('/api/v1/time/today')
+            ->assertJsonPath('meta.paused_timer', null)
+            ->assertJsonPath('meta.session_elapsed', 1200);
+
+        $this->withHeaders($headers)->postJson('/api/v1/time/stop')->assertOk();
+
+        // Paused gap (10:20–10:45) is not counted; the next start begins a new session.
+        $this->withHeaders($headers)->getJson('/api/v1/time/today')
+            ->assertJsonPath('meta.total_duration', 1800)
+            ->assertJsonPath('meta.paused_timer', null)
+            ->assertJsonPath('meta.session_elapsed', 0);
+
+        $this->withHeaders($headers)->postJson('/api/v1/time/start')->assertCreated();
+        $this->withHeaders($headers)->getJson('/api/v1/time/today')
+            ->assertJsonPath('meta.session_elapsed', 0);
+    }
+
+    public function test_stop_while_paused_ends_the_session(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        $this->connectDesktopAgent($user);
+        $headers = $this->tenantHeaders($user);
+
+        $this->withHeaders($headers)->postJson('/api/v1/time/start')->assertCreated();
+        $this->withHeaders($headers)->postJson('/api/v1/time/pause')->assertOk();
+        $this->withHeaders($headers)->postJson('/api/v1/time/stop')
+            ->assertOk()
+            ->assertJsonPath('entry.paused', false);
+
+        $this->withHeaders($headers)->postJson('/api/v1/time/resume')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('timer');
+    }
+
+    public function test_pause_requires_a_running_timer(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/time/pause')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('timer');
+    }
+
     public function test_timer_cannot_start_until_desktop_agent_connects(): void
     {
         $user = User::factory()->create();

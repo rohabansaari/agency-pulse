@@ -19,7 +19,9 @@ class HealthController extends Controller
             'screenshot_disk' => $screenshotDisk,
             'screenshot_s3_configured' => $screenshotDisk === 's3'
                 && filled(config('filesystems.disks.s3.bucket'))
-                && filled(config('filesystems.disks.s3.endpoint')),
+                && filled(config('filesystems.disks.s3.endpoint'))
+                && filled(config('filesystems.disks.s3.key'))
+                && filled(config('filesystems.disks.s3.secret')),
             'checks' => [
                 'app_key_configured' => filled(config('app.key')),
                 ...$this->databaseCheck(),

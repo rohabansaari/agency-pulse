@@ -597,6 +597,20 @@ export async function startTimer(projectId?: number | null): Promise<TimeActionR
   });
 }
 
+export async function pauseTimer(): Promise<TimeActionResponse> {
+  return apiFetch<TimeActionResponse>("/time/pause", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function resumeTimer(): Promise<TimeActionResponse> {
+  return apiFetch<TimeActionResponse>("/time/resume", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
 export async function stopTimer(): Promise<TimeActionResponse> {
   return apiFetch<TimeActionResponse>("/time/stop", {
     method: "POST",
