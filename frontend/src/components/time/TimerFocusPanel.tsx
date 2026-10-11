@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/Button";
 import { formatPKR } from "@/lib/currency";
 import { cn } from "@/lib/cn";
 import { motion } from "framer-motion";
-import { Camera, Play, Square } from "lucide-react";
+import { Camera, Pause, Play, Square } from "lucide-react";
 
 type TimerFocusPanelProps = {
   isRunning: boolean;
+  isPaused?: boolean;
   displayTime: string;
   liveSeconds: number;
   projectName: string;
@@ -16,6 +17,8 @@ type TimerFocusPanelProps = {
   selectedProjectId: string;
   onProjectChange: (value: string) => void;
   onStart: () => void;
+  onPause: () => void;
+  onResume: () => void;
   onStop: () => void;
   actionLoading: boolean;
   startBlocked?: boolean;
@@ -29,6 +32,7 @@ const RING_CIRC = 2 * Math.PI * RING_RADIUS;
 
 export function TimerFocusPanel({
   isRunning,
+  isPaused = false,
   displayTime,
   liveSeconds,
   projectName,
@@ -36,6 +40,8 @@ export function TimerFocusPanel({
   selectedProjectId,
   onProjectChange,
   onStart,
+  onPause,
+  onResume,
   onStop,
   actionLoading,
   startBlocked = false,
@@ -82,29 +88,63 @@ export function TimerFocusPanel({
               <p
                 className={cn(
                   "text-numeric text-4xl font-bold tracking-tight sm:text-5xl",
-                  isRunning ? "text-[var(--foreground)]" : "text-[var(--muted)]",
+                  isRunning || isPaused ? "text-[var(--foreground)]" : "text-[var(--muted)]",
                 )}
               >
                 {displayTime}
               </p>
               <p className="mt-1 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
-                {isRunning ? "Session active" : "Ready"}
+                {isRunning ? "Session active" : isPaused ? "Paused" : "Ready"}
               </p>
             </div>
           </div>
 
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             {isRunning ? (
-              <Button
-                variant="danger"
-                size="lg"
-                onClick={onStop}
-                disabled={actionLoading}
-                className="min-w-[160px]"
-              >
-                <Square className="h-4 w-4" />
-                {actionLoading ? "Stopping…" : "Stop"}
-              </Button>
+              <>
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={onPause}
+                  disabled={actionLoading}
+                  className="min-w-[140px]"
+                >
+                  <Pause className="h-4 w-4" />
+                  Pause
+                </Button>
+                <Button
+                  variant="danger"
+                  size="lg"
+                  onClick={onStop}
+                  disabled={actionLoading}
+                  className="min-w-[140px]"
+                >
+                  <Square className="h-4 w-4" />
+                  Stop
+                </Button>
+              </>
+            ) : isPaused ? (
+              <>
+                <Button
+                  size="lg"
+                  onClick={onResume}
+                  disabled={actionLoading || startBlocked}
+                  className="min-w-[140px] bg-[var(--accent-emerald)] hover:opacity-90"
+                >
+                  <Play className="h-4 w-4" />
+                  Resume
+                </Button>
+                <Button
+                  variant="danger"
+                  size="lg"
+                  onClick={onStop}
+                  disabled={actionLoading}
+                  className="min-w-[140px]"
+                >
+                  <Square className="h-4 w-4" />
+                  Stop
+                </Button>
+              </>
             ) : (
               <Button
                 size="lg"
@@ -122,7 +162,7 @@ export function TimerFocusPanel({
         <div className="space-y-4">
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
             <p className="text-label">Project context</p>
-            {!isRunning ? (
+            {!isRunning && !isPaused ? (
               <div className="mt-2">
                 <Dropdown
                   value={selectedProjectId}

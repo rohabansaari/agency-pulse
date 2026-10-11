@@ -20,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -82,13 +83,11 @@ class TimeEntryController extends TenantAppController
             ]);
         }
 
-        if (config('screenshots.timer_requires_agent') && ! $this->agent->status($user)['connected']) {
-            throw ValidationException::withMessages([
-                'timer' => ['Install and sign in to the AgencyPulse desktop agent before starting the timer.'],
-            ]);
-        }
-
+        $this->assertAgentConnected($user);
         $this->payrollLock->assertDateModifiable(Carbon::today()->startOfDay());
+
+        // Starting fresh discards a paused session; its time is already saved.
+        $this->pausedSegment($user->id)?->update(['paused' => false]);
 
         $entry = TimeEntry::create([
             'user_id' => $user->id,
@@ -97,6 +96,7 @@ class TimeEntryController extends TenantAppController
             'project_id' => $validated['project_id'] ?? null,
             'start_time' => now(),
             'status' => TimeEntryStatus::Running,
+            'timer_session' => (string) Str::uuid(),
         ]);
 
         return response()->json([
@@ -105,43 +105,161 @@ class TimeEntryController extends TenantAppController
         ], 201);
     }
 
-    public function stop(Request $request): JsonResponse
+    public function pause(Request $request): JsonResponse
     {
         $user = $request->user();
+        $this->assertCanTrack($user);
 
-        if ($user->currentRole()?->isOperationalAdmin()) {
-            throw ValidationException::withMessages([
-                'timer' => ['Administrators cannot track time.'],
-            ]);
-        }
-
-        $entry = TimeEntry::query()
-            ->trackedTimers()
-            ->where('user_id', $user->id)
-            ->where('status', TimeEntryStatus::Running)
-            ->first();
+        $entry = $this->runningEntry($user->id);
 
         if (! $entry) {
             throw ValidationException::withMessages([
-                'timer' => ['No active timer found.'],
+                'timer' => ['No running timer to pause.'],
             ]);
         }
 
-        $this->payrollLock->assertTimeEntryModifiable($entry);
+        $this->closeSegment($entry, paused: true);
 
-        $endTime = now();
-        $duration = (int) $entry->start_time->diffInSeconds($endTime);
-
-        $entry->update([
-            'end_time' => $endTime,
-            'duration' => $duration,
-            'status' => TimeEntryStatus::Stopped,
+        return response()->json([
+            'message' => 'Timer paused.',
+            'entry' => new TimeEntryResource($entry->fresh()->load('project')),
         ]);
+    }
+
+    public function resume(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $this->assertCanTrack($user);
+
+        if ($this->runningEntry($user->id)) {
+            throw ValidationException::withMessages([
+                'timer' => ['Your timer is already running.'],
+            ]);
+        }
+
+        $paused = $this->pausedSegment($user->id);
+
+        if (! $paused) {
+            throw ValidationException::withMessages([
+                'timer' => ['No paused timer to resume.'],
+            ]);
+        }
+
+        $this->assertAgentConnected($user);
+        $this->payrollLock->assertDateModifiable(Carbon::today()->startOfDay());
+
+        $paused->update(['paused' => false]);
+
+        $entry = TimeEntry::create([
+            'user_id' => $user->id,
+            'organization_id' => TenantContext::id(),
+            'type' => TimeEntryType::Tracked,
+            'project_id' => $paused->project_id,
+            'start_time' => now(),
+            'status' => TimeEntryStatus::Running,
+            'timer_session' => $paused->timer_session ?? (string) Str::uuid(),
+        ]);
+
+        return response()->json([
+            'message' => 'Timer resumed.',
+            'entry' => new TimeEntryResource($entry->load('project')),
+        ], 201);
+    }
+
+    public function stop(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $this->assertCanTrack($user);
+
+        $entry = $this->runningEntry($user->id);
+
+        if ($entry) {
+            $this->closeSegment($entry, paused: false);
+        } else {
+            $entry = $this->pausedSegment($user->id);
+
+            if (! $entry) {
+                throw ValidationException::withMessages([
+                    'timer' => ['No active timer found.'],
+                ]);
+            }
+
+            $entry->update(['paused' => false]);
+        }
 
         return response()->json([
             'message' => 'Timer stopped.',
             'entry' => new TimeEntryResource($entry->fresh()->load('project')),
         ]);
+    }
+
+    private function assertCanTrack($user): void
+    {
+        if ($user->currentRole()?->isOperationalAdmin()) {
+            throw ValidationException::withMessages([
+                'timer' => ['Administrators cannot track time.'],
+            ]);
+        }
+    }
+
+    private function assertAgentConnected($user): void
+    {
+        if (config('screenshots.timer_requires_agent') && ! $this->agent->status($user)['connected']) {
+            throw ValidationException::withMessages([
+                'timer' => ['Install and sign in to the AgencyPulse desktop agent before starting the timer.'],
+            ]);
+        }
+    }
+
+    private function runningEntry(int $userId): ?TimeEntry
+    {
+        return TimeEntry::query()
+            ->trackedTimers()
+            ->where('user_id', $userId)
+            ->where('status', TimeEntryStatus::Running)
+            ->first();
+    }
+
+    private function pausedSegment(int $userId): ?TimeEntry
+    {
+        return TimeEntry::query()
+            ->trackedTimers()
+            ->where('user_id', $userId)
+            ->where('status', TimeEntryStatus::Stopped)
+            ->where('paused', true)
+            ->latest('end_time')
+            ->first();
+    }
+
+    private function closeSegment(TimeEntry $entry, bool $paused): void
+    {
+        $this->payrollLock->assertTimeEntryModifiable($entry);
+
+        $endTime = now();
+
+        $entry->update([
+            'end_time' => $endTime,
+            'duration' => (int) $entry->start_time->diffInSeconds($endTime),
+            'status' => TimeEntryStatus::Stopped,
+            'paused' => $paused,
+        ]);
+    }
+
+    /**
+     * Seconds already banked in the current session, excluding the running segment.
+     */
+    private function sessionBankedSeconds(?TimeEntry $current): int
+    {
+        if (! $current?->timer_session) {
+            return $current && ! $current->isRunning() ? (int) $current->duration : 0;
+        }
+
+        return (int) TimeEntry::query()
+            ->trackedTimers()
+            ->where('user_id', $current->user_id)
+            ->where('timer_session', $current->timer_session)
+            ->where('status', TimeEntryStatus::Stopped)
+            ->sum('duration');
     }
 
     public function today(Request $request): AnonymousResourceCollection
@@ -170,6 +288,7 @@ class TimeEntryController extends TenantAppController
             ->sum('duration');
 
         $activeTimer = $entries->first(fn (TimeEntry $entry) => $entry->isRunning());
+        $pausedTimer = $activeTimer ? null : $this->pausedSegment($user->id);
 
         $byProject = $entries
             ->groupBy(fn (TimeEntry $entry) => $entry->project_id ?? 'none')
@@ -197,6 +316,10 @@ class TimeEntryController extends TenantAppController
                 'active_timer' => $activeTimer
                     ? new TimeEntryResource($activeTimer->load('project'))
                     : null,
+                'paused_timer' => $pausedTimer
+                    ? new TimeEntryResource($pausedTimer->load('project'))
+                    : null,
+                'session_elapsed' => $this->sessionBankedSeconds($activeTimer ?? $pausedTimer),
                 'by_project' => $byProject,
             ],
         ]);

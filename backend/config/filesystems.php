@@ -29,9 +29,10 @@ return [
 
         's3' => [
             'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
+            // Vercel reserves the AWS_* credential names, so R2_* take precedence.
+            'key' => env('R2_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('R2_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('R2_REGION', env('AWS_DEFAULT_REGION')),
             'bucket' => env('AWS_BUCKET'),
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
@@ -43,9 +44,10 @@ return [
         // Public-read bucket for organization logos (screenshots stay on the private "s3" disk).
         's3_public' => [
             'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
+            // Vercel reserves the AWS_* credential names, so R2_* take precedence.
+            'key' => env('R2_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('R2_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('R2_REGION', env('AWS_DEFAULT_REGION')),
             'bucket' => env('AWS_PUBLIC_BUCKET'),
             'url' => env('AWS_PUBLIC_URL'),
             'endpoint' => env('AWS_ENDPOINT'),

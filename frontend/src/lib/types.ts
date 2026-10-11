@@ -323,6 +323,9 @@ export interface TimeTodayResponse {
     date: string;
     total_duration: number;
     active_timer: TimeEntry | null;
+    paused_timer?: TimeEntry | null;
+    /** Seconds already banked in the current timer session (excludes the running segment). */
+    session_elapsed?: number;
     by_project: TimeByProject[];
   };
 }

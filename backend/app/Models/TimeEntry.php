@@ -29,6 +29,8 @@ class TimeEntry extends Model
         'leave_category',
         'source',
         'status',
+        'timer_session',
+        'paused',
         'approved_by',
         'approved_at',
     ];
@@ -43,6 +45,7 @@ class TimeEntry extends Model
             'end_time' => 'datetime',
             'duration' => 'integer',
             'status' => TimeEntryStatus::class,
+            'paused' => 'boolean',
             'approved_at' => 'datetime',
         ];
     }

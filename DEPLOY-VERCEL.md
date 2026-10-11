@@ -60,8 +60,8 @@ Project → **Settings → Environment Variables** (Production and Preview):
 | `SUPER_ADMIN_PASSWORD` | ≥ 12 characters. Creates the super admin on first boot. |
 | `SCREENSHOT_DISK` | `s3` |
 | `UPLOADS_DISK` | `s3_public` |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | R2 token |
-| `AWS_DEFAULT_REGION` | `auto` |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 token. Vercel reserves the `AWS_*` credential names, so they never reach the app. |
+| `R2_REGION` | `auto` |
 | `AWS_ENDPOINT` | `https://<account_id>.r2.cloudflarestorage.com` |
 | `AWS_USE_PATH_STYLE_ENDPOINT` | `true` |
 | `AWS_BUCKET` | `agencypulse-screenshots` |
