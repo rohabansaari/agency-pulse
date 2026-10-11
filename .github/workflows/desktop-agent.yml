@@ -27,6 +27,15 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The prebuilt PyInstaller bootloader is widely fingerprinted by antivirus
+      # engines (Defender flags it as a trojan). Compiling it from source on the
+      # runner gives the exe a bootloader no engine has a signature for.
+      - name: Install PyInstaller with a locally compiled bootloader
+        shell: pwsh
+        env:
+          PYINSTALLER_COMPILE_BOOTLOADER: "1"
+        run: python -m pip install --no-binary pyinstaller "pyinstaller>=6.10"
+
       - name: Build agent zip
         shell: pwsh
         run: ./desktop-agent/build.ps1
