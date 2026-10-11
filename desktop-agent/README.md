@@ -83,6 +83,6 @@ Without admin mode, `--install` shows a restriction message and exits.
 
 ### Deploy download
 
-After building, commit `frontend/public/downloads/AgencyPulseAgent.zip` and redeploy the frontend.
+After building, commit `frontend/public/downloads/AgencyPulseAgent.zip` and redeploy the frontend. CI does this automatically: pushing a branch that touches `desktop-agent/` runs `.github/workflows/desktop-agent.yml`, which builds on Windows and commits the zip to the branch.
 
 Or host on CDN/R2 and set `NEXT_PUBLIC_AGENT_DOWNLOAD_URL` on Render.

@@ -89,7 +89,7 @@ Set `RUN_MIGRATIONS_ON_BOOT=false` if you'd rather run `php artisan migrate --fo
 
 The agent's default API URL (`DEFAULT_API_BASE_URL` in `desktop-agent/agent.py`) is `https://agency-pulse-six.vercel.app/api/v1`. Installs that saved the old Render URL are moved to it automatically on next start, and employees sign in once more (the database is new).
 
-After changing the URL, rebuild on Windows (`desktop-agent\build.ps1`) and replace `frontend/public/downloads/AgencyPulseAgent.zip`. If you use a custom domain, update `DEFAULT_API_BASE_URL` and add the old URL to `LEGACY_API_BASE_URLS`.
+Pushing a branch that changes `desktop-agent/` runs the **Desktop agent** workflow, which builds the exe on a Windows runner and commits `frontend/public/downloads/AgencyPulseAgent.zip` to that branch. (Manual alternative: `desktop-agent\build.ps1` on Windows.) If you use a custom domain, update `DEFAULT_API_BASE_URL` and add the old URL to `LEGACY_API_BASE_URLS`.
 
 ## 7. Retire Render
 
