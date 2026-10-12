@@ -36,7 +36,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to your AgencyPulse workspace">
+    <AuthShell title="Sign in" subtitle="Use the email your organization invited.">
       <motion.form
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -46,7 +46,7 @@ export default function LoginPage() {
       >
         {error ? <Alert variant="error">{error}</Alert> : null}
 
-        <FormField label="Email" htmlFor="email" required>
+        <FormField label="Work email" htmlFor="email" required>
           <Input
             id="email"
             type="email"

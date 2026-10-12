@@ -1,3 +1,4 @@
+import { PulseLogo } from "@/components/brand/PulseLogo";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -8,67 +9,50 @@ interface AuthShellProps {
   footer?: ReactNode;
 }
 
+/** Ledger auth layout: night brand panel (desktop) beside a plain form column. */
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <div className="auth-shell">
-      <div className="auth-hero">
-        <div className="relative z-10 max-w-lg">
-          <Link href="/" className="inline-flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)] text-sm font-bold text-[var(--primary-foreground)] shadow-sm">
-              AP
-            </span>
-            <span className="text-heading text-base text-[var(--foreground)]">AgencyPulse</span>
-          </Link>
-          <h1 className="text-display mt-12 text-4xl text-[var(--foreground)]">
-            Workforce intelligence for modern agencies
-          </h1>
-          <p className="mt-5 text-lg leading-relaxed text-[var(--muted)]">
-            Track time, manage teams, run payroll, and keep your people aligned — built for how
-            agencies actually work.
-          </p>
-          <ul className="mt-10 space-y-4 text-sm text-[var(--muted)]">
-            {[
-              { color: "var(--accent-emerald)", text: "Real-time time tracking & screenshots" },
-              { color: "var(--primary)", text: "Payroll, leave & advance salary" },
-              { color: "var(--accent-coral)", text: "Role-based team management" },
-            ].map((item) => (
-              <li key={item.text} className="flex items-center gap-3">
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: item.color }}
-                />
-                {item.text}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+    <div className="grid min-h-dvh grid-cols-1 bg-[var(--background)] lg:grid-cols-2">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[var(--night)] p-14 lg:flex">
+        <Link href="/" aria-label="AgencyPulse home" className="self-start">
+          <PulseLogo tone="dark" className="text-xl" markClassName="h-9 w-9" />
+        </Link>
 
-      <div className="flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16">
-        <div className="mx-auto w-full max-w-md">
-          <div className="mb-8 lg:hidden">
-            <Link href="/" className="text-heading text-sm text-[var(--primary)]">
-              AgencyPulse
-            </Link>
-          </div>
-          <div className="ui-card-elevated p-8">
-            <h2 className="text-display text-2xl text-[var(--foreground)]">{title}</h2>
-            <p className="mt-2 text-body-muted">{subtitle}</p>
-            <div className="mt-8">{children}</div>
-            {footer ? <div className="mt-6 text-center text-sm text-[var(--muted)]">{footer}</div> : null}
-          </div>
+        <div className="max-w-lg">
+          <p className="text-[40px] font-semibold leading-[1.15] tracking-[-0.025em] text-white">
+            Time, screenshots and payroll for your agency — in one place.
+          </p>
+          <svg viewBox="0 0 520 72" className="mt-10 h-16 w-full max-w-[520px]" aria-hidden="true">
+            <path
+              d="M0 36h150l22-34 30 68 22-34h296"
+              fill="none"
+              stroke="var(--pulse-on-dark)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
-      </div>
+
+        <p className="text-[13px] text-[var(--night-muted)]">© {new Date().getFullYear()} AgencyPulse</p>
+      </aside>
+
+      <main className="flex flex-col px-5 py-8 sm:px-10 lg:justify-center lg:px-16">
+        <Link href="/" aria-label="AgencyPulse home" className="self-start lg:hidden">
+          <PulseLogo className="text-lg" markClassName="h-8 w-8" />
+        </Link>
+        <div className="mx-auto mt-14 w-full max-w-[400px] lg:mt-0">
+          <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</h1>
+          <p className="mt-1.5 text-sm text-[var(--muted)]">{subtitle}</p>
+          <div className="mt-8">{children}</div>
+          {footer ? <div className="mt-6 text-center text-sm text-[var(--muted)]">{footer}</div> : null}
+        </div>
+      </main>
     </div>
   );
 }
 
 /** @deprecated Use AuthShell instead */
-export function AuthCard(props: {
-  title: string;
-  subtitle: string;
-  children: ReactNode;
-  footer?: ReactNode;
-}) {
+export function AuthCard(props: AuthShellProps) {
   return <AuthShell {...props} />;
 }

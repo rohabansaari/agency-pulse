@@ -54,9 +54,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-display);
-  --font-mono: var(--font-numeric);
+  --font-sans: var(--font-geist);
+  --font-display: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -99,7 +99,7 @@ body {
   min-height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-geist), system-ui, sans-serif;
   font-size: 0.9375rem;
   line-height: 1.55;
   overflow-x: clip;
@@ -110,14 +110,14 @@ body {
 
 /* Typography scale */
 .text-display {
-  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-geist), system-ui, sans-serif;
   font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 1.15;
 }
 
 .text-heading {
-  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-geist), system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.25;
@@ -139,7 +139,7 @@ body {
 
 /* Premium numeric typography — fintech-grade clarity */
 .text-numeric {
-  font-family: var(--font-numeric), ui-monospace, monospace;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
 }
@@ -183,7 +183,7 @@ body {
   border-color: var(--sidebar-border);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .app-sidebar {
     position: fixed;
     top: 0;
@@ -198,38 +198,9 @@ body {
   min-width: 0;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .app-main-with-sidebar {
     margin-left: var(--app-sidebar-width);
-  }
-}
-
-.auth-shell {
-  min-height: 100dvh;
-  display: grid;
-  grid-template-columns: 1fr;
-  background: var(--gradient-surface);
-}
-
-@media (min-width: 1024px) {
-  .auth-shell {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.auth-hero {
-  display: none;
-  position: relative;
-  overflow: hidden;
-  padding: 3.5rem;
-  background: var(--accent-sand);
-}
-
-@media (min-width: 1024px) {
-  .auth-hero {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
   }
 }
 
@@ -325,9 +296,7 @@ body {
  * Modal, Card…) at the new palette and typefaces.
  */
 .theme-ledger {
-  --font-inter: var(--font-geist);
   --font-display: var(--font-geist);
-  --font-numeric: var(--font-geist-mono);
 
   --background: #f4f5f7;
   --foreground: #111723;
