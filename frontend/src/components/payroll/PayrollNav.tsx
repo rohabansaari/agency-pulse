@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/cn";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,23 +13,28 @@ export function PayrollNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-wrap gap-2 border-b border-zinc-200 pb-3 dark:border-zinc-800">
-      {TABS.map((tab) => {
-        const active = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-              active
-                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
+    <nav aria-label="Payroll sections">
+      <ul className="inline-flex flex-wrap gap-1 rounded-xl bg-[var(--accent-sand)] p-1">
+        {TABS.map((tab) => {
+          const active = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
+          return (
+            <li key={tab.href}>
+              <Link
+                href={tab.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "inline-flex min-h-11 items-center rounded-lg px-4 text-sm transition",
+                  active
+                    ? "bg-[var(--card-elevated)] font-medium text-[var(--foreground)] shadow-[var(--shadow-sm)]"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]",
+                )}
+              >
+                {tab.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }

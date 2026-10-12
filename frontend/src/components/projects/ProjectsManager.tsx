@@ -1,11 +1,16 @@
 "use client";
 
+import { Segmented } from "@/components/ledger/Segmented";
 import { ProjectAssignPanel } from "@/components/projects/ProjectAssignPanel";
+import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ProjectReportPanel } from "@/components/projects/ProjectReportPanel";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { PROJECTS_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { Modal } from "@/components/ui/Modal";
-import { Select } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Alert, EmptyState } from "@/components/ui/EmptyState";
+import { FormField, Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   ApiError,
   createProject,
@@ -22,23 +27,18 @@ import {
   isAdmin,
 } from "@/lib/navigation";
 import type { Project, ProjectStatus, User } from "@/lib/types";
+import { FolderKanban, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const STATUS_STYLES: Record<ProjectStatus, string> = {
-  active: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  inactive: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
-  archived: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+const STATUS_FILTER_LABELS: Record<"all" | ProjectStatus, string> = {
+  all: "All",
+  active: "Active",
+  inactive: "Inactive",
+  archived: "Archived",
 };
 
-function StatusBadge({ status }: { status: ProjectStatus }) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLES[status]}`}
-    >
-      {status}
-    </span>
-  );
-}
+const textareaClass =
+  "w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3.5 py-2.5 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
 
 function ProjectFormFields({
   initial,
@@ -81,68 +81,58 @@ function ProjectFormFields({
         onSubmit({ name, client_name: clientName, description, hourly_rate: hourlyRate, status });
       }}
     >
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Project name
-        </label>
-        <input
+      <FormField label="Project name" htmlFor="project-name" required>
+        <Input
+          id="project-name"
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-950"
           placeholder="Website redesign"
         />
-      </div>
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Client name
-        </label>
-        <input
+      </FormField>
+      <FormField label="Client name" htmlFor="project-client" required>
+        <Input
+          id="project-client"
           required
           value={clientName}
           onChange={(e) => setClientName(e.target.value)}
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-950"
           placeholder="Acme Corp"
         />
-      </div>
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Description
-        </label>
+      </FormField>
+      <FormField label="Description" htmlFor="project-description">
         <textarea
+          id="project-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-950"
+          className={textareaClass}
           placeholder="Scope, deliverables, or notes"
         />
-      </div>
+      </FormField>
       <div className={`grid gap-4 ${showHourlyRate ? "sm:grid-cols-2" : ""}`}>
         {showHourlyRate ? (
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Hourly rate
-            </label>
-            <input
+          <FormField
+            label="Hourly rate"
+            htmlFor="project-rate"
+            hint="Admin only — used for payroll calculations"
+          >
+            <Input
+              id="project-rate"
               type="number"
               min="0"
               step="0.01"
               value={hourlyRate}
               onChange={(e) => setHourlyRate(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-600 dark:bg-zinc-950"
+              className="num"
               placeholder="125.00"
             />
-            <p className="mt-1 text-xs text-zinc-500">Admin only — used for payroll calculations</p>
-          </div>
+          </FormField>
         ) : null}
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Status
-          </label>
+        <FormField label="Status" htmlFor="project-status">
           <Select
+            id="project-status"
             value={status}
             onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm dark:border-zinc-600 dark:bg-zinc-950"
           >
             {statusOptions.map((opt) => (
               <option key={opt} value={opt}>
@@ -150,23 +140,15 @@ function ProjectFormFields({
               </option>
             ))}
           </Select>
-        </div>
+        </FormField>
       </div>
-      <div className="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300"
-        >
+      <div className="flex flex-wrap justify-end gap-2 pt-2">
+        <Button type="button" variant="secondary" size="lg" onClick={onCancel}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-        >
+        </Button>
+        <Button type="submit" size="lg" disabled={loading}>
           {loading ? "Saving..." : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -226,6 +208,17 @@ export function ProjectsManager({ user }: { user: User }) {
       })),
     [filtered],
   );
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<"all" | ProjectStatus, number> = {
+      all: projects.length,
+      active: 0,
+      inactive: 0,
+      archived: 0,
+    };
+    for (const p of projects) counts[p.status] += 1;
+    return counts;
+  }, [projects]);
 
   const statusFilters: ("all" | ProjectStatus)[] = showArchive
     ? ["all", "active", "inactive", "archived"]
@@ -299,79 +292,66 @@ export function ProjectsManager({ user }: { user: User }) {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="h-10 w-48 animate-pulse rounded-lg bg-zinc-200/60 dark:bg-zinc-800/60" />
-        <div className="h-64 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />
+      <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading projects">
+        <div className="h-16 w-56 animate-pulse rounded-xl bg-[var(--accent-sand)]" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-48 animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {canManage ? "Projects" : "My Projects"}
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {canManage
-              ? showHourlyRate
-                ? "Full project control including billing rates"
-                : "Manage project execution — rates are admin-only"
-              : "Assigned projects — read-only view"}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ExportDropdown
-            filename="projects"
-            columns={PROJECTS_EXPORT_COLUMNS}
-            rows={exportRows}
-          />
-          {canManage ? (
-            <button
-              type="button"
-              onClick={() => setShowCreate(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              New project
-            </button>
-          ) : null}
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="Work"
+        title={canManage ? "Projects" : "My Projects"}
+        description={
+          canManage
+            ? showHourlyRate
+              ? "Full project control including billing rates"
+              : "Manage project execution — rates are admin-only"
+            : "Assigned projects — read-only view"
+        }
+        actions={
+          <>
+            <ExportDropdown
+              filename="projects"
+              columns={PROJECTS_EXPORT_COLUMNS}
+              rows={exportRows}
+            />
+            {canManage ? (
+              <Button size="lg" onClick={() => setShowCreate(true)}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New project
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
-      {error ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {statusFilters.map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              onClick={() => setStatusFilter(filter)}
-              className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition ${
-                statusFilter === filter
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
-              }`}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Segmented
+          label="Filter projects by status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={statusFilters.map((filter) => ({
+            value: filter,
+            label: STATUS_FILTER_LABELS[filter],
+            count: statusCounts[filter],
+          }))}
+        />
         {showArchive ? (
-          <label className="flex items-center gap-2 text-xs text-zinc-500">
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3.5 text-[13px] text-[var(--foreground)]">
             <input
               type="checkbox"
               checked={includeArchived}
               onChange={(e) => setIncludeArchived(e.target.checked)}
-              className="rounded border-zinc-300"
+              className="h-4 w-4 rounded accent-[var(--primary)]"
             />
             Include archived in fetch
           </label>
@@ -379,100 +359,35 @@ export function ProjectsManager({ user }: { user: User }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-200 bg-white py-16 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">No projects found</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            {canManage
+        <EmptyState
+          icon={FolderKanban}
+          title="No projects found"
+          description={
+            canManage
               ? "Create a project to start organizing client work."
-              : "Ask your manager to assign you to a project."}
-          </p>
-        </div>
+              : "Ask your manager to assign you to a project."
+          }
+          className="bg-[var(--card)]"
+        />
       ) : (
-        <div className="ui-table-wrap ui-card">
-          <div className="ui-table-wrap">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-zinc-100 bg-zinc-50/80 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/40">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Project</th>
-                  <th className="px-4 py-3 font-medium">Client</th>
-                  {showHourlyRate ? (
-                    <th className="px-4 py-3 font-medium">Rate</th>
-                  ) : null}
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  {canManage ? (
-                    <th className="px-4 py-3 font-medium text-right">Actions</th>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((project) => (
-                  <tr
-                    key={project.id}
-                    className="border-b border-zinc-50 transition hover:bg-zinc-50/80 dark:border-zinc-800/80 dark:hover:bg-zinc-800/30"
-                  >
-                    <td className="px-4 py-3.5">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-50">{project.name}</p>
-                      {project.description ? (
-                        <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">
-                          {project.description}
-                        </p>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3.5 text-zinc-600 dark:text-zinc-400">
-                      {project.client_name}
-                    </td>
-                    {showHourlyRate ? (
-                      <td className="px-4 py-3.5 font-mono text-zinc-600 tabular-nums dark:text-zinc-400">
-                        {project.hourly_rate ? `$${project.hourly_rate}` : "—"}
-                      </td>
-                    ) : null}
-                    <td className="px-4 py-3.5">
-                      <StatusBadge status={project.status} />
-                    </td>
-                    {canManage ? (
-                      <td className="px-4 py-3.5">
-                        <div className="flex justify-end gap-2">
-                          {project.status !== "archived" ? (
-                            <button
-                              type="button"
-                              onClick={() => toggleActive(project)}
-                              className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300"
-                            >
-                              {project.status === "active" ? "Deactivate" : "Activate"}
-                            </button>
-                          ) : null}
-                          {showReports ? (
-                            <button
-                              type="button"
-                              onClick={() => setReporting(project)}
-                              className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:border-zinc-700 dark:hover:bg-emerald-950/30"
-                            >
-                              Report
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() => setAssigning(project)}
-                            className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-violet-600 hover:bg-violet-50 dark:border-zinc-700 dark:hover:bg-violet-950/30"
-                          >
-                            Assign
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditing(project)}
-                            className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:border-zinc-700 dark:hover:bg-blue-950/30"
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <section
+          aria-label="Project list"
+          className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))]"
+        >
+          {filtered.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              canManage={canManage}
+              showHourlyRate={showHourlyRate}
+              showReports={showReports}
+              onToggleActive={() => toggleActive(project)}
+              onReport={() => setReporting(project)}
+              onAssign={() => setAssigning(project)}
+              onEdit={() => setEditing(project)}
+            />
+          ))}
+        </section>
       )}
 
       {showCreate ? (

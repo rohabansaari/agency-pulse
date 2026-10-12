@@ -67,27 +67,30 @@ export function ScreenshotViewer({ shots, index, onClose, onNavigate }: Screensh
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 12 }}
           transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="flex h-full max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-elevated)] shadow-2xl lg:flex-row"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Screenshot ${index + 1} of ${shots.length}`}
+          className="flex h-full max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-elevated)] lg:flex-row"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="relative flex flex-1 items-center justify-center bg-[var(--background)] p-4 lg:p-6">
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-4 top-4 z-10 rounded-xl bg-[var(--card-elevated)]/90 p-2 text-[var(--muted)] shadow-sm backdrop-blur hover:text-[var(--foreground)]"
+              className="absolute right-4 top-4 z-10 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--card-elevated)]/90 text-[var(--muted)] backdrop-blur hover:text-[var(--foreground)]"
               aria-label="Close"
             >
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
 
             {hasPrev ? (
               <button
                 type="button"
                 onClick={goPrev}
-                className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-xl bg-[var(--card-elevated)]/90 p-2.5 text-[var(--foreground)] shadow-md backdrop-blur hover:bg-[var(--card-elevated)]"
+                className="absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--card-elevated)]/90 text-[var(--foreground)] backdrop-blur hover:bg-[var(--card-elevated)]"
                 aria-label="Previous screenshot"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
               </button>
             ) : null}
 
@@ -95,11 +98,10 @@ export function ScreenshotViewer({ shots, index, onClose, onNavigate }: Screensh
               <button
                 type="button"
                 onClick={goNext}
-                className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-xl bg-[var(--card-elevated)]/90 p-2.5 text-[var(--foreground)] shadow-md backdrop-blur hover:bg-[var(--card-elevated)] lg:right-auto lg:left-auto lg:translate-x-0"
-                style={{ right: "4rem" }}
+                className="absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--card-elevated)]/90 text-[var(--foreground)] backdrop-blur hover:bg-[var(--card-elevated)]"
                 aria-label="Next screenshot"
               >
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
               </button>
             ) : null}
 
@@ -108,7 +110,7 @@ export function ScreenshotViewer({ shots, index, onClose, onNavigate }: Screensh
               <img
                 src={shot.image_url}
                 alt={`Screenshot by ${shot.user_name ?? "employee"}`}
-                className="max-h-full max-w-full rounded-lg object-contain shadow-lg"
+                className="max-h-full max-w-full rounded-lg object-contain"
               />
             ) : (
               <div className="flex flex-col items-center gap-2 text-[var(--muted)]">
@@ -120,31 +122,31 @@ export function ScreenshotViewer({ shots, index, onClose, onNavigate }: Screensh
 
           <aside className="flex w-full shrink-0 flex-col border-t border-[var(--border)] lg:w-80 lg:border-l lg:border-t-0">
             <div className="border-b border-[var(--border-subtle)] px-5 py-4">
-              <p className="text-label">Screenshot details</p>
-              <p className="text-heading mt-1 text-lg">{shot.user_name ?? `User #${shot.user_id}`}</p>
+              <p className="text-xs uppercase tracking-[0.04em] text-[var(--muted)]">Screenshot details</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">{shot.user_name ?? `User #${shot.user_id}`}</p>
             </div>
             <dl className="space-y-4 px-5 py-4 text-sm">
               <div>
-                <dt className="text-label">Captured</dt>
-                <dd className="mt-1 font-medium text-[var(--foreground)]">{formatCapturedAt(shot.captured_at)}</dd>
+                <dt className="text-xs text-[var(--muted)]">Captured</dt>
+                <dd className="tnum mt-1 font-medium text-[var(--foreground)]">{formatCapturedAt(shot.captured_at)}</dd>
               </div>
               {shot.project_name ? (
                 <div>
-                  <dt className="text-label">Project</dt>
+                  <dt className="text-xs text-[var(--muted)]">Project</dt>
                   <dd className="mt-1 font-medium text-[var(--foreground)]">{shot.project_name}</dd>
                 </div>
               ) : null}
               <div>
-                <dt className="text-label">Session</dt>
-                <dd className="mt-1 font-mono text-xs text-[var(--muted)]">{shot.session_id}</dd>
+                <dt className="text-xs text-[var(--muted)]">Session</dt>
+                <dd className="num mt-1 break-all text-xs text-[var(--muted)]">{shot.session_id}</dd>
               </div>
               <div>
-                <dt className="text-label">File size</dt>
-                <dd className="mt-1 font-medium text-[var(--foreground)]">{formatFileSize(shot.file_size_bytes)}</dd>
+                <dt className="text-xs text-[var(--muted)]">File size</dt>
+                <dd className="tnum mt-1 font-medium text-[var(--foreground)]">{formatFileSize(shot.file_size_bytes)}</dd>
               </div>
               <div>
-                <dt className="text-label">Position</dt>
-                <dd className="mt-1 text-[var(--muted)]">
+                <dt className="text-xs text-[var(--muted)]">Position</dt>
+                <dd className="tnum mt-1 text-[var(--muted)]">
                   {index + 1} of {shots.length}
                 </dd>
               </div>
@@ -156,17 +158,17 @@ export function ScreenshotViewer({ shots, index, onClose, onNavigate }: Screensh
                     href={shot.image_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2.5 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--accent-sand)]"
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--border)] min-h-11 px-3 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--accent-sand)]"
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
                     Open
                   </a>
                   <a
                     href={shot.image_url}
                     download
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-3 py-2.5 text-sm font-medium text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)]"
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] min-h-11 px-3 text-sm font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)]"
                   >
-                    <Download className="h-4 w-4" />
+                    <Download className="h-4 w-4" aria-hidden="true" />
                     Save
                   </a>
                 </>

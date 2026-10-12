@@ -1,5 +1,7 @@
 "use client";
 
+import { Avatar } from "@/components/ledger/Avatar";
+import { Alert } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { ApiError, fetchProjectReport, formatApiErrors } from "@/lib/api";
 import { formatDuration, formatUtilization } from "@/lib/time";
@@ -38,90 +40,111 @@ export function ProjectReportPanel({
   }, [load]);
 
   return (
-    <Modal title={`Report: ${project.name}`} onClose={onClose}>
+    <Modal title={`Report: ${project.name}`} description={project.client_name} onClose={onClose}>
       {loading ? (
-        <div className="space-y-3 py-4">
-          <div className="h-6 w-40 animate-pulse rounded bg-zinc-200/60 dark:bg-zinc-800/60" />
-          <div className="h-24 animate-pulse rounded-lg bg-zinc-200/60 dark:bg-zinc-800/60" />
+        <div className="space-y-3 py-4" aria-busy="true" aria-label="Loading report">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-[70px] animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
+            ))}
+          </div>
+          <div className="h-24 animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
         </div>
       ) : error ? (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <Alert variant="error">{error}</Alert>
       ) : report ? (
         <div className="space-y-6">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
-              <p className="text-xs text-zinc-500">Total tracked</p>
-              <p className="font-mono text-lg font-semibold tabular-nums">
-                {formatDuration(report.total_tracked_seconds)}
-              </p>
-            </div>
-            <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
-              <p className="text-xs text-zinc-500">This week</p>
-              <p className="font-mono text-lg font-semibold tabular-nums">
-                {formatDuration(report.hours_week_seconds)}
-              </p>
-            </div>
-            <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
-              <p className="text-xs text-zinc-500">This month</p>
-              <p className="font-mono text-lg font-semibold tabular-nums">
-                {formatDuration(report.hours_month_seconds)}
-              </p>
-            </div>
-            <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
-              <p className="text-xs text-zinc-500">Utilization (MTD)</p>
-              <p className="font-mono text-lg font-semibold tabular-nums">
-                {formatUtilization(report.utilization_percent)}
-              </p>
-            </div>
-          </div>
+          <dl className="grid grid-cols-2 gap-3">
+            <ReportStat label="Total tracked" value={formatDuration(report.total_tracked_seconds)} />
+            <ReportStat label="This week" value={formatDuration(report.hours_week_seconds)} />
+            <ReportStat label="This month" value={formatDuration(report.hours_month_seconds)} />
+            <ReportStat
+              label="Utilization (MTD)"
+              value={formatUtilization(report.utilization_percent)}
+              progress={report.utilization_percent}
+            />
+          </dl>
 
-          <section>
-            <h3 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              Team contributions
-            </h3>
-            {report.team_contributions.length === 0 ? (
-              <p className="text-xs text-zinc-500">No team contributions yet.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {report.team_contributions.map((row) => (
-                  <li
-                    key={row.team_id}
-                    className="flex justify-between rounded-lg border border-zinc-100 px-3 py-2 text-sm dark:border-zinc-800"
-                  >
-                    <span>{row.team_name}</span>
-                    <span className="font-mono tabular-nums">
-                      {formatDuration(row.total_seconds)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          <ContributionList
+            title="Team contributions"
+            empty="No team contributions yet."
+            rows={report.team_contributions.map((row) => ({
+              key: row.team_id,
+              name: row.team_name,
+              seconds: row.total_seconds,
+              avatar: false,
+            }))}
+          />
 
-          <section>
-            <h3 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              Employee contributions
-            </h3>
-            {report.employee_contributions.length === 0 ? (
-              <p className="text-xs text-zinc-500">No employee contributions yet.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {report.employee_contributions.map((row) => (
-                  <li
-                    key={row.user_id}
-                    className="flex justify-between rounded-lg border border-zinc-100 px-3 py-2 text-sm dark:border-zinc-800"
-                  >
-                    <span>{row.name}</span>
-                    <span className="font-mono tabular-nums">
-                      {formatDuration(Number(row.total_seconds))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          <ContributionList
+            title="Employee contributions"
+            empty="No employee contributions yet."
+            rows={report.employee_contributions.map((row) => ({
+              key: row.user_id,
+              name: row.name,
+              seconds: Number(row.total_seconds),
+              avatar: true,
+            }))}
+          />
         </div>
       ) : null}
     </Modal>
+  );
+}
+
+function ReportStat({ label, value, progress }: { label: string; value: string; progress?: number }) {
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 py-3">
+      <dt className="text-[13px] text-[var(--muted)]">{label}</dt>
+      <dd className="num mt-1 truncate text-lg font-semibold text-[var(--foreground)]">{value}</dd>
+      {progress !== undefined ? (
+        <div className="mt-2 h-1.5 rounded-full bg-[var(--border-subtle)]" aria-hidden="true">
+          <div
+            className="h-1.5 rounded-full bg-[var(--primary)]"
+            style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ContributionList({
+  title,
+  empty,
+  rows,
+}: {
+  title: string;
+  empty: string;
+  rows: { key: number | string; name: string; seconds: number; avatar: boolean }[];
+}) {
+  const max = rows.reduce((m, r) => Math.max(m, r.seconds), 0);
+  return (
+    <section>
+      <h3 className="mb-2 text-sm font-semibold text-[var(--foreground)]">{title}</h3>
+      {rows.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-6 text-center text-[13px] text-[var(--muted)]">
+          {empty}
+        </p>
+      ) : (
+        <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)]">
+          {rows.map((row) => (
+            <li key={row.key} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+              {row.avatar ? <Avatar name={row.name} size="sm" /> : null}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[var(--foreground)]">{row.name}</p>
+                <div className="mt-1.5 h-1 rounded-full bg-[var(--border-subtle)]" aria-hidden="true">
+                  <div
+                    className="h-1 rounded-full bg-[var(--primary)]"
+                    style={{ width: `${max > 0 ? (row.seconds / max) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+              <span className="num shrink-0 text-[var(--foreground)]">{formatDuration(row.seconds)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

@@ -3,7 +3,8 @@
 import { Modal } from "@/components/ui/Modal";
 import { Alert, Spinner } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { SearchField } from "@/components/ledger/SearchField";
+import { Avatar } from "@/components/ledger/Avatar";
 import {
   ApiError,
   assignProjectEmployees,
@@ -14,7 +15,7 @@ import {
   unassignProjectEmployee,
 } from "@/lib/api";
 import type { Project, ProjectAssignee, TeamMember, User } from "@/lib/types";
-import { Check, Search, UserMinus, Users, X } from "lucide-react";
+import { Check, UserMinus, Users, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function ProjectAssignPanel({
@@ -151,10 +152,10 @@ export function ProjectAssignPanel({
         <Spinner label="Loading employees…" />
       ) : (
         <div className="space-y-6">
-          <section className="rounded-lg border border-[var(--border)] p-4">
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
             <div className="mb-3 flex items-center gap-2">
-              <Users className="h-4 w-4 text-zinc-500" />
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Select employees</h3>
+              <Users className="h-4 w-4 text-[var(--muted)]" aria-hidden="true" />
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">Select employees</h3>
             </div>
 
             {selectedEmployees.length > 0 ? (
@@ -162,35 +163,33 @@ export function ProjectAssignPanel({
                 {selectedEmployees.map((emp) => (
                   <span
                     key={emp.user_id}
-                    className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-950 dark:text-blue-200"
+                    className="inline-flex items-center gap-1 rounded-full bg-[var(--primary-muted)] py-1 pl-2.5 pr-1 text-xs font-medium text-[var(--primary)]"
                   >
                     {emp.name}
                     <button
                       type="button"
                       onClick={() => toggleEmployee(emp.user_id)}
-                      className="rounded p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-[var(--primary)]/15"
                       aria-label={`Remove ${emp.name}`}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3 w-3" aria-hidden="true" />
                     </button>
                   </span>
                 ))}
               </div>
             ) : null}
 
-            <div className="relative mb-3">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <Input
-                placeholder="Search by name or email…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+            <SearchField
+              label="Search employees"
+              placeholder="Search by name or email…"
+              value={search}
+              onChange={setSearch}
+              className="mb-3 min-w-0"
+            />
 
-            <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-[var(--border)] p-1">
+            <div className="max-h-56 space-y-0.5 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] p-1">
               {available.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-zinc-500">
+                <p className="px-3 py-4 text-center text-sm text-[var(--muted)]">
                   {search ? "No matching employees." : "All employees are already assigned."}
                 </p>
               ) : (
@@ -201,24 +200,25 @@ export function ProjectAssignPanel({
                       key={member.user_id}
                       type="button"
                       onClick={() => toggleEmployee(member.user_id)}
-                      className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition ${
+                      aria-pressed={checked}
+                      className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-[var(--foreground)] transition ${
                         checked
-                          ? "bg-blue-50 text-blue-900 dark:bg-blue-950/50 dark:text-blue-100"
-                          : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                          ? "bg-[var(--primary-muted)]"
+                          : "hover:bg-[var(--accent-sand)]"
                       }`}
                     >
                       <span
                         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                           checked
-                            ? "border-blue-600 bg-blue-600 text-white"
-                            : "border-zinc-300 dark:border-zinc-600"
+                            ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
+                            : "border-[var(--border)] bg-[var(--card)]"
                         }`}
                       >
-                        {checked ? <Check className="h-3 w-3" /> : null}
+                        {checked ? <Check className="h-3 w-3" aria-hidden="true" /> : null}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{member.name}</span>
-                        <span className="block truncate text-xs text-zinc-500">{member.email}</span>
+                        <span className="block truncate text-xs text-[var(--muted)]">{member.email}</span>
                       </span>
                     </button>
                   );
@@ -228,6 +228,7 @@ export function ProjectAssignPanel({
 
             <div className="mt-3 flex justify-end">
               <Button
+                size="lg"
                 onClick={() => void handleAssign()}
                 disabled={saving || selectedIds.size === 0}
               >
@@ -238,36 +239,39 @@ export function ProjectAssignPanel({
 
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                Assigned ({assignees.length})
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">
+                Assigned <span className="tnum text-[var(--muted)]">{assignees.length}</span>
               </h3>
             </div>
             {assignees.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-[var(--border)] py-8 text-center text-sm text-zinc-500">
+              <p className="rounded-2xl border border-dashed border-[var(--border)] py-8 text-center text-sm text-[var(--muted)]">
                 No employees assigned yet.
               </p>
             ) : (
-              <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)]">
+              <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)]">
                 {assignees.map((assignee) => (
                   <li
                     key={assignee.id}
-                    className="flex items-center justify-between gap-3 px-3 py-2.5"
+                    className="flex items-center justify-between gap-3 px-4 py-2.5"
                   >
+                    <div className="flex min-w-0 items-center gap-3">
+                    <Avatar name={assignee.name} size="sm" />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                      <p className="truncate text-sm font-medium text-[var(--foreground)]">
                         {assignee.name}
                       </p>
-                      <p className="truncate text-xs text-zinc-500">{assignee.email}</p>
+                      <p className="truncate text-xs text-[var(--muted)]">{assignee.email}</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    </div>
+                    <button
+                      type="button"
                       onClick={() => void handleUnassign(assignee.id)}
-                      className="shrink-0 text-red-600 hover:text-red-700"
+                      aria-label={`Remove ${assignee.name} from ${project.name}`}
+                      className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--accent-coral)]/40 bg-[var(--card-elevated)] px-3 text-[13px] font-medium text-[var(--accent-coral)] transition hover:bg-[var(--accent-coral-soft)]"
                     >
-                      <UserMinus className="h-3.5 w-3.5" />
+                      <UserMinus className="h-3.5 w-3.5" aria-hidden="true" />
                       Remove
-                    </Button>
+                    </button>
                   </li>
                 ))}
               </ul>

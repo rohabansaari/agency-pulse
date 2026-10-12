@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { Panel } from "@/components/ledger/Panel";
 import { Alert } from "@/components/ui/EmptyState";
 import { FormField, Input } from "@/components/ui/Input";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -20,7 +20,7 @@ import type {
   PayrollComponentType,
   PayrollComponentValueMode,
 } from "@/lib/types";
-import { MinusCircle, Pencil, Plus, TrendingUp } from "lucide-react";
+import { MinusCircle, Pencil, Plus, Trash2, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type FormState = {
@@ -137,30 +137,28 @@ export function EmployeePayrollAdjustmentsPanel({
   const deductions = items.filter((i) => i.type === "deduction" && i.is_active);
 
   return (
-    <Card className="p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-heading text-lg text-[var(--foreground)]">Payroll adjustments</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Individual increments and deductions applied during payroll for this employee.
-          </p>
-        </div>
-        {canManage ? (
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4" />
+    <Panel
+      title="Payroll adjustments"
+      description="Individual increments and deductions applied during payroll for this employee."
+      action={
+        canManage ? (
+          <Button variant="secondary" size="lg" onClick={openCreate}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
             Add adjustment
           </Button>
-        ) : null}
-      </div>
-
-      {error ? <div className="mt-4"><Alert variant="error">{error}</Alert></div> : null}
+        ) : null
+      }
+    >
+      {error ? <div className="mb-4"><Alert variant="error">{error}</Alert></div> : null}
 
       {loading ? (
-        <p className="mt-4 text-sm text-[var(--muted)]">Loading…</p>
+        <p className="text-sm text-[var(--muted)]" role="status">Loading…</p>
       ) : items.length === 0 ? (
-        <p className="mt-4 text-sm text-[var(--muted)]">No individual adjustments configured.</p>
+        <p className="rounded-xl border border-dashed border-[var(--border)] px-4 py-6 text-center text-sm text-[var(--muted)]">
+          No individual adjustments configured.
+        </p>
       ) : (
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <AdjustmentGroup
             title="Increments"
             icon={TrendingUp}
@@ -188,8 +186,9 @@ export function EmployeePayrollAdjustmentsPanel({
           onClose={() => setModalOpen(false)}
         >
           <form onSubmit={handleSubmit} className="space-y-4">
-            <FormField label="Name" required>
+            <FormField label="Name" htmlFor="adjustment-name" required>
               <Input
+                id="adjustment-name"
                 required
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -218,8 +217,10 @@ export function EmployeePayrollAdjustmentsPanel({
                 />
               </FormField>
             </div>
-            <FormField label={form.value_mode === "percentage" ? "Percentage" : "Amount (PKR)"} required>
+            <FormField label={form.value_mode === "percentage" ? "Percentage" : "Amount (PKR)"} htmlFor="adjustment-value" required>
               <Input
+                id="adjustment-value"
+                className="num"
                 required
                 type="number"
                 min={0}
@@ -228,31 +229,33 @@ export function EmployeePayrollAdjustmentsPanel({
                 onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
               />
             </FormField>
-            <FormField label="Effective month (optional)" hint="YYYY-MM-01 — leave empty for all periods">
+            <FormField label="Effective month (optional)" htmlFor="adjustment-month" hint="YYYY-MM-01 — leave empty for all periods">
               <Input
+                id="adjustment-month"
                 type="date"
                 value={form.effective_month}
                 onChange={(e) => setForm((f) => ({ ...f, effective_month: e.target.value }))}
               />
             </FormField>
-            <FormField label="Notes (optional)">
+            <FormField label="Notes (optional)" htmlFor="adjustment-notes">
               <Input
+                id="adjustment-notes"
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               />
             </FormField>
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
+            <div className="flex flex-wrap justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" size="lg" onClick={() => setModalOpen(false)}>
                 Cancel
+              </Button>
+              <Button type="submit" size="lg" disabled={saving}>
+                {saving ? "Saving…" : "Save"}
               </Button>
             </div>
           </form>
         </Modal>
       ) : null}
-    </Card>
+    </Panel>
   );
 }
 
@@ -274,25 +277,27 @@ function AdjustmentGroup({
   positive?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-      <div className="mb-3 flex items-center gap-2">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card-elevated)]">
+      <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-2.5">
         <Icon
-          className={positive ? "h-4 w-4 text-[var(--accent-emerald)]" : "h-4 w-4 text-[var(--danger)]"}
+          aria-hidden="true"
+          className={positive ? "h-4 w-4 text-[var(--accent-emerald)]" : "h-4 w-4 text-[var(--accent-coral)]"}
         />
-        <h3 className="text-sm font-semibold text-[var(--foreground)]">{title}</h3>
+        <h3 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-[var(--muted)]">{title}</h3>
+        <span className="tnum ml-auto text-[13px] text-[var(--muted)]">{items.length}</span>
       </div>
       {items.length === 0 ? (
-        <p className="text-xs text-[var(--muted)]">None active</p>
+        <p className="px-4 py-4 text-[13px] text-[var(--muted)]">None active</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-[var(--border-subtle)]">
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2"
+              className="flex items-center justify-between gap-3 px-4 py-2.5"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{item.name}</p>
-                <p className="text-xs text-[var(--muted)]">
+                <p className="truncate text-sm font-medium text-[var(--foreground)]">{item.name}</p>
+                <p className="tnum text-[13px] text-[var(--muted)]">
                   {item.value_mode === "percentage" ? `${item.value}%` : formatPKRLabel(item.value)}
                   {item.effective_month ? ` · ${item.effective_month.slice(0, 7)}` : ""}
                 </p>
@@ -307,17 +312,19 @@ function AdjustmentGroup({
                   <>
                     <button
                       type="button"
+                      aria-label={`Edit ${item.name}`}
                       onClick={() => onEdit(item)}
-                      className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--sidebar-hover)]"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--accent-sand)] hover:text-[var(--foreground)]"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
+                      aria-label={`Delete ${item.name}`}
                       onClick={() => onDelete(item.id)}
-                      className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--accent-coral-soft)] hover:text-[var(--danger)]"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--accent-coral-soft)] hover:text-[var(--danger)]"
                     >
-                      <MinusCircle className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </>
                 ) : null}

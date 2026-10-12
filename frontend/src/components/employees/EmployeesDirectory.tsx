@@ -3,12 +3,21 @@
 import { CreateEmployeeModal } from "@/components/employees/CreateEmployeeModal";
 import { EmployeeActionsMenu } from "@/components/employees/EmployeeActionsMenu";
 import { EmployeeCsvImport } from "@/components/onboarding/EmployeeCsvImport";
+import {
+  LedgerRoleBadge,
+  MEMBER_STATUS_LABELS,
+  MemberStatusBadge,
+  TimerBadge,
+} from "@/components/employees/employee-ui";
+import { Avatar } from "@/components/ledger/Avatar";
+import { Panel } from "@/components/ledger/Panel";
+import { SearchField } from "@/components/ledger/SearchField";
+import { Segmented } from "@/components/ledger/Segmented";
+import { ledgerTable } from "@/components/ledger/table";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { Alert, Spinner } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { FormField, Input } from "@/components/ui/Input";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
@@ -27,20 +36,27 @@ import {
   canManageOrgEmployees,
 } from "@/lib/navigation";
 import type { MemberStatus, PayrollVaultStatus, TeamMember, User } from "@/lib/types";
-import { motion } from "framer-motion";
-import { Plus, Search, Upload } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { Plus, Upload } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STATUS_OPTIONS = [
-  { value: "active", label: "Active" },
-  { value: "invited", label: "Invited" },
-  { value: "suspended", label: "Suspended" },
+  { value: "active", label: MEMBER_STATUS_LABELS.active },
+  { value: "invited", label: MEMBER_STATUS_LABELS.invited },
+  { value: "suspended", label: MEMBER_STATUS_LABELS.suspended },
 ];
+
+const STATUS_FILTERS: (MemberStatus | "all")[] = ["all", "active", "invited", "suspended"];
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
   return new Date(value).toLocaleDateString();
+}
+
+function shortDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
 export function EmployeesDirectory({ user }: { user: User }) {
@@ -112,14 +128,24 @@ export function EmployeesDirectory({ user }: { user: User }) {
     });
   }, [members, search, statusFilter]);
 
+  const statusCounts = useMemo(() => {
+    const result: Record<MemberStatus | "all", number> = { all: members.length, active: 0, invited: 0, suspended: 0 };
+    for (const m of members) result[m.status] += 1;
+    return result;
+  }, [members]);
+
   if (loading) {
     return <Spinner label="Loading employees…" />;
   }
 
+  const th = ledgerTable.th;
+  const td = ledgerTable.td;
+
   return (
     <PageTransition>
-      <div className="space-y-6">
+      <div className="flex flex-col gap-6">
         <PageHeader
+          eyebrow="People"
           title="Employees"
           description="Organization directory — compensation data is managed under Payroll."
           actions={
@@ -129,17 +155,18 @@ export function EmployeesDirectory({ user }: { user: User }) {
                 <>
                   <Button
                     variant="secondary"
-                    size="md"
+                    size="lg"
+                    aria-expanded={showImport}
                     onClick={() => {
                       setShowImport((v) => !v);
                       setShowCreate(false);
                     }}
                   >
-                    <Upload className="h-4 w-4" />
+                    <Upload className="h-4 w-4" aria-hidden="true" />
                     Import CSV
                   </Button>
-                  <Button onClick={() => { setShowCreate(true); setShowImport(false); }}>
-                    <Plus className="h-4 w-4" />
+                  <Button size="lg" onClick={() => { setShowCreate(true); setShowImport(false); }}>
+                    <Plus className="h-4 w-4" aria-hidden="true" />
                     Create employee
                   </Button>
                 </>
@@ -151,40 +178,15 @@ export function EmployeesDirectory({ user }: { user: User }) {
         {feedback ? <Alert variant={feedback.variant}>{feedback.message}</Alert> : null}
         {error ? <Alert variant="error">{error}</Alert> : null}
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-            <Input
-              placeholder="Search by name, email, or team…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <FormField label="Status">
-            <Dropdown
-              value={statusFilter}
-              onChange={(v) => setStatusFilter(v as MemberStatus | "all")}
-              options={[
-                { value: "all", label: "All statuses" },
-                ...STATUS_OPTIONS,
-              ]}
-              className="min-w-[140px]"
-              size="sm"
-            />
-          </FormField>
-        </div>
-
         {showImport && canCreate ? (
-          <div className="ui-card rounded-xl p-4">
-            <p className="mb-3 text-sm font-medium text-zinc-900 dark:text-zinc-50">Import employees from CSV</p>
+          <Panel title="Import employees from CSV" description="Upload a spreadsheet to invite several people at once.">
             <EmployeeCsvImport
               variant="employees"
               submitting={importing}
               onSubmittingChange={setImporting}
               onImported={() => void load()}
             />
-          </div>
+          </Panel>
         ) : null}
 
         <CreateEmployeeModal
@@ -200,102 +202,138 @@ export function EmployeesDirectory({ user }: { user: User }) {
           canSelectRole={canChangeEmployeeRoles(user.role)}
         />
 
-        <div className="ui-table-wrap ui-card rounded-xl">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/50">
-              <tr>
-                <th className="px-3 py-2.5 font-medium">Employee</th>
-                <th className="px-3 py-2.5 font-medium">Role</th>
-                <th className="px-3 py-2.5 font-medium">Team</th>
-                <th className="px-3 py-2.5 font-medium">Manager</th>
-                <th className="px-3 py-2.5 font-medium">Status</th>
-                <th className="px-3 py-2.5 font-medium">Join date</th>
-                <th className="px-3 py-2.5 font-medium">Last activity</th>
-                <th className="px-3 py-2.5 font-medium">Timer</th>
-                <th className="px-3 py-2.5 font-medium">Projects</th>
-                <th className="px-3 py-2.5 font-medium">Month hrs</th>
-                <th className="px-3 py-2.5 font-medium">Leave</th>
-                <th className="px-3 py-2.5 font-medium">OT reqs</th>
-                <th className="px-3 py-2.5 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {filteredMembers.map((member, index) => (
-                <motion.tr
-                  key={member.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.02, duration: 0.2 }}
-                >
-                  <td className="px-3 py-3">
-                    <Link
-                      href={`/employees/${member.user_id}`}
-                      className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+        <section aria-label="Employee list" className={ledgerTable.card}>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+            <Segmented
+              label="Filter by status"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={STATUS_FILTERS.map((value) => ({
+                value,
+                label: value === "all" ? "All" : MEMBER_STATUS_LABELS[value],
+                count: statusCounts[value],
+              }))}
+            />
+            <SearchField
+              label="Search employees"
+              placeholder="Search by name, email, or team…"
+              value={search}
+              onChange={setSearch}
+              className="min-w-0 flex-[1_1_220px] sm:max-w-sm"
+            />
+          </div>
+
+          <div className={ledgerTable.wrap}>
+            <table className={cn(ledgerTable.table, "min-w-[1080px]")}>
+              <thead className={ledgerTable.thead}>
+                <tr>
+                  <th scope="col" className={th}>Employee</th>
+                  <th scope="col" className={th}>Role</th>
+                  <th scope="col" className={th}>Team</th>
+                  <th scope="col" className={th}>Status</th>
+                  <th scope="col" className={th}>Timer</th>
+                  <th scope="col" className={cn(th, "text-right")}>Month hrs</th>
+                  <th scope="col" className={cn(th, "text-right")}>Leave</th>
+                  <th scope="col" className={cn(th, "text-right")}>Projects</th>
+                  <th scope="col" className={cn(th, "text-right")}>OT reqs</th>
+                  <th scope="col" className={th}>Joined</th>
+                  <th scope="col" className={cn(th, "text-right")}>
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className={ledgerTable.tbody}>
+                {filteredMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="px-5 py-12 text-center text-[var(--muted)]">
+                      {members.length === 0
+                        ? "No employees yet. Invite the first one with “Create employee”."
+                        : "No employees match this filter."}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMembers.map((member) => (
+                    <tr
+                      key={member.id}
+                      className={cn(ledgerTable.rowHover, member.status === "suspended" && "text-[var(--muted)]")}
                     >
-                      {member.name}
-                    </Link>
-                    <p className="text-xs text-zinc-500">{member.email}</p>
-                  </td>
-                  <td className="px-3 py-3 capitalize">
-                    <Badge variant={member.role === "manager" ? "primary" : member.role === "admin" ? "violet" : "default"}>
-                      {member.role.replace("_", " ")}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.team_name ?? "—"}</td>
-                  <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">{member.manager_name ?? "—"}</td>
-                  <td className="px-3 py-3">
-                    {canEditStatus && canEditMemberStatus(member.role) ? (
-                      <Dropdown
-                        size="sm"
-                        className="w-[118px]"
-                        value={member.status}
-                        onChange={async (value) => {
-                          try {
-                            await updateTeamMember(member.id, {
-                              status: value as MemberStatus,
-                            });
-                            await load();
-                          } catch (err) {
-                            setError(err instanceof ApiError ? err.message : "Status update failed.");
-                          }
-                        }}
-                        options={STATUS_OPTIONS}
-                      />
-                    ) : (
-                      <Badge
-                        variant={
-                          member.status === "active"
-                            ? "success"
-                            : member.status === "invited"
-                              ? "primary"
-                              : "danger"
-                        }
-                        className="capitalize"
-                      >
-                        {member.status}
-                      </Badge>
-                    )}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-zinc-600">{formatDate(member.joined_at)}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-zinc-600">{formatDate(member.last_activity_at)}</td>
-                  <td className="px-3 py-3">{member.has_active_timer ? "Running" : "Idle"}</td>
-                  <td className="px-3 py-3">{member.assigned_projects_count ?? 0}</td>
-                  <td className="px-3 py-3 font-mono text-xs">{formatDuration(member.time_tracked_month_seconds ?? 0)}</td>
-                  <td className="px-3 py-3 font-mono text-xs">{formatDuration(member.approved_leave_seconds ?? 0)}</td>
-                  <td className="px-3 py-3">{member.overtime_requests_count ?? 0}</td>
-                  <td className="px-3 py-3">
-                    <EmployeeActionsMenu
-                      viewer={user}
-                      member={member}
-                      onUpdated={load}
-                      onFeedback={(message, variant) => setFeedback({ message, variant })}
-                    />
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <td className={td}>
+                        <div className="flex items-center gap-3">
+                          <Avatar name={member.name} size="sm" />
+                          <span className="min-w-0">
+                            <Link
+                              href={`/employees/${member.user_id}`}
+                              className="block truncate font-medium text-[var(--foreground)] hover:text-[var(--primary)] hover:underline"
+                            >
+                              {member.name}
+                            </Link>
+                            <span className="block truncate text-[13px] text-[var(--muted)]">{member.email}</span>
+                          </span>
+                        </div>
+                      </td>
+                      <td className={td}>
+                        <LedgerRoleBadge role={member.role} />
+                      </td>
+                      <td className={td}>
+                        <span className="block text-[var(--foreground)]">{member.team_name ?? "—"}</span>
+                        {member.manager_name ? (
+                          <span className="block text-[13px] text-[var(--muted)]">Mgr. {member.manager_name}</span>
+                        ) : null}
+                      </td>
+                      <td className={td}>
+                        {canEditStatus && canEditMemberStatus(member.role) ? (
+                          <Dropdown
+                            size="sm"
+                            className="w-[132px]"
+                            value={member.status}
+                            onChange={async (value) => {
+                              try {
+                                await updateTeamMember(member.id, {
+                                  status: value as MemberStatus,
+                                });
+                                await load();
+                              } catch (err) {
+                                setError(err instanceof ApiError ? err.message : "Status update failed.");
+                              }
+                            }}
+                            options={STATUS_OPTIONS}
+                          />
+                        ) : (
+                          <MemberStatusBadge status={member.status} />
+                        )}
+                      </td>
+                      <td className={td}>
+                        <TimerBadge running={Boolean(member.has_active_timer)} />
+                      </td>
+                      <td className={cn(td, "num text-right text-[13px]")}>
+                        {formatDuration(member.time_tracked_month_seconds ?? 0)}
+                      </td>
+                      <td className={cn(td, "num text-right text-[13px] text-[var(--muted)]")}>
+                        {formatDuration(member.approved_leave_seconds ?? 0)}
+                      </td>
+                      <td className={cn(td, "tnum text-right")}>{member.assigned_projects_count ?? 0}</td>
+                      <td className={cn(td, "tnum text-right")}>{member.overtime_requests_count ?? 0}</td>
+                      <td className={cn(td, "whitespace-nowrap")}>
+                        <span className="block">{shortDate(member.joined_at)}</span>
+                        <span className="block text-[13px] text-[var(--muted)]">
+                          Active {shortDate(member.last_activity_at)}
+                        </span>
+                      </td>
+                      <td className={cn(td, "py-2 text-right")}>
+                        <EmployeeActionsMenu
+                          viewer={user}
+                          member={member}
+                          onUpdated={load}
+                          onFeedback={(message, variant) => setFeedback({ message, variant })}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </PageTransition>
   );

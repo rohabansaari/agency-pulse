@@ -1,9 +1,11 @@
 "use client";
 
+import { RowMenu, RowMenuDivider, RowMenuItem } from "@/components/employees/employee-ui";
 import { Modal } from "@/components/ui/Modal";
 import { Dropdown } from "@/components/ui/Dropdown";
-import { ActionMenu, ActionMenuItem } from "@/components/ui/ActionMenu";
 import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/EmptyState";
+import { FormField, Input } from "@/components/ui/Input";
 import {
   ApiError,
   deleteTeamMember,
@@ -20,6 +22,16 @@ import {
   ROLE_LABELS,
 } from "@/lib/navigation";
 import type { MemberStatus, TeamMember, User, UserRole } from "@/lib/types";
+import {
+  Ban,
+  CircleCheck,
+  Mail,
+  Pencil,
+  Repeat,
+  ToggleLeft,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -28,7 +40,7 @@ const ASSIGNABLE_ROLES: UserRole[] = MUTABLE_ROLES;
 const STATUS_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "invited", label: "Pending invitation" },
-  { value: "suspended", label: "Disabled" },
+  { value: "suspended", label: "Deactivated" },
 ];
 
 type EmployeeActionsMenuProps = {
@@ -59,6 +71,10 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
   const canChangeThisRole = canChangeMemberRole(viewer.role, member.role, isSelf);
   const canDeleteThis =
     canManageOrgEmployees(viewer.role) && canEditMemberStatus(member.role) && !isSelf;
+
+  const hasDangerZone =
+    (canEditStatus && !isSelf && (member.status === "active" || member.status === "suspended")) ||
+    canDeleteThis;
 
   function openModal(next: NonNullable<typeof modal>) {
     setError("");
@@ -106,75 +122,50 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
 
   return (
     <>
-      <ActionMenu align="right">
-        <ActionMenuItem
+      <RowMenu label={`Actions for ${member.name}`}>
+        <RowMenuItem
+          icon={<UserRound className="h-4 w-4" />}
           onClick={() => router.push(`/employees/${member.user_id}`)}
         >
           View profile
-        </ActionMenuItem>
+        </RowMenuItem>
         {canEditThis ? (
-          <ActionMenuItem
+          <RowMenuItem
+            icon={<Pencil className="h-4 w-4" />}
             onClick={() => {
               setName(member.name);
               setEmail(member.email);
               openModal("edit");
             }}
           >
-            Edit profile
-          </ActionMenuItem>
+            Edit name &amp; email
+          </RowMenuItem>
         ) : null}
         {canChangeThisRole ? (
-          <ActionMenuItem
+          <RowMenuItem
+            icon={<Repeat className="h-4 w-4" />}
             onClick={() => {
               setSelectedRole(member.role);
               openModal("role");
             }}
           >
             Change role
-          </ActionMenuItem>
+          </RowMenuItem>
         ) : null}
         {canEditStatus ? (
-          <ActionMenuItem
+          <RowMenuItem
+            icon={<ToggleLeft className="h-4 w-4" />}
             onClick={() => {
               setSelectedStatus(member.status);
               openModal("status");
             }}
           >
             Update status
-          </ActionMenuItem>
-        ) : null}
-        {canEditStatus && !isSelf && member.status === "active" ? (
-          <ActionMenuItem onClick={() => openModal("deactivate")}>Deactivate</ActionMenuItem>
-        ) : null}
-        {canEditStatus && !isSelf && member.status === "suspended" ? (
-          <ActionMenuItem
-            onClick={() => {
-              void (async () => {
-                try {
-                  await updateTeamMember(member.id, { status: "active" });
-                  onFeedback?.(`${member.name} was reactivated.`, "success");
-                  onUpdated();
-                } catch (err) {
-                  onFeedback?.(
-                    err instanceof ApiError
-                      ? formatApiErrors(err.errors) || err.message
-                      : "Reactivation failed.",
-                    "error",
-                  );
-                }
-              })();
-            }}
-          >
-            Reactivate
-          </ActionMenuItem>
-        ) : null}
-        {canDeleteThis ? (
-          <ActionMenuItem className="text-[var(--danger)]" onClick={() => openModal("delete")}>
-            Delete employee
-          </ActionMenuItem>
+          </RowMenuItem>
         ) : null}
         {canResendInvitation ? (
-          <ActionMenuItem
+          <RowMenuItem
+            icon={<Mail className="h-4 w-4" />}
             onClick={() => {
               void (async () => {
                 setSaving(true);
@@ -204,14 +195,52 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
             }}
           >
             Resend invitation
-          </ActionMenuItem>
+          </RowMenuItem>
         ) : null}
-      </ActionMenu>
+        {hasDangerZone ? <RowMenuDivider /> : null}
+        {canEditStatus && !isSelf && member.status === "active" ? (
+          <RowMenuItem icon={<Ban className="h-4 w-4" />} onClick={() => openModal("deactivate")}>
+            Deactivate
+          </RowMenuItem>
+        ) : null}
+        {canEditStatus && !isSelf && member.status === "suspended" ? (
+          <RowMenuItem
+            icon={<CircleCheck className="h-4 w-4" />}
+            onClick={() => {
+              void (async () => {
+                try {
+                  await updateTeamMember(member.id, { status: "active" });
+                  onFeedback?.(`${member.name} was reactivated.`, "success");
+                  onUpdated();
+                } catch (err) {
+                  onFeedback?.(
+                    err instanceof ApiError
+                      ? formatApiErrors(err.errors) || err.message
+                      : "Reactivation failed.",
+                    "error",
+                  );
+                }
+              })();
+            }}
+          >
+            Reactivate
+          </RowMenuItem>
+        ) : null}
+        {canDeleteThis ? (
+          <RowMenuItem tone="danger" icon={<Trash2 className="h-4 w-4" />} onClick={() => openModal("delete")}>
+            Delete employee
+          </RowMenuItem>
+        ) : null}
+      </RowMenu>
 
       {modal === "edit" ? (
-        <Modal onClose={() => setModal(null)} title="Edit profile">
+        <Modal
+          onClose={() => setModal(null)}
+          title="Edit name & email"
+          description={`Update how ${member.name} appears and signs in.`}
+        >
           <form
-            className="space-y-3"
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               const trimmedEmail = email.trim();
@@ -222,144 +251,164 @@ export function EmployeeActionsMenu({ viewer, member, onUpdated, onFeedback }: E
               );
             }}
           >
-            <label className="block space-y-1 text-sm">
-              <span className="text-label">Name</span>
-              <input
+            <FormField label="Name" htmlFor={`member-${member.id}-name`} required>
+              <Input
+                id={`member-${member.id}-name`}
                 required
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
               />
-            </label>
-            <label className="block space-y-1 text-sm">
-              <span className="text-label">Email</span>
-              <input
+            </FormField>
+            <FormField
+              label="Email"
+              htmlFor={`member-${member.id}-email`}
+              required
+              hint={`The employee signs in with this email.${
+                member.status === "invited" ? " Resend the invitation after changing it." : ""
+              }`}
+            >
+              <Input
+                id={`member-${member.id}-email`}
                 required
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
               />
-              <span className="block text-xs text-[var(--muted)]">
-                The employee signs in with this email.
-                {member.status === "invited" ? " Resend the invitation after changing it." : ""}
-              </span>
-            </label>
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
-            >
-              Save
-            </button>
+            </FormField>
+            {error ? <Alert variant="error">{error}</Alert> : null}
+            <ModalActions onCancel={() => setModal(null)}>
+              <Button type="submit" size="lg" disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </Button>
+            </ModalActions>
           </form>
         </Modal>
       ) : null}
 
       {modal === "role" ? (
-        <Modal onClose={() => setModal(null)} title="Change role">
+        <Modal
+          onClose={() => setModal(null)}
+          title="Change role"
+          description={`Choose what ${member.name} can see and manage.`}
+        >
           <form
-            className="space-y-3"
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               void saveUpdate({ role: selectedRole });
             }}
           >
-            <Dropdown
-              value={selectedRole}
-              onChange={(v) => setSelectedRole(v as UserRole)}
-              options={ASSIGNABLE_ROLES.map((role) => ({
-                value: role,
-                label: ROLE_LABELS[role],
-              }))}
-            />
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <button
-              type="submit"
-              disabled={saving || selectedRole === member.role}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
-            >
-              Save role
-            </button>
+            <FormField label="Role">
+              <Dropdown
+                value={selectedRole}
+                onChange={(v) => setSelectedRole(v as UserRole)}
+                options={ASSIGNABLE_ROLES.map((role) => ({
+                  value: role,
+                  label: ROLE_LABELS[role],
+                }))}
+              />
+            </FormField>
+            {error ? <Alert variant="error">{error}</Alert> : null}
+            <ModalActions onCancel={() => setModal(null)}>
+              <Button type="submit" size="lg" disabled={saving || selectedRole === member.role}>
+                {saving ? "Saving…" : "Save role"}
+              </Button>
+            </ModalActions>
           </form>
         </Modal>
       ) : null}
 
       {modal === "deactivate" ? (
         <Modal onClose={() => setModal(null)} title={`Deactivate ${member.name}?`}>
-          <div className="space-y-3 text-sm">
-            <p>
+          <div className="space-y-4 text-sm">
+            <p className="text-[var(--foreground)]">
               They lose access right away and can&apos;t sign in or track time until you reactivate
-              them. A running timer is stopped. Their time, screenshots and payroll history are
-              kept.
+              them. A running timer is stopped.
             </p>
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setModal(null)}>
-                Cancel
-              </Button>
+            <p className="rounded-xl bg-[var(--accent-sand)] px-4 py-3 text-[var(--muted)]">
+              Their time, screenshots and payroll history are kept.
+            </p>
+            {error ? <Alert variant="error">{error}</Alert> : null}
+            <ModalActions onCancel={() => setModal(null)}>
               <Button
                 variant="danger"
+                size="lg"
                 disabled={saving}
                 onClick={() => void saveUpdate({ status: "suspended" })}
               >
                 {saving ? "Deactivating…" : "Deactivate"}
               </Button>
-            </div>
+            </ModalActions>
           </div>
         </Modal>
       ) : null}
 
       {modal === "delete" ? (
         <Modal onClose={() => setModal(null)} title={`Delete ${member.name}?`}>
-          <div className="space-y-3 text-sm">
-            <p>
-              This permanently removes {member.email} and their time entries, screenshots, leave
-              and salary records. It can&apos;t be undone.
+          <div className="space-y-4 text-sm">
+            <p className="text-[var(--foreground)]">
+              This permanently removes <span className="font-medium">{member.email}</span> and their
+              time entries, screenshots, leave and salary records. It can&apos;t be undone.
             </p>
-            <p className="text-[var(--muted)]">
+            <p className="rounded-xl border border-[var(--accent-copper)]/30 bg-[var(--accent-copper-soft)] px-4 py-3 text-[var(--accent-copper)]">
               Employees included in a finalized payroll run can&apos;t be deleted. Deactivate them
               instead to keep their history.
             </p>
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setModal(null)}>
-                Cancel
-              </Button>
-              <Button variant="danger" disabled={saving} onClick={() => void removeMember()}>
+            {error ? <Alert variant="error">{error}</Alert> : null}
+            <ModalActions onCancel={() => setModal(null)}>
+              <Button
+                size="lg"
+                disabled={saving}
+                onClick={() => void removeMember()}
+                className="bg-[var(--danger)] text-[var(--primary-foreground)] hover:bg-[var(--danger)] hover:brightness-110"
+              >
                 {saving ? "Deleting…" : "Delete permanently"}
               </Button>
-            </div>
+            </ModalActions>
           </div>
         </Modal>
       ) : null}
 
       {modal === "status" ? (
-        <Modal onClose={() => setModal(null)} title="Update status">
+        <Modal
+          onClose={() => setModal(null)}
+          title="Update status"
+          description={`Currently ${STATUS_OPTIONS.find((o) => o.value === member.status)?.label ?? member.status}.`}
+        >
           <form
-            className="space-y-3"
+            className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               void saveUpdate({ status: selectedStatus });
             }}
           >
-            <Dropdown
-              value={selectedStatus}
-              onChange={(v) => setSelectedStatus(v as MemberStatus)}
-              options={STATUS_OPTIONS}
-            />
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <button
-              type="submit"
-              disabled={saving || selectedStatus === member.status}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
-            >
-              Save status
-            </button>
+            <FormField label="Status">
+              <Dropdown
+                value={selectedStatus}
+                onChange={(v) => setSelectedStatus(v as MemberStatus)}
+                options={STATUS_OPTIONS}
+              />
+            </FormField>
+            {error ? <Alert variant="error">{error}</Alert> : null}
+            <ModalActions onCancel={() => setModal(null)}>
+              <Button type="submit" size="lg" disabled={saving || selectedStatus === member.status}>
+                {saving ? "Saving…" : "Save status"}
+              </Button>
+            </ModalActions>
           </form>
         </Modal>
       ) : null}
     </>
+  );
+}
+
+function ModalActions({ onCancel, children }: { onCancel: () => void; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap justify-end gap-2 pt-2">
+      <Button type="button" variant="secondary" size="lg" onClick={onCancel}>
+        Cancel
+      </Button>
+      {children}
+    </div>
   );
 }

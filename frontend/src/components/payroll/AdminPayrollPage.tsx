@@ -14,7 +14,7 @@ import {
   updatePayrollRun,
 } from "@/lib/api";
 import { formatDuration } from "@/lib/time";
-import type { PayrollRun, PayrollRunEmployeeRecord, PayrollRunStatus } from "@/lib/types";
+import type { PayrollRun, PayrollRunStatus } from "@/lib/types";
 import { PayrollNav } from "@/components/payroll/PayrollNav";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -31,25 +31,57 @@ import {
   type ReportDateRange,
 } from "@/components/reports/ReportDateRangeFilter";
 import { MoneyAmount } from "@/components/ui/MoneyAmount";
-import { PayrollBreakdown } from "@/components/payroll/PayrollBreakdown";
+import { PayrollEmployeeLines } from "@/components/payroll/PayrollEmployeeLines";
+import { PayrollRunStepper } from "@/components/payroll/PayrollRunStepper";
+import { Metric } from "@/components/ledger/Metric";
+import { Panel } from "@/components/ledger/Panel";
+import { ledgerTable, rowButton } from "@/components/ledger/table";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Alert, EmptyState, Spinner } from "@/components/ui/EmptyState";
+import { cn } from "@/lib/cn";
+import { CalendarRange, ChevronDown, Lock, ShieldCheck } from "lucide-react";
 import { formatPKR } from "@/lib/currency";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
-const STATUS_STYLES: Record<PayrollRunStatus, string> = {
-  draft: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  finalized: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
-  locked: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200",
+const STATUS_LABEL: Record<PayrollRunStatus, string> = {
+  draft: "Draft",
+  finalized: "Finalized",
+  locked: "Locked · secured",
+};
+
+const STATUS_VARIANT: Record<PayrollRunStatus, "default" | "warning" | "success"> = {
+  draft: "default",
+  finalized: "warning",
+  locked: "success",
 };
 
 function StatusBadge({ status }: { status: PayrollRunStatus }) {
   return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status]}`}
-      title={status === "locked" ? "Secured audit record — immutable" : undefined}
-    >
-      {status === "locked" ? "locked · secured" : status}
+    <span title={status === "locked" ? "Secured audit record — immutable" : undefined}>
+      <Badge variant={STATUS_VARIANT[status]} className="gap-1 normal-case">
+        {status === "locked" ? <Lock className="h-3 w-3" aria-hidden="true" /> : null}
+        {STATUS_LABEL[status]}
+      </Badge>
     </span>
   );
+}
+
+function formatRunDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** Sum of a run money field; null when any run hides it (masked or missing). */
+function sumMoney(values: (string | null | undefined)[]): number | null {
+  let total = 0;
+  for (const value of values) {
+    if (value === null || value === undefined || value === "") return null;
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return null;
+    total += parsed;
+  }
+  return total;
 }
 
 export function AdminPayrollPage() {
@@ -112,42 +144,6 @@ export function AdminPayrollPage() {
     } finally {
       setLoadingDetailId(null);
     }
-  }
-
-  function renderEmployeeRecords(records: PayrollRunEmployeeRecord[] | undefined) {
-    if (!records?.length) {
-      return <p className="text-sm text-[var(--muted)]">No employee payroll records.</p>;
-    }
-
-    return (
-      <div className="grid gap-4 lg:grid-cols-2">
-        {records.map((record) => {
-          const masked = record.financial_data_masked || !financialUnlocked;
-          return (
-            <div key={record.id} className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-heading text-sm font-semibold">
-                  {record.user_name ?? `User #${record.user_id}`}
-                </p>
-                <span className="text-xs capitalize text-[var(--muted)]">{record.salary_type}</span>
-              </div>
-              <p className="text-xs text-[var(--muted)]">
-                Worked {formatDuration(record.regular_hours_seconds ?? record.payable_hours_seconds)}
-                {record.overtime_hours_seconds
-                  ? ` · OT ${formatDuration(record.overtime_hours_seconds)}`
-                  : ""}
-              </p>
-              <PayrollBreakdown
-                gross={record.gross_salary_snapshot}
-                net={record.net_salary_snapshot}
-                lines={record.adjustment_lines_snapshot}
-                masked={masked}
-              />
-            </div>
-          );
-        })}
-      </div>
-    );
   }
 
   const { payrollExportRows, payrollSummaryRows } = useMemo(() => {
@@ -328,240 +324,343 @@ export function AdminPayrollPage() {
     }
   }
 
+
+  const totals = useMemo(() => {
+    const counts: Record<PayrollRunStatus, number> = { draft: 0, finalized: 0, locked: 0 };
+    let hoursSeconds = 0;
+    for (const run of runs) {
+      counts[run.status] += 1;
+      hoursSeconds += run.total_hours_snapshot ?? 0;
+    }
+    const visible = financialUnlocked && !runs.some((run) => run.financial_data_masked);
+    return {
+      counts,
+      hoursSeconds,
+      gross: visible ? sumMoney(runs.map((run) => run.total_gross_snapshot)) : null,
+      net: visible ? sumMoney(runs.map((run) => run.total_net_snapshot)) : null,
+    };
+  }, [runs, financialUnlocked]);
+
+  const moneyHidden = financialUnlocked ? "Not available" : "Unlock vault to view";
+
   return (
     <PageTransition>
       <div className="space-y-6">
         <PageHeader
-          title="Payroll"
+          eyebrow="Payroll"
+          title="Payroll runs"
           description="Manage payroll runs, organization settings, and compensation snapshots."
+          actions={
+            <>
+              {financialUnlocked ? (
+                <Badge variant="success" className="min-h-8 gap-1.5 px-3 normal-case">
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                  Vault unlocked
+                </Badge>
+              ) : (
+                <Badge variant="warning" className="min-h-8 gap-1.5 px-3 normal-case">
+                  <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                  Vault locked
+                </Badge>
+              )}
+              <ExportDropdown
+                filename="payroll-runs"
+                formats={["csv", "xlsx", "pdf"]}
+                columns={PAYROLL_RUNS_EXPORT_COLUMNS}
+                rows={payrollExportRows}
+                extraSheets={[
+                  {
+                    name: "Summary",
+                    columns: PAYROLL_SUMMARY_EXPORT_COLUMNS,
+                    rows: payrollSummaryRows,
+                  },
+                ]}
+              />
+            </>
+          }
         />
         <PayrollNav />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <ReportDateRangeFilter value={filterRange} onChange={setFilterRange} disabled={loading} />
-        <ExportDropdown
-          filename="payroll-runs"
-          formats={["csv", "xlsx", "pdf"]}
-          columns={PAYROLL_RUNS_EXPORT_COLUMNS}
-          rows={payrollExportRows}
-          extraSheets={[
-            {
-              name: "Summary",
-              columns: PAYROLL_SUMMARY_EXPORT_COLUMNS,
-              rows: payrollSummaryRows,
-            },
-          ]}
-        />
-      </div>
 
-      {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-          {error}
-        </div>
-      ) : null}
+        {error ? <Alert variant="error">{error}</Alert> : null}
+        {success ? <Alert variant="success">{success}</Alert> : null}
 
-      {success ? (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300">
-          {success}
-        </div>
-      ) : null}
-
-      <PayrollSettingsPanel />
-
-      <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Create payroll run
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Snapshots approved tracked time, manual entries, paid leave, and approved overtime for the selected period.
-        </p>
-
-        <form className="mt-4 grid gap-4 sm:grid-cols-2" onSubmit={handleCreate}>
-          <LeaveDateInput
-            id="payroll-period-start"
-            label="Period start"
-            value={periodStart}
-            onChange={setPeriodStart}
-            hint="dd/mm/yyyy"
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Metric
+            label="Runs in range"
+            value={runs.length}
+            detail={`${totals.counts.draft} draft · ${totals.counts.finalized} finalized · ${totals.counts.locked} locked`}
           />
-          <LeaveDateInput
-            id="payroll-period-end"
-            label="Period end"
-            value={periodEnd}
-            onChange={setPeriodEnd}
-            hint="dd/mm/yyyy"
+          <Metric
+            label="Total hours"
+            value={<span className="num">{formatDuration(totals.hoursSeconds)}</span>}
+            detail="Snapshot across runs"
           />
-          <div className="sm:col-span-2">
-            <button
-              type="submit"
-              disabled={creating || !periodStart || !periodEnd || !financialUnlocked}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-            >
-              {creating ? "Creating snapshot…" : "Create payroll run"}
-            </button>
-          </div>
-        </form>
-      </section>
+          <Metric
+            label="Gross pay"
+            value={totals.gross === null ? "—" : formatPKR(totals.gross)}
+            detail={totals.gross === null ? moneyHidden : "PKR · all runs in range"}
+          />
+          <Metric
+            label="Net payable"
+            value={totals.net === null ? "—" : formatPKR(totals.net)}
+            detail={totals.net === null ? moneyHidden : "PKR · after deductions"}
+          />
+        </div>
 
-      <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Payroll history
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Runs overlapping {filterRange.start_date} – {filterRange.end_date}
-        </p>
+        <Panel
+          title="New payroll run"
+          description="Snapshots approved tracked time, manual entries, paid leave, and approved overtime for the selected period."
+        >
+          <form className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end" onSubmit={handleCreate}>
+            <LeaveDateInput
+              id="payroll-period-start"
+              label="Period start"
+              value={periodStart}
+              onChange={setPeriodStart}
+              hint="dd/mm/yyyy"
+            />
+            <LeaveDateInput
+              id="payroll-period-end"
+              label="Period end"
+              value={periodEnd}
+              onChange={setPeriodEnd}
+              hint="dd/mm/yyyy"
+            />
+            <div className="sm:col-span-2 lg:col-span-1 lg:pb-6">
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full sm:w-auto"
+                disabled={creating || !periodStart || !periodEnd || !financialUnlocked}
+              >
+                {creating ? "Creating snapshot…" : "Create payroll run"}
+              </Button>
+            </div>
+          </form>
+        </Panel>
 
-        {loading ? (
-          <p className="mt-4 text-sm text-zinc-500">Loading payroll runs…</p>
-        ) : runs.length === 0 ? (
-          <p className="mt-4 text-sm text-zinc-500">No payroll runs yet.</p>
-        ) : (
-          <div className="ui-table-wrap mt-4">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-700">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Period</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Total hours</th>
-                  <th className="px-3 py-2 font-medium">Created by</th>
-                  <th className="px-3 py-2 font-medium">Generated</th>
-                  <th className="px-3 py-2 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {runs.map((run) => {
-                  const detail = runDetails[run.id];
-                  const isExpanded = expandedRunId === run.id;
-
-                  return (
-                  <Fragment key={run.id}>
+        <Panel
+          title="Payroll history"
+          description={
+            <>
+              Runs overlapping <span className="tnum">{filterRange.start_date} – {filterRange.end_date}</span> · amounts in PKR
+            </>
+          }
+          flush
+        >
+          {loading ? (
+            <Spinner label="Loading payroll runs…" />
+          ) : runs.length === 0 ? (
+            <div className="px-5 pb-5">
+              <EmptyState
+                icon={CalendarRange}
+                title="No payroll runs yet"
+                description="Create a run for a period above to snapshot hours and pay."
+              />
+            </div>
+          ) : (
+            <div className={ledgerTable.wrap}>
+              <table className={cn(ledgerTable.table, "min-w-[960px]")}>
+                <thead className={ledgerTable.thead}>
                   <tr>
-                    <td className="px-3 py-3 whitespace-nowrap text-zinc-900 dark:text-zinc-100">
-                      {run.period_start} – {run.period_end}
-                    </td>
-                    <td className="px-3 py-3">
-                      <StatusBadge status={run.status} />
-                    </td>
-                    <td className="px-3 py-3 font-mono text-zinc-700 dark:text-zinc-300">
-                      {formatDuration(run.total_hours_snapshot)}
-                    </td>
-                    <td className="px-3 py-3 text-zinc-600 dark:text-zinc-400">
-                      {run.created_by_name ?? `User #${run.created_by}`}
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                      {run.created_at ? new Date(run.created_at).toLocaleDateString() : "—"}
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void toggleRunDetails(run.id)}
-                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                        >
-                          {loadingDetailId === run.id
-                            ? "Loading…"
-                            : isExpanded
-                              ? "Hide"
-                              : "Details"}
-                        </button>
-                        {run.status === "draft" ? (
-                          <>
-                            <button
-                              type="button"
-                              disabled={actingId === run.id || !financialUnlocked}
-                              onClick={() => startEditRun(run)}
-                              className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              disabled={actingId === run.id || !financialUnlocked}
-                              onClick={() => void runAction(run.id, "recalculate")}
-                              className="rounded-md border border-blue-300 px-2.5 py-1 text-xs font-medium text-blue-800 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-700 dark:text-blue-200 dark:hover:bg-blue-950/30"
-                            >
-                              Recalculate
-                            </button>
-                            <button
-                              type="button"
-                              disabled={actingId === run.id || !financialUnlocked}
-                              onClick={() => void runAction(run.id, "delete")}
-                              className="rounded-md border border-red-300 px-2.5 py-1 text-xs font-medium text-red-800 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-200 dark:hover:bg-red-950/30"
-                            >
-                              Delete
-                            </button>
-                            <button
-                              type="button"
-                              disabled={actingId === run.id || !financialUnlocked}
-                              onClick={() => void runAction(run.id, "finalize")}
-                              className="rounded-md border border-amber-300 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-950/30"
-                            >
-                              Finalize
-                            </button>
-                          </>
-                        ) : null}
-                        {run.status === "finalized" ? (
-                          <button
-                            type="button"
-                            disabled={actingId === run.id || !financialUnlocked}
-                            onClick={() => void runAction(run.id, "lock")}
-                            className="rounded-md border border-green-300 px-2.5 py-1 text-xs font-medium text-green-800 hover:bg-green-50 disabled:opacity-50 dark:border-green-700 dark:text-green-200 dark:hover:bg-green-950/30"
-                          >
-                            Lock
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
+                    <th scope="col" className={ledgerTable.th}>Period</th>
+                    <th scope="col" className={ledgerTable.th}>Status</th>
+                    <th scope="col" className={cn(ledgerTable.th, "text-right")}>Total hours</th>
+                    <th scope="col" className={cn(ledgerTable.th, "text-right")}>Net pay</th>
+                    <th scope="col" className={ledgerTable.th}>Created by</th>
+                    <th scope="col" className={ledgerTable.th}>Generated</th>
+                    <th scope="col" className={cn(ledgerTable.th, "text-right")}>
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
-                  {isExpanded ? (
-                    <tr>
-                      <td colSpan={6} className="bg-zinc-50 px-3 py-4 dark:bg-zinc-950/50">
-                        {editingRunId === run.id ? (
-                          <form className="mb-4 grid gap-3 sm:grid-cols-2" onSubmit={handleEditRun}>
-                            <LeaveDateInput
-                              id={`edit-period-start-${run.id}`}
-                              label="Period start"
-                              value={editPeriodStart}
-                              onChange={setEditPeriodStart}
-                              hint="dd/mm/yyyy"
-                            />
-                            <LeaveDateInput
-                              id={`edit-period-end-${run.id}`}
-                              label="Period end"
-                              value={editPeriodEnd}
-                              onChange={setEditPeriodEnd}
-                              hint="dd/mm/yyyy"
-                            />
-                            <div className="flex gap-2 sm:col-span-2">
-                              <button
-                                type="submit"
-                                disabled={actingId === run.id || !financialUnlocked}
-                                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-                              >
-                                Save & recalculate
-                              </button>
+                </thead>
+                <tbody className={ledgerTable.tbody}>
+                  {runs.map((run) => {
+                    const detail = runDetails[run.id];
+                    const isExpanded = expandedRunId === run.id;
+                    const busy = actingId === run.id || !financialUnlocked;
+                    const moneyMasked = Boolean(run.financial_data_masked) || !financialUnlocked;
+                    const detailId = `payroll-run-detail-${run.id}`;
+
+                    return (
+                      <Fragment key={run.id}>
+                        <tr className={cn(ledgerTable.rowHover, isExpanded && "bg-[var(--accent-sand)]/40")}>
+                          <td className={cn(ledgerTable.td, "whitespace-nowrap font-medium text-[var(--foreground)]")}>
+                            <span className="tnum">{run.period_start} – {run.period_end}</span>
+                          </td>
+                          <td className={ledgerTable.td}>
+                            <StatusBadge status={run.status} />
+                          </td>
+                          <td className={cn(ledgerTable.td, "num text-right text-[var(--foreground)]")}>
+                            {formatDuration(run.total_hours_snapshot)}
+                          </td>
+                          <td className={cn(ledgerTable.td, "text-right")}>
+                            {moneyMasked ? (
+                              <span className="text-[var(--muted)]">—</span>
+                            ) : (
+                              <MoneyAmount amount={run.total_net_snapshot} size="sm" />
+                            )}
+                          </td>
+                          <td className={cn(ledgerTable.td, "text-[var(--muted)]")}>
+                            {run.created_by_name ?? `User #${run.created_by}`}
+                          </td>
+                          <td className={cn(ledgerTable.td, "whitespace-nowrap text-[var(--muted)]")}>
+                            {formatRunDate(run.created_at)}
+                          </td>
+                          <td className={ledgerTable.td}>
+                            <div className="flex flex-wrap justify-end gap-1.5">
+                              {run.status === "draft" ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => startEditRun(run)}
+                                    className={rowButton}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void runAction(run.id, "recalculate")}
+                                    className={rowButton}
+                                  >
+                                    Recalculate
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void runAction(run.id, "delete")}
+                                    className={cn(
+                                      rowButton,
+                                      "border-[var(--accent-coral)]/30 bg-[var(--accent-coral-soft)] text-[var(--danger)] hover:bg-[var(--accent-coral)]/20",
+                                    )}
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void runAction(run.id, "finalize")}
+                                    className={cn(
+                                      rowButton,
+                                      "border-transparent bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]",
+                                    )}
+                                  >
+                                    Finalize
+                                  </button>
+                                </>
+                              ) : null}
+                              {run.status === "finalized" ? (
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void runAction(run.id, "lock")}
+                                  className={cn(
+                                    rowButton,
+                                    "border-transparent bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]",
+                                  )}
+                                >
+                                  <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Lock
+                                </button>
+                              ) : null}
                               <button
                                 type="button"
-                                onClick={() => setEditingRunId(null)}
-                                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs dark:border-zinc-600"
+                                aria-expanded={isExpanded}
+                                aria-controls={detailId}
+                                onClick={() => void toggleRunDetails(run.id)}
+                                className={rowButton}
                               >
-                                Cancel
+                                {loadingDetailId === run.id
+                                  ? "Loading…"
+                                  : isExpanded
+                                    ? "Hide"
+                                    : "Details"}
+                                <ChevronDown
+                                  className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-180")}
+                                  aria-hidden="true"
+                                />
                               </button>
                             </div>
-                          </form>
+                          </td>
+                        </tr>
+                        {isExpanded ? (
+                          <tr id={detailId}>
+                            <td colSpan={7} className="bg-[var(--accent-sand)]/40 p-0">
+                              <div className="space-y-4 px-5 py-4">
+                                <PayrollRunStepper run={run} />
+                                {editingRunId === run.id ? (
+                                  <form
+                                    className="grid gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 sm:grid-cols-2"
+                                    onSubmit={handleEditRun}
+                                  >
+                                    <p className="text-sm font-semibold text-[var(--foreground)] sm:col-span-2">
+                                      Edit run period
+                                    </p>
+                                    <LeaveDateInput
+                                      id={`edit-period-start-${run.id}`}
+                                      label="Period start"
+                                      value={editPeriodStart}
+                                      onChange={setEditPeriodStart}
+                                      hint="dd/mm/yyyy"
+                                    />
+                                    <LeaveDateInput
+                                      id={`edit-period-end-${run.id}`}
+                                      label="Period end"
+                                      value={editPeriodEnd}
+                                      onChange={setEditPeriodEnd}
+                                      hint="dd/mm/yyyy"
+                                    />
+                                    <div className="flex flex-wrap gap-2 sm:col-span-2">
+                                      <Button
+                                        type="submit"
+                                        size="lg"
+                                        disabled={actingId === run.id || !financialUnlocked}
+                                      >
+                                        Save & recalculate
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="lg"
+                                        onClick={() => setEditingRunId(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </form>
+                                ) : null}
+                              </div>
+                              <div className="border-t border-[var(--border)] bg-[var(--card)]">
+                                <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pb-3 pt-4">
+                                  <h3 className="text-sm font-semibold text-[var(--foreground)]">Employees in this run</h3>
+                                  <p className="text-[13px] text-[var(--muted)]">Amounts in PKR</p>
+                                </div>
+                                {loadingDetailId === run.id && !detail ? (
+                                  <Spinner label="Loading employee lines…" />
+                                ) : (
+                                  <PayrollEmployeeLines
+                                    records={detail?.employee_records}
+                                    financialUnlocked={financialUnlocked}
+                                  />
+                                )}
+                              </div>
+                            </td>
+                          </tr>
                         ) : null}
-                        {renderEmployeeRecords(detail?.employee_records)}
-                      </td>
-                    </tr>
-                  ) : null}
-                  </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+
+        <PayrollSettingsPanel />
       </div>
     </PageTransition>
   );

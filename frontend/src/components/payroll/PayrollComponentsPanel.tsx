@@ -13,7 +13,10 @@ import {
 import { usePayrollVault } from "@/components/payroll/PayrollVaultProvider";
 import { Alert, EmptyState, Spinner } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader } from "@/components/ui/Card";
+import { Panel } from "@/components/ledger/Panel";
+import { ledgerTable, rowButton } from "@/components/ledger/table";
+import { Badge } from "@/components/ui/Badge";
+import { cn } from "@/lib/cn";
 import { FormField, Input } from "@/components/ui/Input";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { MultiSelect } from "@/components/ui/MultiSelect";
@@ -71,65 +74,67 @@ function ComponentTable({
         icon={Icon}
         title={`No ${title.toLowerCase()} yet`}
         description={`Add custom ${title.toLowerCase()} to apply during payroll calculation.`}
-        className="py-8"
+        className="mx-5 mb-5 py-8"
       />
     );
   }
 
   return (
-    <div className="ui-table-wrap overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
-      <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/50">
+    <div className={ledgerTable.wrap}>
+      <table className={cn(ledgerTable.table, "min-w-[560px]")}>
+        <thead className={ledgerTable.thead}>
           <tr>
-            <th className="px-3 py-2 font-medium">Name</th>
-            <th className="px-3 py-2 font-medium">Mode</th>
-            <th className="px-3 py-2 font-medium">Value</th>
-            <th className="px-3 py-2 font-medium">Status</th>
-            {canManage ? <th className="px-3 py-2 font-medium">Actions</th> : null}
+            <th scope="col" className={ledgerTable.th}>Name</th>
+            <th scope="col" className={ledgerTable.th}>Mode</th>
+            <th scope="col" className={cn(ledgerTable.th, "text-right")}>Value</th>
+            <th scope="col" className={ledgerTable.th}>Status</th>
+            {canManage ? (
+              <th scope="col" className={cn(ledgerTable.th, "text-right")}>
+                <span className="sr-only">Actions</span>
+              </th>
+            ) : null}
           </tr>
         </thead>
-        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+        <tbody className={ledgerTable.tbody}>
           {components.map((component, index) => (
             <motion.tr
               key={component.id}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03, duration: 0.2 }}
+              className={ledgerTable.rowHover}
             >
-              <td className="px-3 py-2.5 font-medium text-zinc-900 dark:text-zinc-100">{component.name}</td>
-              <td className="px-3 py-2.5 capitalize text-zinc-600 dark:text-zinc-400">
+              <td className={cn(ledgerTable.td, "font-medium text-[var(--foreground)]")}>{component.name}</td>
+              <td className={cn(ledgerTable.td, "text-[var(--muted)]")}>
                 {component.value_mode === "percentage" ? "Percentage" : "Fixed amount"}
               </td>
-              <td className="px-3 py-2.5 font-mono text-zinc-700 dark:text-zinc-300">{formatValue(component)}</td>
-              <td className="px-3 py-2.5">
-                <span
-                  className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                    component.is_active
-                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                      : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                  }`}
-                >
+              <td className={cn(ledgerTable.td, "tnum text-right text-[var(--foreground)]")}>{formatValue(component)}</td>
+              <td className={ledgerTable.td}>
+                <Badge variant={component.is_active ? "success" : "default"}>
                   {component.is_active ? "Active" : "Inactive"}
-                </span>
+                </Badge>
               </td>
               {canManage ? (
-                <td className="px-3 py-2.5">
-                  <div className="flex gap-1">
+                <td className={ledgerTable.td}>
+                  <div className="flex justify-end gap-1.5">
                     <button
                       type="button"
                       onClick={() => onEdit(component)}
-                      className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800"
+                      className={cn(rowButton, "w-9 justify-center px-0")}
                       aria-label={`Edit ${component.name}`}
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete(component)}
-                      className="rounded-md p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+                      className={cn(
+                        rowButton,
+                        "w-9 justify-center border-[var(--accent-coral)]/30 bg-[var(--accent-coral-soft)] px-0 text-[var(--danger)] hover:bg-[var(--accent-coral)]/20",
+                      )}
                       aria-label={`Delete ${component.name}`}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 </td>
@@ -294,32 +299,35 @@ export function PayrollComponentsPanel() {
 
   if (loading) {
     return (
-      <Card>
+      <Panel title="Custom payroll components">
         <Spinner label="Loading payroll components…" />
-      </Card>
+      </Panel>
     );
   }
 
   return (
-    <Card>
-      <CardHeader
-        title="Custom payroll components"
-        description="Define deductions and increments applied automatically during payroll runs."
-      />
+    <Panel
+      title="Custom payroll components"
+      description="Define deductions and increments applied automatically during payroll runs."
+      flush
+    >
+      {(error && !modalOpen) || success ? (
+        <div className="space-y-3 px-5 pb-4">
+          {error && !modalOpen ? <Alert variant="error">{error}</Alert> : null}
+          {success ? <Alert variant="success">{success}</Alert> : null}
+        </div>
+      ) : null}
 
-      {error && !modalOpen ? <Alert variant="error">{error}</Alert> : null}
-      {success ? <Alert variant="success">{success}</Alert> : null}
-
-      <div className="space-y-8">
-        <section>
-          <div className="mb-3 flex items-center justify-between gap-3">
+      <div>
+        <section aria-labelledby="payroll-components-deduction" className="border-t border-[var(--border)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
             <div className="flex items-center gap-2">
-              <MinusCircle className="h-4 w-4 text-red-500" />
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Deductions</h3>
+              <MinusCircle className="h-4 w-4 text-[var(--accent-coral)]" aria-hidden="true" />
+              <h3 id="payroll-components-deduction" className="text-sm font-semibold text-[var(--foreground)]">Deductions</h3>
             </div>
             <Button
               variant="secondary"
-              size="sm"
+              size="lg"
               disabled={!financialUnlocked}
               onClick={() => openCreate("deduction")}
             >
@@ -337,15 +345,15 @@ export function PayrollComponentsPanel() {
           />
         </section>
 
-        <section>
-          <div className="mb-3 flex items-center justify-between gap-3">
+        <section aria-labelledby="payroll-components-increment" className="border-t border-[var(--border)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Increments</h3>
+              <TrendingUp className="h-4 w-4 text-[var(--accent-emerald)]" aria-hidden="true" />
+              <h3 id="payroll-components-increment" className="text-sm font-semibold text-[var(--foreground)]">Increments</h3>
             </div>
             <Button
               variant="secondary"
-              size="sm"
+              size="lg"
               disabled={!financialUnlocked}
               onClick={() => openCreate("increment")}
             >
@@ -420,12 +428,12 @@ export function PayrollComponentsPanel() {
                 onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
               />
             </FormField>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex min-h-11 items-center gap-3 text-sm text-[var(--foreground)]">
               <input
                 type="checkbox"
                 checked={form.is_active}
                 onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
-                className="h-4 w-4 rounded"
+                className="h-5 w-5 rounded accent-[var(--primary)]"
               />
               Active
             </label>
@@ -479,17 +487,17 @@ export function PayrollComponentsPanel() {
                 ) : null}
               </>
             ) : null}
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" disabled={saving}>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Button type="submit" size="lg" disabled={saving}>
                 {saving ? "Saving…" : editing ? "Save changes" : "Create component"}
               </Button>
-              <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
+              <Button type="button" variant="secondary" size="lg" onClick={() => setModalOpen(false)}>
                 Cancel
               </Button>
             </div>
           </form>
         </Modal>
       ) : null}
-    </Card>
+    </Panel>
   );
 }

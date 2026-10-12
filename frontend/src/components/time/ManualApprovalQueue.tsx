@@ -1,6 +1,15 @@
 "use client";
 
 import {
+  ApproveRejectButtons,
+  PanelEmpty,
+  PanelMessage,
+  QueueSkeleton,
+  RequestItem,
+  RequestList,
+  RequestPanel,
+} from "@/components/leave/approvals";
+import {
   ApiError,
   approveManualTimeEntry,
   fetchPendingManualEntries,
@@ -61,65 +70,48 @@ export function ManualApprovalQueue() {
   }
 
   if (loading) {
-    return (
-      <div className="h-32 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />
-    );
+    return <QueueSkeleton />;
   }
 
   return (
-    <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-        My Approval Queue
-      </h2>
-      {error ? (
-        <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>
-      ) : null}
+    <RequestPanel
+      title="My approval queue"
+      description="Manual time entries waiting for review"
+      count={entries.length}
+    >
+      <PanelMessage error={error} />
       {entries.length === 0 ? (
-        <p className="text-sm text-zinc-500">No pending manual time entries.</p>
+        <PanelEmpty title="All caught up" description="No pending manual time entries." />
       ) : (
-        <ul className="space-y-3">
-          {entries.map((entry) => (
-            <li
-              key={entry.id}
-              className="rounded-lg border border-zinc-100 px-3 py-3 dark:border-zinc-800"
-            >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {entry.user_name ?? "Employee"}
-                  </p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <RequestList>
+          {entries.map((entry) => {
+            const who = entry.user_name ?? "Employee";
+            return (
+              <RequestItem
+                key={entry.id}
+                kind="time"
+                who={who}
+                what={
+                  <>
                     {new Date(entry.start_time).toLocaleDateString()} ·{" "}
-                    {formatDuration(entry.duration ?? 0)} ·{" "}
+                    <span className="num">{formatDuration(entry.duration ?? 0)}</span> ·{" "}
                     {entry.project_name ?? "General time"}
-                  </p>
-                  {entry.description ? (
-                    <p className="mt-1 text-xs text-zinc-500">{entry.description}</p>
-                  ) : null}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
+                  </>
+                }
+                note={entry.description || undefined}
+                actions={
+                  <ApproveRejectButtons
+                    subject={`${who}'s manual time`}
                     disabled={actingId === entry.id}
-                    onClick={() => handleApprove(entry.id)}
-                    className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    type="button"
-                    disabled={actingId === entry.id}
-                    onClick={() => handleReject(entry.id)}
-                    className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-zinc-700"
-                  >
-                    Reject
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+                    onApprove={() => void handleApprove(entry.id)}
+                    onReject={() => void handleReject(entry.id)}
+                  />
+                }
+              />
+            );
+          })}
+        </RequestList>
       )}
-    </section>
+    </RequestPanel>
   );
 }

@@ -6,7 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState, type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
 
 const baseClass =
-  "w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3.5 py-2.5 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
+  "min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3.5 py-2.5 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(baseClass, className)} {...props} />;
@@ -71,7 +71,7 @@ export function Label({
   required?: boolean;
 }) {
   return (
-    <label htmlFor={htmlFor} className="text-label mb-2 block">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-medium text-[var(--foreground)]">
       {children}
       {required ? <span className="ml-0.5 text-[var(--accent-coral)]">*</span> : null}
     </label>

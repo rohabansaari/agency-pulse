@@ -1,15 +1,21 @@
 "use client";
 
-import { StatCard } from "@/components/dashboard/StatCard";
+import { Avatar } from "@/components/ledger/Avatar";
+import { Metric } from "@/components/ledger/Metric";
+import { TeamList, TeamStat } from "@/components/teams/TeamList";
+import { Alert, EmptyState, Spinner } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiError, fetchWorkTeams, formatApiErrors } from "@/lib/api";
 import { formatDuration } from "@/lib/time";
 import type { WorkTeam } from "@/lib/types";
+import { Clock, FolderKanban, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export function MyTeamsView() {
   const [teams, setTeams] = useState<WorkTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setError("");
@@ -31,69 +37,97 @@ export function MyTeamsView() {
   }, [load]);
 
   if (loading) {
-    return <div className="h-64 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />;
+    return <Spinner label="Loading your teams…" />;
   }
 
+  const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? teams[0] ?? null;
+  const totalMembers = teams.reduce((sum, t) => sum + (t.members?.length ?? t.members_count ?? 0), 0);
+  const totalTodaySeconds = teams.reduce((sum, t) => sum + (t.team_hours_today_seconds ?? 0), 0);
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          My teams
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Teams you manage — view members and time summaries
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader eyebrow="People" title="My teams" description="Teams you manage — view members and time summaries" />
 
-      {error ? (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-      ) : null}
+      {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <StatCard label="Teams managed" value={String(teams.length)} accent="blue" />
+      <section aria-label="At a glance" className="grid gap-4 sm:grid-cols-3">
+        <Metric label="Teams managed" icon={<Users className="h-4 w-4" />} value={teams.length} />
+        <Metric label="People" icon={<Users className="h-4 w-4" />} value={totalMembers} detail="Across your teams" />
+        <Metric
+          label="Hours today"
+          icon={<Clock className="h-4 w-4" />}
+          value={<span className="num">{formatDuration(totalTodaySeconds)}</span>}
+          detail="All teams combined"
+        />
+      </section>
 
       {teams.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-200 py-16 text-center dark:border-zinc-800">
-          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">No teams assigned</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            An admin will assign you as manager to a team.
-          </p>
-        </div>
+        <EmptyState
+          icon={Users}
+          title="No teams assigned"
+          description="An admin will assign you as manager to a team."
+        />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {teams.map((team) => (
-            <div
-              key={team.id}
-              className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+        <div className="flex flex-wrap items-start gap-6">
+          <section aria-label="Team list" className="min-w-0 flex-[1_1_300px] lg:max-w-[380px]">
+            <TeamList
+              teams={teams}
+              selectedId={selectedTeam?.id ?? null}
+              onSelect={setSelectedTeamId}
+              managerNameOf={(team) => team.manager_name ?? "You"}
+            />
+          </section>
+
+          {selectedTeam ? (
+            <section
+              aria-labelledby="my-team-heading"
+              className="flex min-w-0 flex-[999_1_520px] flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
             >
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{team.name}</h2>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
-                  <p className="text-zinc-500">Hours today</p>
-                  <p className="font-mono font-semibold">
-                    {formatDuration(team.team_hours_today_seconds ?? 0)}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
-                  <p className="text-zinc-500">Active projects</p>
-                  <p className="font-semibold">{team.active_projects_count ?? 0}</p>
-                </div>
+              <div>
+                <h2 id="my-team-heading" className="text-xl font-semibold text-[var(--foreground)]">
+                  {selectedTeam.name}
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  <span className="tnum">{(selectedTeam.members ?? []).length}</span>{" "}
+                  {(selectedTeam.members ?? []).length === 1 ? "employee" : "employees"}
+                </p>
               </div>
-              <ul className="mt-4 space-y-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-                {(team.members ?? []).length === 0 ? (
-                  <li className="text-xs text-zinc-500">No employees on this team.</li>
-                ) : (
-                  team.members!.map((member) => (
-                    <li key={member.id} className="flex justify-between text-sm">
-                      <span className="font-medium text-zinc-900 dark:text-zinc-50">
-                        {member.name}
-                      </span>
-                      <span className="text-xs text-zinc-500">{member.email}</span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-          ))}
+
+              <div className="grid grid-cols-2 gap-3">
+                <TeamStat label="Hours today" value={formatDuration(selectedTeam.team_hours_today_seconds ?? 0)} mono />
+                <TeamStat
+                  label="Active projects"
+                  value={
+                    <span className="inline-flex items-center gap-2">
+                      <FolderKanban className="h-4 w-4 text-[var(--muted)]" aria-hidden="true" />
+                      {selectedTeam.active_projects_count ?? 0}
+                    </span>
+                  }
+                />
+              </div>
+
+              <div>
+                <h3 className="text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Members</h3>
+                <ul className="mt-2 divide-y divide-[var(--border-subtle)] border-t border-[var(--border-subtle)]">
+                  {(selectedTeam.members ?? []).length === 0 ? (
+                    <li className="py-6 text-sm text-[var(--muted)]">No employees on this team.</li>
+                  ) : (
+                    selectedTeam.members!.map((member) => (
+                      <li key={member.id} className="flex items-center gap-3 py-3">
+                        <Avatar name={member.name} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-[var(--foreground)]">
+                            {member.name}
+                          </span>
+                          <span className="block truncate text-[13px] text-[var(--muted)]">{member.email}</span>
+                        </span>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            </section>
+          ) : null}
         </div>
       )}
     </div>

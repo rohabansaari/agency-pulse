@@ -9,8 +9,9 @@ import {
 } from "@/lib/api";
 import { usePayrollVault } from "@/components/payroll/PayrollVaultProvider";
 import { Alert } from "@/components/ui/EmptyState";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader } from "@/components/ui/Card";
+import { Panel } from "@/components/ledger/Panel";
 import { FormField, Input, Select } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/EmptyState";
 import type { OrganizationPayrollSettings } from "@/lib/types";
@@ -96,27 +97,34 @@ export function PayrollSettingsPanel() {
 
   if (loading) {
     return (
-      <Card>
+      <Panel title="Payroll configuration">
         <Spinner label="Loading payroll settings…" />
-      </Card>
+      </Panel>
     );
   }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader
-          title="Payroll configuration"
-          description="Working hours, statutory deductions, and overtime rules for your organization."
-        />
-        {error ? <Alert variant="error">{error}</Alert> : null}
-        {success ? <Alert variant="success">{success}</Alert> : null}
-        <form onSubmit={handleSubmit} className="mt-4 space-y-6">
+      <Panel
+        title="Payroll configuration"
+        description="Working hours, statutory deductions, and overtime rules for your organization."
+        action={
+          financialUnlocked ? null : (
+            <Badge variant="warning" className="normal-case">Read-only · vault locked</Badge>
+          )
+        }
+      >
+        <div className="space-y-3">
+          {error ? <Alert variant="error">{error}</Alert> : null}
+          {success ? <Alert variant="success">{success}</Alert> : null}
+        </div>
+        <form onSubmit={handleSubmit} className="mt-2 space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <FormField label="Working days / month" htmlFor="working-days" required>
               <Input
                 id="working-days"
                 type="number"
+                className="tnum"
                 min={1}
                 max={31}
                 value={workingDays}
@@ -128,6 +136,7 @@ export function PayrollSettingsPanel() {
               <Input
                 id="working-hours"
                 type="number"
+                className="tnum"
                 min={1}
                 max={24}
                 value={workingHours}
@@ -136,16 +145,17 @@ export function PayrollSettingsPanel() {
               />
             </FormField>
             <FormField label="Expected monthly hours" hint="Auto-calculated from days × hours">
-              <Input value={String(expectedHours)} readOnly disabled className="bg-zinc-50 dark:bg-zinc-900/50" />
+              <Input value={String(expectedHours)} readOnly disabled className="tnum bg-[var(--accent-sand)] text-[var(--muted)]" />
             </FormField>
           </div>
 
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Statutory deductions (%)</h3>
+            <h3 className="mb-3 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">Statutory deductions (%)</h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <FormField label="Income tax">
                 <Input
                   type="number"
+                  className="tnum"
                   min={0}
                   max={100}
                   step="0.01"
@@ -157,6 +167,7 @@ export function PayrollSettingsPanel() {
               <FormField label="EOBI">
                 <Input
                   type="number"
+                  className="tnum"
                   min={0}
                   max={100}
                   step="0.01"
@@ -168,6 +179,7 @@ export function PayrollSettingsPanel() {
               <FormField label="Social security">
                 <Input
                   type="number"
+                  className="tnum"
                   min={0}
                   max={100}
                   step="0.01"
@@ -179,6 +191,7 @@ export function PayrollSettingsPanel() {
               <FormField label="Custom deduction">
                 <Input
                   type="number"
+                  className="tnum"
                   min={0}
                   max={100}
                   step="0.01"
@@ -190,22 +203,23 @@ export function PayrollSettingsPanel() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-            <label className="flex cursor-pointer items-center gap-3">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--accent-sand)]/40 p-4">
+            <label className="flex min-h-11 cursor-pointer items-center gap-3">
               <input
                 type="checkbox"
                 checked={overtimeEnabled}
                 onChange={(e) => setOvertimeEnabled(e.target.checked)}
                 disabled={!financialUnlocked}
-                className="h-4 w-4 rounded border-zinc-300"
+                className="h-5 w-5 rounded border-[var(--border)] accent-[var(--primary)]"
               />
-              <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Enable overtime pay</span>
+              <span className="text-sm font-medium text-[var(--foreground)]">Enable overtime pay</span>
             </label>
             {overtimeEnabled ? (
               <div className="mt-3 max-w-xs">
                 <FormField label="Overtime rate (%)" hint="125 = 1.25× base rate">
                   <Input
                     type="number"
+                    className="tnum"
                     min={100}
                     max={500}
                     value={overtimeRate}
@@ -217,11 +231,11 @@ export function PayrollSettingsPanel() {
             ) : null}
           </div>
 
-          <Button type="submit" disabled={saving || !financialUnlocked}>
+          <Button type="submit" size="lg" disabled={saving || !financialUnlocked}>
             {saving ? "Saving…" : "Save settings"}
           </Button>
         </form>
-      </Card>
+      </Panel>
 
       <PayrollComponentsPanel />
     </div>
