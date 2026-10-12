@@ -121,7 +121,7 @@ export function OvertimeRequestForm({
   }
 
   if (loading) {
-    return <div className="ui-card h-28 animate-pulse bg-zinc-200/60 dark:bg-zinc-800/60" />;
+    return <div className="ui-card h-28 animate-pulse bg-[var(--accent-sand)]" />;
   }
 
   const blockedReason =
@@ -136,12 +136,12 @@ export function OvertimeRequestForm({
 
     return (
       <section className="ui-card p-5">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Overtime request</h2>
-        <p className={`mt-2 text-sm ${error && !blockedReason ? "text-red-600 dark:text-red-400" : "text-zinc-500"}`}>
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">Overtime request</h2>
+        <p className={`mt-2 text-sm ${error && !blockedReason ? "text-[var(--danger)]" : "text-[var(--muted)]"}`}>
           {message}
         </p>
         {!blockedReason && !error ? (
-          <p className="mt-2 text-xs text-zinc-400">
+          <p className="mt-2 text-xs text-[var(--muted)]">
             Employees need overtime enabled, team membership with a manager, and at least one assigned project.
           </p>
         ) : null}
@@ -153,18 +153,18 @@ export function OvertimeRequestForm({
     <section className="ui-card p-5">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Request overtime</h2>
-          <p className="mt-0.5 text-sm text-zinc-500">
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Request overtime</h2>
+          <p className="mt-0.5 text-sm text-[var(--muted)]">
             {role === "manager" && forSelf
               ? "Submitted to admin for approval — never auto-approved."
               : "Submitted to your manager for approval"}
           </p>
           {role === "employee" && context?.manager?.name ? (
-            <p className="mt-1 text-xs text-zinc-400">Approver: {context.manager.name}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Approver: {context.manager.name}</p>
           ) : null}
         </div>
         {role === "manager" ? (
-          <label className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+          <label className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--muted)]">
             <input
               type="checkbox"
               checked={forSelf}
@@ -175,8 +175,8 @@ export function OvertimeRequestForm({
         ) : null}
       </div>
 
-      {error ? <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">{error}</p> : null}
-      {success ? <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">{success}</p> : null}
+      {error ? <p className="mb-3 rounded-lg bg-[var(--accent-coral-soft)] px-3 py-2 text-sm text-[var(--danger)]">{error}</p> : null}
+      {success ? <p className="mb-3 rounded-lg bg-[var(--accent-emerald-soft)] px-3 py-2 text-sm text-[var(--accent-emerald)]">{success}</p> : null}
 
       <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
         <DatePicker
@@ -187,7 +187,7 @@ export function OvertimeRequestForm({
           required
         />
         <label className="block text-sm">
-          <span className="font-medium text-zinc-600 dark:text-zinc-400">Duration (hours)</span>
+          <span className="mb-1.5 block font-medium text-[var(--foreground)]">Duration (hours)</span>
           <input
             type="number"
             required
@@ -195,7 +195,7 @@ export function OvertimeRequestForm({
             step={0.25}
             value={hours}
             onChange={(event) => setHours(event.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-muted)]"
           />
           <div className="mt-2 flex flex-wrap gap-1.5">
             {DURATION_PRESETS.map((preset) => (
@@ -205,8 +205,8 @@ export function OvertimeRequestForm({
                 onClick={() => setHours(String(preset.hours))}
                 className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                   Number.parseFloat(hours) === preset.hours
-                    ? "bg-blue-600 text-white"
-                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                    : "bg-[var(--accent-sand)] text-[var(--muted)]"
                 }`}
               >
                 {preset.label}
@@ -215,29 +215,27 @@ export function OvertimeRequestForm({
           </div>
         </label>
         <label className="block text-sm sm:col-span-2">
-          <span className="font-medium text-zinc-600 dark:text-zinc-400">Project</span>
+          <span className="mb-1.5 block font-medium text-[var(--foreground)]">Project</span>
           <Select
             required
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           >
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
-                {project.name}
-                {project.client_name ? ` — ${project.client_name}` : ""}
+                {project.client_name ? `${project.name} — ${project.client_name}` : project.name}
               </option>
             ))}
           </Select>
         </label>
         <label className="block text-sm sm:col-span-2">
-          <span className="font-medium text-zinc-600 dark:text-zinc-400">Reason</span>
+          <span className="mb-1.5 block font-medium text-[var(--foreground)]">Reason</span>
           <textarea
             required
             rows={3}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-zinc-200 px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-muted)]"
             placeholder="Describe the work completed during overtime"
           />
         </label>
@@ -245,7 +243,7 @@ export function OvertimeRequestForm({
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="min-h-11 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)] disabled:opacity-50"
           >
             {submitting ? "Submitting…" : "Submit overtime request"}
           </button>

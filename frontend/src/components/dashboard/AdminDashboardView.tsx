@@ -2,6 +2,8 @@
 
 import { useAppSession } from "@/components/dashboard/AppShell";
 import { Metric } from "@/components/ledger/Metric";
+import { initialsOf } from "@/components/ledger/Avatar";
+import { greeting, hoursLabel, percentLabel } from "@/components/ledger/format";
 import { Panel } from "@/components/ledger/Panel";
 import { ManualApprovalQueue } from "@/components/time/ManualApprovalQueue";
 import { OvertimeApprovalQueue } from "@/components/time/OvertimeApprovalQueue";
@@ -10,33 +12,6 @@ import type { AdminDashboard, EmployeeReportBreakdown } from "@/lib/types";
 import { Activity, ArrowRight, Clock, Gauge, Hourglass, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, type ReactNode } from "react";
-
-/** "112h 40m" — readable totals for the dashboard (timers keep HH:MM:SS). */
-function hoursLabel(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return `${hours}h ${String(minutes).padStart(2, "0")}m`;
-}
-
-function percentLabel(value: number): string {
-  return `${Math.round(value)}%`;
-}
-
-function greeting(date: Date): string {
-  const hour = date.getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
 
 export function AdminDashboardView({ data, filter }: { data: AdminDashboard; filter?: ReactNode }) {
   const { user, organizationName } = useAppSession();
@@ -251,7 +226,7 @@ function RosterRow({ row }: { row: EmployeeReportBreakdown }) {
       <td className="px-5 py-3">
         <div className="flex items-center gap-3">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--primary-muted)] text-xs font-semibold text-[var(--primary)]">
-            {initials(row.name)}
+            {initialsOf(row.name)}
           </span>
           <span className="min-w-0">
             <span className="block truncate font-medium text-[var(--foreground)]">{row.name}</span>

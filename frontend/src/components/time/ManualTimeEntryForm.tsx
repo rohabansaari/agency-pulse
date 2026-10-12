@@ -413,7 +413,7 @@ export function ManualTimeEntryForm({
 
       <div
 
-        className={`animate-pulse rounded-lg bg-zinc-200/60 dark:bg-zinc-800/60 ${
+        className={`animate-pulse rounded-xl bg-[var(--accent-sand)] ${
 
           compact ? "h-32" : "h-48"
 
@@ -431,9 +431,9 @@ export function ManualTimeEntryForm({
 
     return (
 
-      <div className="rounded-lg border border-dashed border-amber-200 bg-amber-50/80 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+      <div className="rounded-lg border border-dashed border-[var(--accent-copper)]/30 bg-[var(--accent-copper-soft)] px-4 py-3">
 
-        <p className="text-sm text-amber-800 dark:text-amber-200">
+        <p className="text-sm text-[var(--accent-copper)]">
 
           {context?.reason ??
 
@@ -453,9 +453,9 @@ export function ManualTimeEntryForm({
 
     return (
 
-      <div className="rounded-lg border border-dashed border-amber-200 bg-amber-50/80 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+      <div className="rounded-lg border border-dashed border-[var(--accent-copper)]/30 bg-[var(--accent-copper-soft)] px-4 py-3">
 
-        <p className="text-sm text-amber-800 dark:text-amber-200">
+        <p className="text-sm text-[var(--accent-copper)]">
 
           {context?.reason_self ??
 
@@ -475,9 +475,9 @@ export function ManualTimeEntryForm({
 
     return (
 
-      <div className="rounded-lg border border-dashed border-amber-200 bg-amber-50/80 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+      <div className="rounded-lg border border-dashed border-[var(--accent-copper)]/30 bg-[var(--accent-copper-soft)] px-4 py-3">
 
-        <p className="text-sm text-amber-800 dark:text-amber-200">
+        <p className="text-sm text-[var(--accent-copper)]">
 
           {context?.reason ??
 
@@ -503,13 +503,13 @@ export function ManualTimeEntryForm({
 
       {error ? (
 
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="text-sm text-[var(--danger)]">{error}</p>
 
       ) : null}
 
       {success ? (
 
-        <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+        <p className="text-sm text-[var(--accent-emerald)]">{success}</p>
 
       ) : null}
 
@@ -519,7 +519,7 @@ export function ManualTimeEntryForm({
 
         <label className="block text-sm">
 
-          <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
+          <span className="mb-1.5 block font-medium text-[var(--foreground)]">
 
             Employee *
 
@@ -533,7 +533,6 @@ export function ManualTimeEntryForm({
 
             onChange={(event) => handleUserChange(event.target.value)}
 
-            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
 
           >
 
@@ -559,7 +558,7 @@ export function ManualTimeEntryForm({
 
         <label className="block text-sm">
 
-          <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
+          <span className="mb-1.5 block font-medium text-[var(--foreground)]">
 
             Project *
 
@@ -575,7 +574,7 @@ export function ManualTimeEntryForm({
 
             disabled={projectOptions.length === 0}
 
-            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900"
+            className="disabled:opacity-60 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-muted)]"
 
           >
 
@@ -599,7 +598,7 @@ export function ManualTimeEntryForm({
 
           <label className="block text-sm">
 
-            <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
+            <span className="mb-1.5 block font-medium text-[var(--foreground)]">
 
               Manager *
 
@@ -613,7 +612,6 @@ export function ManualTimeEntryForm({
 
               onChange={(event) => setManagerId(event.target.value)}
 
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
 
             >
 
@@ -647,7 +645,7 @@ export function ManualTimeEntryForm({
 
         <label className="block text-sm">
 
-          <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
+          <span className="mb-1.5 block font-medium text-[var(--foreground)]">
 
             Hours *
 
@@ -669,7 +667,7 @@ export function ManualTimeEntryForm({
 
             onChange={(event) => setHours(event.target.value)}
 
-            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-muted)]"
 
           />
 
@@ -681,7 +679,7 @@ export function ManualTimeEntryForm({
 
       <label className="block text-sm">
 
-        <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
+        <span className="mb-1.5 block font-medium text-[var(--foreground)]">
 
           Description *
 
@@ -699,7 +697,7 @@ export function ManualTimeEntryForm({
 
           placeholder="What work was performed?"
 
-          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-muted)]"
 
         />
 
@@ -713,7 +711,7 @@ export function ManualTimeEntryForm({
 
         disabled={submitting || projectOptions.length === 0}
 
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+        className="min-h-11 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)] disabled:opacity-60"
 
       >
 

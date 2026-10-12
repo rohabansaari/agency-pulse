@@ -2,16 +2,13 @@
 
 import { Dropdown } from "@/components/ui/Dropdown";
 import { Button } from "@/components/ui/Button";
-import { formatPKR } from "@/lib/currency";
 import { cn } from "@/lib/cn";
-import { motion } from "framer-motion";
 import { Camera, Pause, Play, Square } from "lucide-react";
 
 type TimerFocusPanelProps = {
   isRunning: boolean;
   isPaused?: boolean;
   displayTime: string;
-  liveSeconds: number;
   projectName: string;
   projectOptions: { value: string; label: string }[];
   selectedProjectId: string;
@@ -23,18 +20,15 @@ type TimerFocusPanelProps = {
   actionLoading: boolean;
   startBlocked?: boolean;
   projectsNotice?: string;
-  screenshotActive?: boolean;
-  hourlyRate?: number | null;
+  /** e.g. "Started 9:04 AM" / "Paused at 1:12 PM". */
+  caption?: string;
 };
 
-const RING_RADIUS = 88;
-const RING_CIRC = 2 * Math.PI * RING_RADIUS;
-
+/** Ledger live timer: large mono clock, project picker, start/pause/resume/stop. */
 export function TimerFocusPanel({
   isRunning,
   isPaused = false,
   displayTime,
-  liveSeconds,
   projectName,
   projectOptions,
   selectedProjectId,
@@ -46,182 +40,120 @@ export function TimerFocusPanel({
   actionLoading,
   startBlocked = false,
   projectsNotice,
-  screenshotActive = false,
-  hourlyRate,
+  caption,
 }: TimerFocusPanelProps) {
-  const sessionHours = liveSeconds / 3600;
-  const earnings =
-    hourlyRate && hourlyRate > 0 ? formatPKR(sessionHours * hourlyRate) : "—";
-  const ringProgress = isRunning ? ((liveSeconds % 3600) / 3600) * RING_CIRC : 0;
+  const idle = !isRunning && !isPaused;
 
   return (
-    <div className="ui-card-elevated mx-auto max-w-3xl p-6 sm:p-10">
-      <div className="grid gap-8 lg:grid-cols-[1fr_280px] lg:items-center">
-        <div className="flex flex-col items-center">
-          <div className="relative flex h-[220px] w-[220px] items-center justify-center">
-            <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 200 200">
-              <circle
-                cx="100"
-                cy="100"
-                r={RING_RADIUS}
-                fill="none"
-                stroke="var(--border)"
-                strokeWidth="8"
-              />
-              <motion.circle
-                cx="100"
-                cy="100"
-                r={RING_RADIUS}
-                fill="none"
-                stroke={isRunning ? "var(--accent-emerald)" : "var(--muted-foreground)"}
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={RING_CIRC}
-                animate={{
-                  strokeDashoffset: isRunning ? RING_CIRC - ringProgress : RING_CIRC * 0.75,
-                  opacity: isRunning ? 1 : 0.35,
-                }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-              />
-            </svg>
-            <div className="relative text-center">
-              <p
-                className={cn(
-                  "text-numeric text-4xl font-bold tracking-tight sm:text-5xl",
-                  isRunning || isPaused ? "text-[var(--foreground)]" : "text-[var(--muted)]",
-                )}
-              >
-                {displayTime}
-              </p>
-              <p className="mt-1 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
-                {isRunning ? "Session active" : isPaused ? "Paused" : "Ready"}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            {isRunning ? (
-              <>
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={onPause}
-                  disabled={actionLoading}
-                  className="min-w-[140px]"
-                >
-                  <Pause className="h-4 w-4" />
-                  Pause
-                </Button>
-                <Button
-                  variant="danger"
-                  size="lg"
-                  onClick={onStop}
-                  disabled={actionLoading}
-                  className="min-w-[140px]"
-                >
-                  <Square className="h-4 w-4" />
-                  Stop
-                </Button>
-              </>
-            ) : isPaused ? (
-              <>
-                <Button
-                  size="lg"
-                  onClick={onResume}
-                  disabled={actionLoading || startBlocked}
-                  className="min-w-[140px] bg-[var(--accent-emerald)] hover:opacity-90"
-                >
-                  <Play className="h-4 w-4" />
-                  Resume
-                </Button>
-                <Button
-                  variant="danger"
-                  size="lg"
-                  onClick={onStop}
-                  disabled={actionLoading}
-                  className="min-w-[140px]"
-                >
-                  <Square className="h-4 w-4" />
-                  Stop
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="lg"
-                onClick={onStart}
-                disabled={actionLoading || startBlocked}
-                className="min-w-[160px] bg-[var(--accent-emerald)] hover:opacity-90"
-              >
-                <Play className="h-4 w-4" />
-                {actionLoading ? "Starting…" : "Start"}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-            <p className="text-label">Project context</p>
-            {!isRunning && !isPaused ? (
-              <div className="mt-2">
-                <Dropdown
-                  value={selectedProjectId}
-                  onChange={onProjectChange}
-                  options={projectOptions}
-                  placeholder="General time"
-                  disabled={actionLoading}
-                  size="sm"
-                />
-                {projectsNotice ? (
-                  <p className="mt-2 text-xs text-[var(--warning)]">{projectsNotice}</p>
-                ) : null}
-              </div>
-            ) : (
-              <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{projectName}</p>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-            <p className="text-label">Session earnings</p>
-            <p className="text-numeric mt-2 text-2xl font-bold text-[var(--foreground)]">
-              {earnings}
-            </p>
-            <p className="mt-1 text-xs text-[var(--muted)]">Live estimate from tracked time</p>
-          </div>
-
-          <div
-            className={cn(
-              "flex items-center gap-3 rounded-xl border p-4 transition-colors",
-              screenshotActive || isRunning
-                ? "border-[var(--accent-emerald)]/30 bg-[var(--accent-emerald-soft)]"
-                : "border-[var(--border)] bg-[var(--card)]",
-            )}
-          >
-            <span
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg",
-                isRunning
-                  ? "bg-[var(--accent-emerald)]/15 text-[var(--accent-emerald)]"
-                  : "bg-[var(--sidebar-hover)] text-[var(--muted)]",
-              )}
-            >
-              <Camera className="h-4 w-4" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-[var(--foreground)]">Screenshots</p>
-              <p className="text-xs text-[var(--muted)]">
-                {isRunning ? "Capturing every 5 minutes" : "Start timer to enable capture"}
-              </p>
-            </div>
-            {isRunning ? (
-              <span className="ml-auto flex items-center gap-1.5 text-xs font-medium text-[var(--accent-emerald)]">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent-emerald)]" />
-                Active
-              </span>
-            ) : null}
-          </div>
-        </div>
+    <section
+      aria-labelledby="live-timer-title"
+      className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-7"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="live-timer-title" className="text-lg font-semibold text-[var(--foreground)]">
+          Live timer
+        </h2>
+        <StatusPill state={isRunning ? "running" : isPaused ? "paused" : "idle"} />
       </div>
-    </div>
+
+      <p className="mt-5 text-[13px] text-[var(--muted)]">
+        {idle ? "Ready when you are" : `${projectName}${caption ? ` · ${caption}` : ""}`}
+      </p>
+      <p
+        className={cn(
+          "num mt-1 text-[clamp(3rem,10vw,5.5rem)] font-semibold leading-none tracking-[-0.03em]",
+          idle ? "text-[var(--muted)]" : "text-[var(--foreground)]",
+        )}
+        aria-live="off"
+      >
+        {displayTime}
+      </p>
+
+      {idle ? (
+        <div className="mt-6">
+          <label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">Project</label>
+          <Dropdown
+            value={selectedProjectId}
+            onChange={onProjectChange}
+            options={projectOptions}
+            placeholder="General time"
+            disabled={actionLoading}
+          />
+          {projectsNotice ? <p className="mt-2 text-xs text-[var(--accent-copper)]">{projectsNotice}</p> : null}
+        </div>
+      ) : null}
+
+      <div className="mt-6 flex flex-wrap gap-3">
+        {isRunning ? (
+          <>
+            <Button variant="secondary" size="lg" onClick={onPause} disabled={actionLoading} className="min-w-[140px]">
+              <Pause className="h-4 w-4" aria-hidden="true" />
+              Pause
+            </Button>
+            <Button variant="danger" size="lg" onClick={onStop} disabled={actionLoading} className="min-w-[140px]">
+              <Square className="h-4 w-4" aria-hidden="true" />
+              Stop
+            </Button>
+          </>
+        ) : isPaused ? (
+          <>
+            <Button size="lg" onClick={onResume} disabled={actionLoading || startBlocked} className="min-w-[140px]">
+              <Play className="h-4 w-4" aria-hidden="true" />
+              Resume
+            </Button>
+            <Button variant="danger" size="lg" onClick={onStop} disabled={actionLoading} className="min-w-[140px]">
+              <Square className="h-4 w-4" aria-hidden="true" />
+              Stop
+            </Button>
+          </>
+        ) : (
+          <Button size="lg" onClick={onStart} disabled={actionLoading || startBlocked} className="min-w-[180px]">
+            <Play className="h-4 w-4" aria-hidden="true" />
+            {actionLoading ? "Starting…" : startBlocked ? "Start — agent required" : "Start timer"}
+          </Button>
+        )}
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-5 text-[13px]">
+        <span
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full px-3 py-1.5",
+            isRunning
+              ? "bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]"
+              : "bg-[var(--accent-sand)] text-[var(--muted)]",
+          )}
+        >
+          <Camera className="h-3.5 w-3.5" aria-hidden="true" />
+          {isRunning
+            ? "Capturing screenshots every 5 minutes"
+            : isPaused
+              ? "Screenshots paused"
+              : "Screenshots every 5 minutes while tracking"}
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function StatusPill({ state }: { state: "running" | "paused" | "idle" }) {
+  if (state === "running") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-emerald-soft)] px-2.5 py-1 text-xs font-medium text-[var(--accent-emerald)]">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--accent-emerald)]" aria-hidden="true" />
+        Tracking
+      </span>
+    );
+  }
+  if (state === "paused") {
+    return (
+      <span className="inline-flex rounded-full bg-[var(--accent-copper-soft)] px-2.5 py-1 text-xs font-medium text-[var(--accent-copper)]">
+        Paused
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex rounded-full bg-[var(--accent-sand)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
+      Idle
+    </span>
   );
 }
