@@ -1,16 +1,12 @@
+import { PulseLogo } from "@/components/brand/PulseLogo";
 import Link from "next/link";
 import { ArrowRight, Clock, Shield, Users } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="min-h-dvh" style={{ background: "var(--gradient-surface)" }}>
+    <div className="min-h-dvh bg-[var(--background)]">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)] text-sm font-bold text-[var(--primary-foreground)] shadow-sm">
-            AP
-          </span>
-          <span className="text-heading text-lg">AgencyPulse</span>
-        </div>
+        <PulseLogo className="text-lg" markClassName="h-9 w-9" />
         <Link
           href="/login"
           className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:bg-[var(--primary-hover)]"
@@ -24,7 +20,7 @@ export default function Home() {
           <p className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card-elevated)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
             Premium HR for agencies
           </p>
-          <h1 className="text-display mx-auto mt-8 max-w-3xl text-5xl text-[var(--foreground)] sm:text-[3.5rem]">
+          <h1 className="mx-auto mt-8 max-w-3xl text-[40px] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--foreground)] sm:text-[3.5rem]">
             Run your workforce with clarity
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--muted)]">

@@ -63,28 +63,28 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={session}>
       <div className="theme-ledger app-layout min-h-screen">
-        <aside className="app-sidebar hidden border-r border-[var(--sidebar-border)] md:block">
+        <aside className="app-sidebar hidden border-r border-[var(--sidebar-border)] lg:block">
           <DashboardSidebar user={user} onLogout={handleLogout} loggingOut={loggingOut} />
         </aside>
 
         <div className="app-main-with-sidebar flex min-h-screen flex-col">
-          <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--card)]/90 px-4 py-3 backdrop-blur-md md:hidden">
+          <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--card)]/90 px-4 py-3 backdrop-blur-md lg:hidden">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(true)}
-                className="rounded-xl p-2 text-[var(--muted)] transition hover:bg-[var(--sidebar-hover)] md:hidden"
+                className="rounded-xl p-2 text-[var(--muted)] transition hover:bg-[var(--sidebar-hover)] lg:hidden"
                 aria-label="Open navigation"
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <PulseLogo className="text-sm md:hidden" markClassName="h-7 w-7" />
+              <PulseLogo className="text-sm lg:hidden" markClassName="h-7 w-7" />
             </div>
             <button
               type="button"
               onClick={handleLogout}
               disabled={loggingOut}
-              className="text-xs font-medium text-[var(--muted)] hover:text-[var(--foreground)] md:hidden"
+              className="text-xs font-medium text-[var(--muted)] hover:text-[var(--foreground)] lg:hidden"
             >
               {loggingOut ? "…" : "Logout"}
             </button>
@@ -106,13 +106,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             aria-label="Close navigation"
-            className="fixed inset-0 z-40 bg-[var(--foreground)]/20 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-40 bg-[var(--foreground)]/20 backdrop-blur-sm lg:hidden"
             onClick={() => setMobileNavOpen(false)}
           />
         ) : null}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-[var(--app-sidebar-width)] max-w-[85vw] border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] transition-[transform,visibility]  duration-300 ease-out md:hidden ${
+          className={`fixed inset-y-0 left-0 z-50 w-[var(--app-sidebar-width)] max-w-[85vw] border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] transition-[transform,visibility]  duration-300 ease-out lg:hidden ${
             mobileNavOpen ? "visible translate-x-0 shadow-2xl" : "invisible -translate-x-full pointer-events-none"
           }`}
           aria-hidden={!mobileNavOpen}
