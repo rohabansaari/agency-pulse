@@ -379,6 +379,40 @@ body {
   --shadow-md: 0 4px 20px rgb(14 20 32 / 0.08);
   --shadow-lg: 0 20px 48px rgb(14 20 32 / 0.14);
 
+  --gradient-surface: var(--background);
+
+  /* Dark sidebar */
+  --sidebar-bg: var(--night);
+  --sidebar-border: var(--night-border);
+
+  /*
+   * Screens still written with Tailwind's blue utilities (bg-blue-600 …)
+   * resolve to these variables, so the brand accent follows without
+   * touching each component.
+   */
+  --color-blue-50: #fbf2f9;
+  --color-blue-100: #f6e3f2;
+  --color-blue-200: #edc2e5;
+  --color-blue-300: #e19bd6;
+  --color-blue-400: #d06ec3;
+  --color-blue-500: #b8439f;
+  --color-blue-600: #9d2a8c;
+  --color-blue-700: #7d1f6f;
+  --color-blue-800: #64195a;
+  --color-blue-900: #4c1445;
+  --color-blue-950: #2e0b2a;
+  --color-violet-50: var(--color-blue-50);
+  --color-violet-100: var(--color-blue-100);
+  --color-violet-200: var(--color-blue-200);
+  --color-violet-300: var(--color-blue-300);
+  --color-violet-400: var(--color-blue-400);
+  --color-violet-500: var(--color-blue-500);
+  --color-violet-600: var(--color-blue-600);
+  --color-violet-700: var(--color-blue-700);
+  --color-violet-800: var(--color-blue-800);
+  --color-violet-900: var(--color-blue-900);
+  --color-violet-950: var(--color-blue-950);
+
   font-family: var(--font-geist), system-ui, sans-serif;
   color: var(--foreground);
   background: var(--background);
@@ -421,5 +455,10 @@ body {
 
 .theme-ledger .num {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sans figures that still line up: dashboard totals, percentages. */
+.theme-ledger .tnum {
   font-variant-numeric: tabular-nums;
 }

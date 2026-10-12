@@ -1,5 +1,6 @@
 "use client";
 
+import { PulseLogo } from "@/components/brand/PulseLogo";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DesktopAgentBanner } from "@/components/screenshots/DesktopAgentBanner";
 import { useAuthSession } from "@/hooks/useAuthSession";
@@ -35,7 +36,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="app-layout flex items-center justify-center">
+      <div className="theme-ledger app-layout flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="h-9 w-9 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
           <p className="text-sm text-[var(--muted)]">Loading workspace…</p>
@@ -46,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (error || !user) {
     return (
-      <div className="app-layout flex items-center justify-center px-4">
+      <div className="theme-ledger app-layout flex items-center justify-center px-4">
         <div className="ui-card-elevated max-w-sm p-8 text-center">
           <p className="text-sm text-[var(--danger)]">{error || "Something went wrong."}</p>
           <Link href="/login" className="mt-4 inline-block text-sm font-semibold text-[var(--primary)]">
@@ -61,13 +62,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={session}>
-      <div className="app-layout min-h-screen">
+      <div className="theme-ledger app-layout min-h-screen">
         <aside className="app-sidebar hidden border-r border-[var(--sidebar-border)] md:block">
           <DashboardSidebar user={user} onLogout={handleLogout} loggingOut={loggingOut} />
         </aside>
 
         <div className="app-main-with-sidebar flex min-h-screen flex-col">
-          <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--card)]/90 px-4 py-3 backdrop-blur-md md:px-6">
+          <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--card)]/90 px-4 py-3 backdrop-blur-md md:hidden">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -77,7 +78,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <span className="text-heading text-sm md:hidden">AgencyPulse</span>
+              <PulseLogo className="text-sm md:hidden" markClassName="h-7 w-7" />
             </div>
             <button
               type="button"
