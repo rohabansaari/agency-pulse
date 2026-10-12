@@ -48,10 +48,10 @@ export function CardHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h2 className="text-heading text-lg text-[var(--foreground)]">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-[var(--muted)]">{description}</p> : null}
+        <h2 className="text-base font-semibold text-[var(--foreground)]">{title}</h2>
+        {description ? <p className="mt-0.5 text-[13px] text-[var(--muted)]">{description}</p> : null}
       </div>
       {action}
     </div>

@@ -462,3 +462,13 @@ body {
 .theme-ledger .tnum {
   font-variant-numeric: tabular-nums;
 }
+
+.theme-ledger .ui-card,
+.theme-ledger .ui-card-elevated {
+  border-radius: 1rem;
+  box-shadow: none;
+}
+
+.theme-ledger .ui-card-elevated {
+  box-shadow: var(--shadow-sm);
+}
