@@ -15,16 +15,17 @@ import { ManualTimeEntries } from "@/components/time/ManualTimeEntries";
 import { ManualTimeEntryForm } from "@/components/time/ManualTimeEntryForm";
 import { OvertimeRequestForm } from "@/components/time/OvertimeRequestForm";
 import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
-import { Button } from "@/components/ui/Button";
+import { hoursLabel } from "@/components/ledger/format";
+import { Panel } from "@/components/ledger/Panel";
+import { Segmented, type SegmentedOption } from "@/components/ledger/Segmented";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { TimerFocusPanel } from "@/components/time/TimerFocusPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TIME_TRACKING_EXPORT_COLUMNS } from "@/lib/export-columns";
 import { wakeDesktopAgent } from "@/lib/desktop-agent";
-import { AGENT_DOWNLOAD_FILENAME, getAgentDownloadUrl } from "@/lib/desktop-agent-config";
 import { useDesktopAgentStatus } from "@/hooks/useDesktopAgentStatus";
 import type { Project, TimeEntry, User } from "@/lib/types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 const GENERAL_TIME_VALUE = "";
 
@@ -39,130 +40,79 @@ function projectLabel(project: Project): string {
   return `${project.name} — ${project.client_name}`;
 }
 
-function SummaryCard({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: "blue" | "green" | "zinc";
-}) {
-  const accentClass = {
-    blue: "border-blue-100 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/20",
-    green: "border-green-100 bg-green-50/50 dark:border-green-900/50 dark:bg-green-950/20",
-    zinc: "border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900",
-  }[accent ?? "zinc"];
-
-  return (
-    <div
-      className={`rounded-xl border p-5 shadow-sm transition-shadow hover:shadow-md ${accentClass}`}
-    >
-      <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
-        {label}
-      </p>
-      <p className="mt-2 font-mono text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums sm:text-3xl dark:text-zinc-50">
-        {value}
-      </p>
-      {sub ? (
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{sub}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function ActivityTimeline({
+function TodayPanel({
   entries,
   liveElapsed,
+  totalSeconds,
+  exportControl,
 }: {
   entries: TimeEntry[];
   liveElapsed: number;
+  totalSeconds: number;
+  exportControl: ReactNode;
 }) {
-  if (entries.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-white py-16 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6 text-zinc-400">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 7v5l3 3" />
-          </svg>
-        </div>
-        <p className="mt-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          No sessions yet today
-        </p>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Start a timer to begin tracking your time
-        </p>
-      </div>
-    );
-  }
+  const first = entries.at(-1);
+  const last = entries[0];
 
   return (
-    <div className="relative space-y-0">
-      <div className="absolute top-3 bottom-3 left-[19px] w-px bg-zinc-200 dark:bg-zinc-700" />
-      {entries.map((entry, index) => {
-        const isRunning = entry.status === "running";
-        const duration = isRunning
-          ? liveElapsed
-          : (entry.duration ?? 0);
-        const projectName = entry.project_name ?? "General time";
+    <Panel
+      title="Today"
+      description={new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+      action={exportControl}
+      flush
+    >
+      <div className="grid grid-cols-2 gap-3 px-5">
+        <div className="rounded-xl bg-[var(--accent-sand)] px-4 py-3">
+          <p className="text-[13px] text-[var(--muted)]">Total</p>
+          <p className="num mt-1 text-xl font-semibold text-[var(--foreground)]">{hoursLabel(totalSeconds)}</p>
+        </div>
+        <div className="rounded-xl bg-[var(--accent-sand)] px-4 py-3">
+          <p className="text-[13px] text-[var(--muted)]">Sessions</p>
+          <p className="num mt-1 text-xl font-semibold text-[var(--foreground)]">{entries.length}</p>
+        </div>
+      </div>
+      {first && last ? (
+        <p className="tnum px-5 pt-3 text-xs text-[var(--muted)]">
+          {formatTime(first.start_time)} → {last.end_time ? formatTime(last.end_time) : "now"}
+        </p>
+      ) : null}
 
-        return (
-          <div
-            key={entry.id}
-            className="animate-fade-in relative flex gap-4 pb-6"
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            <div
-              className={`relative z-10 mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-white dark:bg-zinc-900 ${
-                isRunning
-                  ? "border-green-500 animate-pulse-ring"
-                  : "border-zinc-200 dark:border-zinc-700"
-              }`}
-            >
-              {isRunning ? (
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-              ) : (
-                <span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-              )}
-            </div>
-
-            <div className="min-w-0 flex-1 rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {projectName}
+      {entries.length === 0 ? (
+        <div className="px-5 pb-6 pt-4">
+          <p className="rounded-xl border border-dashed border-[var(--border)] px-4 py-8 text-center text-sm text-[var(--muted)]">
+            No sessions yet today. Start the timer to begin tracking.
+          </p>
+        </div>
+      ) : (
+        <ul className="mt-4 divide-y divide-[var(--border-subtle)] border-t border-[var(--border-subtle)]">
+          {entries.map((entry) => {
+            const isRunning = entry.status === "running";
+            const duration = isRunning ? liveElapsed : (entry.duration ?? 0);
+            return (
+              <li key={entry.id} className="flex items-start justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--foreground)]">
+                    {entry.project_name ?? "General time"}
                   </p>
-                  <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                    {formatTime(entry.start_time)}
-                    {entry.end_time
-                      ? ` → ${formatTime(entry.end_time)}`
-                      : " → now"}
+                  <p className="tnum mt-0.5 text-xs text-[var(--muted)]">
+                    {formatTime(entry.start_time)} → {entry.end_time ? formatTime(entry.end_time) : "now"}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 sm:flex-col sm:items-end">
-                  <span className="font-mono text-lg font-semibold text-zinc-900 tabular-nums dark:text-zinc-50">
-                    {formatDuration(duration)}
-                  </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="num text-sm font-semibold text-[var(--foreground)]">{formatDuration(duration)}</span>
                   {isRunning ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950/50 dark:text-green-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--accent-emerald)]">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--accent-emerald)]" aria-hidden="true" />
                       Live
                     </span>
-                  ) : (
-                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                      Completed
-                    </span>
-                  )}
+                  ) : null}
                 </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Panel>
   );
 }
 
@@ -189,7 +139,6 @@ export function TimeTracker({ user }: { user?: User }) {
   const requiresAgent = isEmployee || isManager;
   const {
     connected: agentConnected,
-    checking: agentChecking,
     refresh: refreshAgentStatus,
     timerRequiresAgent,
   } = useDesktopAgentStatus(requiresAgent);
@@ -424,27 +373,21 @@ export function TimeTracker({ user }: { user?: User }) {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-28 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60"
-            />
-          ))}
+      <div className="flex flex-col gap-6" aria-busy="true">
+        <div className="h-16 w-64 animate-pulse rounded-xl bg-[var(--accent-sand)]" />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="h-80 animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
+          <div className="h-80 animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
         </div>
-        <div className="h-72 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />
       </div>
     );
   }
 
   if (isAdmin) {
     return (
-      <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Time tracking unavailable
-        </h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 text-center">
+        <h1 className="text-lg font-semibold text-[var(--foreground)]">Time tracking unavailable</h1>
+        <p className="mt-2 text-sm text-[var(--muted)]">
           Administrators manage the organization but do not track time. Use employee or manager
           accounts for timers, manual entries, and overtime requests.
         </p>
@@ -458,49 +401,37 @@ export function TimeTracker({ user }: { user?: User }) {
       ? sessionElapsed
       : 0;
   const displayTime = formatDuration(sessionSeconds);
+  const todaySeconds = totalDuration + (activeTimer ? liveElapsed : 0);
+  const timerCaption = activeTimer
+    ? `Started ${formatTime(activeTimer.start_time)}`
+    : pausedTimer?.end_time
+      ? `Paused at ${formatTime(pausedTimer.end_time)}`
+      : undefined;
+
+  const tabOptions: SegmentedOption<typeof tab>[] = [
+    { value: "timer", label: "Live timer" },
+    ...(isEmployee ? [{ value: "manual" as const, label: "Manual time" }] : []),
+    { value: "overtime", label: "Overtime" },
+  ];
+  const showTimer = tab === "timer";
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-6">
       <PageHeader
-        title="Time Tracking"
-        description={
-          isEmployee || isManager
-            ? "Start your timer — screenshots capture automatically every 5 minutes."
-            : "Track your work hours across projects"
+        eyebrow="Time"
+        title="Time tracking"
+        description="Start your timer — screenshots capture automatically every 5 minutes."
+        actions={
+          isEmployee || isManager ? (
+            <Segmented label="Time tracking views" options={tabOptions} value={tab} onChange={setTab} />
+          ) : null
         }
-        actions={null}
       />
 
-      {(isEmployee || isManager) ? (
-        <div className="flex flex-wrap gap-2">
-          {(["timer", ...(isEmployee ? (["manual"] as const) : []), "overtime"] as const).map((tabKey) => (
-            <Button
-              key={tabKey}
-              type="button"
-              size="sm"
-              variant={tab === tabKey ? "primary" : "secondary"}
-              onClick={() => setTab(tabKey as typeof tab)}
-            >
-              {tabKey === "timer" ? "Live timer" : tabKey === "manual" ? "Manual time" : "Overtime"}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-
-      {isEmployee && tab === "overtime" ? (
-        <div className="space-y-8">
+      {tab === "overtime" ? (
+        <div className="flex flex-col gap-6">
           <OvertimeRequestForm
-            role="employee"
-            onSubmitted={() => setOvertimeRefreshKey((value) => value + 1)}
-          />
-          <OvertimeRequestList key={overtimeRefreshKey} />
-        </div>
-      ) : null}
-
-      {isManager && tab === "overtime" ? (
-        <div className="space-y-8">
-          <OvertimeRequestForm
-            role="manager"
+            role={isManager ? "manager" : "employee"}
             onSubmitted={() => setOvertimeRefreshKey((value) => value + 1)}
           />
           <OvertimeRequestList key={overtimeRefreshKey} />
@@ -508,170 +439,94 @@ export function TimeTracker({ user }: { user?: User }) {
       ) : null}
 
       {isEmployee && tab === "manual" ? (
-        <div className="space-y-8">
-          <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="mb-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-              Submit manual time
-            </h2>
-            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-              Requires team membership, a project, and manager approval.
-            </p>
+        <div className="flex flex-col gap-6">
+          <Panel title="Submit manual time" description="Requires team membership, a project, and manager approval.">
             <ManualTimeEntryForm
               role="employee"
               onSubmitted={() => setManualRefreshKey((value) => value + 1)}
             />
-          </section>
+          </Panel>
           <ManualTimeEntries refreshKey={manualRefreshKey} employeeName={user.name} />
         </div>
       ) : null}
 
-      {(isEmployee && (tab === "manual" || tab === "overtime")) || (isManager && tab === "overtime") ? null : (
+      {showTimer ? (
         <>
+          {successMessage ? (
+            <p role="status" className="rounded-xl bg-[var(--accent-emerald-soft)] px-4 py-2.5 text-sm font-medium text-[var(--accent-emerald)]">
+              {successMessage}
+            </p>
+          ) : null}
+          {error ? (
+            <p role="alert" className="rounded-xl border border-[var(--accent-coral)]/30 bg-[var(--accent-coral-soft)] px-4 py-2.5 text-sm text-[var(--danger)]">
+              {error}
+            </p>
+          ) : null}
 
-      {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <SummaryCard
-          label="Today's total"
-          value={formatDuration(totalDuration)}
-          sub="All completed sessions"
-          accent="blue"
-        />
-        <SummaryCard
-          label="Active session"
-          value={activeTimer ? "Running" : pausedTimer ? "Paused" : "Idle"}
-          sub={
-            activeTimer
-              ? `Started ${formatTime(activeTimer.start_time)}`
-              : pausedTimer?.end_time
-                ? `Paused at ${formatTime(pausedTimer.end_time)}`
-                : "No timer active"
-          }
-          accent={activeTimer ? "green" : pausedTimer ? "blue" : "zinc"}
-        />
-        <SummaryCard
-          label="Sessions today"
-          value={String(entries.length)}
-          sub={
-            entries.length === 1 ? "1 time entry" : `${entries.length} time entries`
-          }
-        />
-      </div>
-
-      <TimerFocusPanel
-        isRunning={Boolean(activeTimer)}
-        isPaused={!activeTimer && Boolean(pausedTimer)}
-        displayTime={displayTime}
-        liveSeconds={sessionSeconds}
-        projectName={
-          activeProjectName ??
-          (selectedProjectId === GENERAL_TIME_VALUE
-            ? "General time"
-            : projects.find((p) => String(p.id) === selectedProjectId)?.name ?? "General time")
-        }
-        projectOptions={projectOptions}
-        selectedProjectId={selectedProjectId}
-        onProjectChange={setSelectedProjectId}
-        onStart={() => void handleStart()}
-        onPause={handlePause}
-        onResume={handleResume}
-        onStop={() => void handleStop()}
-        actionLoading={actionLoading}
-        startBlocked={agentMissing}
-        projectsNotice={projectsNotice}
-        screenshotActive={Boolean(activeTimer)}
-      />
-
-      {agentMissing && !activeTimer ? (
-        <div className="mx-auto max-w-3xl rounded-xl border border-[var(--warning)]/30 bg-[var(--card)] px-4 py-3 text-center text-sm text-[var(--foreground)]">
-          {agentChecking ? (
-            "Checking for the desktop agent…"
-          ) : (
-            <>
-              The timer starts only after the desktop agent is installed and signed in on this
-              computer.{" "}
-              <a href={getAgentDownloadUrl()} className="font-medium underline hover:no-underline">
-                Download {AGENT_DOWNLOAD_FILENAME}
-              </a>
-              , run <span className="font-mono text-xs">AgencyPulseAgent.exe</span>, sign in, then{" "}
-              <button
-                type="button"
-                onClick={() => void refreshAgentStatus()}
-                className="font-medium underline hover:no-underline"
-              >
-                check again
-              </button>
-              .
-            </>
-          )}
-        </div>
-      ) : null}
-
-      {successMessage ? (
-        <p className="text-center text-sm font-medium text-[var(--accent-emerald)]">{successMessage}</p>
-      ) : null}
-      {error ? (
-        <p className="rounded-xl border border-[var(--accent-coral)]/30 bg-[var(--accent-coral-soft)] px-4 py-2.5 text-center text-sm text-[var(--danger)]">
-          {error}
-        </p>
-      ) : null}
-
-      {/* Activity timeline */}
-      <div>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Today&apos;s activity
-          </h2>
-          <div className="flex items-center gap-2">
-            <ExportDropdown
-              filename="time-tracking-today"
-              columns={TIME_TRACKING_EXPORT_COLUMNS}
-              rows={timeExportRows}
-              formats={["csv", "xlsx", "pdf"]}
-            />
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              {new Date().toLocaleDateString(undefined, {
-                weekday: "long",
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
+          <div className="flex flex-wrap items-start gap-6">
+            <div className="min-w-0 flex-[999_1_520px]">
+              <TimerFocusPanel
+                isRunning={Boolean(activeTimer)}
+                isPaused={!activeTimer && Boolean(pausedTimer)}
+                displayTime={displayTime}
+                caption={timerCaption}
+                projectName={
+                  activeProjectName ??
+                  (selectedProjectId === GENERAL_TIME_VALUE
+                    ? "General time"
+                    : projects.find((p) => String(p.id) === selectedProjectId)?.name ?? "General time")
+                }
+                projectOptions={projectOptions}
+                selectedProjectId={selectedProjectId}
+                onProjectChange={setSelectedProjectId}
+                onStart={() => void handleStart()}
+                onPause={handlePause}
+                onResume={handleResume}
+                onStop={() => void handleStop()}
+                actionLoading={actionLoading}
+                startBlocked={agentMissing}
+                projectsNotice={projectsNotice}
+              />
+            </div>
+            <div className="min-w-0 flex-[1_1_300px]">
+              <TodayPanel
+                entries={sortedEntries}
+                liveElapsed={liveElapsed}
+                totalSeconds={todaySeconds}
+                exportControl={
+                  <ExportDropdown
+                    filename="time-tracking-today"
+                    columns={TIME_TRACKING_EXPORT_COLUMNS}
+                    rows={timeExportRows}
+                    formats={["csv", "xlsx", "pdf"]}
+                  />
+                }
+              />
+            </div>
           </div>
-        </div>
-        <ActivityTimeline entries={sortedEntries} liveElapsed={liveElapsed} />
-      </div>
 
-      {isManager && tab !== "overtime" ? (
-        <div className="space-y-8">
-          <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="mb-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-              Submit manual time for yourself
-            </h2>
-            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-              Your entry will be sent to an admin for approval.
-            </p>
-            <ManualTimeEntryForm
-              role="manager"
-              forSelf
-              onSubmitted={() => setManualRefreshKey((value) => value + 1)}
-            />
-          </section>
-          <ManualTimeEntries refreshKey={manualRefreshKey} employeeName={user.name} />
-          <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="mb-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-              Record manual time for team
-            </h2>
-            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-              Create manual entries on behalf of employees on your managed teams.
-            </p>
-            <ManualTimeEntryForm
-              role="manager"
-              onSubmitted={() => setManualRefreshKey((value) => value + 1)}
-            />
-          </section>
-        </div>
-      ) : null}
+          {isManager ? (
+            <div className="grid gap-6 xl:grid-cols-2">
+              <Panel title="Manual time for yourself" description="Sent to an admin for approval.">
+                <ManualTimeEntryForm
+                  role="manager"
+                  forSelf
+                  onSubmitted={() => setManualRefreshKey((value) => value + 1)}
+                />
+              </Panel>
+              <Panel title="Manual time for your team" description="Record entries for employees on teams you manage.">
+                <ManualTimeEntryForm
+                  role="manager"
+                  onSubmitted={() => setManualRefreshKey((value) => value + 1)}
+                />
+              </Panel>
+              <div className="xl:col-span-2">
+                <ManualTimeEntries refreshKey={manualRefreshKey} employeeName={user.name} />
+              </div>
+            </div>
+          ) : null}
         </>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -1,205 +1,295 @@
 "use client";
 
 import { AdminDashboardView } from "@/components/dashboard/AdminDashboardView";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { Card, CardHeader } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { EmptyState as UiEmptyState } from "@/components/ui/EmptyState";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { formatDuration, formatTime, formatUtilization } from "@/lib/time";
+import { useAppSession } from "@/components/dashboard/AppShell";
+import { Avatar } from "@/components/ledger/Avatar";
+import { greeting, hoursLabel, percentLabel } from "@/components/ledger/format";
+import { Metric } from "@/components/ledger/Metric";
+import { Panel } from "@/components/ledger/Panel";
+import { ManualApprovalQueue } from "@/components/time/ManualApprovalQueue";
+import { OvertimeApprovalQueue } from "@/components/time/OvertimeApprovalQueue";
+import { cn } from "@/lib/cn";
+import { formatDuration, formatTime } from "@/lib/time";
 import type {
   DashboardData,
   EmployeeDashboard,
   ManagerDashboard,
   ManagerTeamReport,
 } from "@/lib/types";
-import { ManualApprovalQueue } from "@/components/time/ManualApprovalQueue";
-import { OvertimeApprovalQueue } from "@/components/time/OvertimeApprovalQueue";
-import {
-  Activity,
-  Briefcase,
-  Clock,
-  Play,
-  Timer,
-  TrendingUp,
-  Users,
-} from "lucide-react";
+import { Activity, ArrowRight, CalendarRange, Clock, Gauge, Hourglass, Play, Timer, Users } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-function ManagerTeamCard({ team }: { team: ManagerTeamReport }) {
+function DashboardGreeting({ filter, actions, subtitle }: { filter?: ReactNode; actions?: ReactNode; subtitle?: string }) {
+  const { user, organizationName } = useAppSession();
+  const now = new Date();
+  const firstName = user.name.split(/\s+/)[0] ?? user.name;
+
   return (
-    <div className="ui-card rounded-xl p-4">
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">{team.team_name}</h3>
-        <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-200">
-          {formatUtilization(team.utilization_percent)}
-        </span>
+    <header className="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p className="text-[13px] text-[var(--muted)]">
+          {now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+          {subtitle ? ` · ${subtitle}` : organizationName ? ` · ${organizationName}` : ""}
+        </p>
+        <h1 className="mt-1 text-[28px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+          {greeting(now)}, {firstName}
+        </h1>
       </div>
-      <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
-          <p className="text-zinc-500">Today</p>
-          <p className="font-mono font-semibold tabular-nums">{formatDuration(team.hours_today_seconds)}</p>
-        </div>
-        <div className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
-          <p className="text-zinc-500">Projects</p>
-          <p className="font-semibold">{team.active_projects}</p>
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {filter}
+        {actions}
       </div>
-      {team.member_breakdown.length > 0 ? (
-        <ul className="space-y-1.5 border-t border-[var(--border)] pt-3">
-          {team.member_breakdown.slice(0, 4).map((member) => (
-            <li key={member.user_id} className="flex items-center justify-between text-sm">
-              <span className="truncate text-zinc-700 dark:text-zinc-300">{member.name}</span>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                  member.has_active_timer
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                    : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-                }`}
-              >
-                {member.has_active_timer ? "Active" : "Idle"}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
+    </header>
+  );
+}
+
+const linkButton =
+  "inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition";
+
+function SeeAll({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-[var(--primary)] hover:bg-[var(--primary-muted)]"
+    >
+      {label}
+      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+    </Link>
+  );
+}
+
+function TrackingPill({ active }: { active: boolean }) {
+  return active ? (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-emerald-soft)] px-2.5 py-1 text-xs font-medium text-[var(--accent-emerald)]">
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--accent-emerald)]" aria-hidden="true" />
+      Tracking
+    </span>
+  ) : (
+    <span className="inline-flex rounded-full bg-[var(--accent-sand)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
+      Idle
+    </span>
   );
 }
 
 function EmployeeView({ data, filter }: { data: EmployeeDashboard; filter?: ReactNode }) {
-  const timerRunning = Boolean(data.active_timer);
+  const timer = data.active_timer;
+  const rangeSeconds = data.personal_report.hours_in_range_seconds ?? data.range_total_seconds ?? 0;
+  const utilization = data.range_utilization_percent ?? data.week_utilization_percent;
+  const pendingOvertime = data.overtime_summary?.pending_count ?? 0;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description={data.team ? `${data.team.name} · Your work at a glance` : "Your personal work summary"}
-        actions={filter}
-      />
+    <div className="flex flex-col gap-6">
+      <DashboardGreeting filter={filter} subtitle={data.team?.name} />
 
-      <div className="ui-card flex flex-col gap-4 rounded-xl border border-[var(--border)] p-5 sm:flex-row sm:items-center sm:justify-between">
+      <section
+        aria-label="Time tracker"
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5",
+          timer
+            ? "border-[var(--accent-emerald)]/30 bg-[var(--accent-emerald-soft)]"
+            : "border-[var(--border)] bg-[var(--card)]",
+        )}
+      >
         <div className="flex items-center gap-4">
-          <div
-            className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-              timerRunning
-                ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
-                : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-            }`}
+          <span
+            className={cn(
+              "flex h-12 w-12 items-center justify-center rounded-xl",
+              timer ? "bg-[var(--card)] text-[var(--accent-emerald)]" : "bg-[var(--primary-muted)] text-[var(--primary)]",
+            )}
+            aria-hidden="true"
           >
-            <Timer className={`h-6 w-6 ${timerRunning ? "animate-pulse-ring" : ""}`} />
-          </div>
+            <Timer className="h-6 w-6" />
+          </span>
           <div>
-            <p className="text-sm font-medium text-zinc-500">Time tracker</p>
-            <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-              {timerRunning ? "Timer running" : "Not tracking"}
+            <p className="text-[13px] text-[var(--muted)]">Time tracker</p>
+            <p className="text-lg font-semibold text-[var(--foreground)]">
+              {timer ? `Tracking ${timer.project_name ?? "general time"}` : "Not tracking right now"}
             </p>
-            {timerRunning && data.active_timer ? (
-              <p className="text-xs text-zinc-500">Since {formatTime(data.active_timer.start_time)}</p>
+            {timer ? (
+              <p className="tnum text-[13px] text-[var(--muted)]">Since {formatTime(timer.start_time)}</p>
             ) : null}
           </div>
         </div>
-        <Link href="/time">
-          <Button size="lg">
-            <Play className="h-4 w-4" />
-            {timerRunning ? "Open timer" : "Start tracking"}
-          </Button>
+        <Link
+          href="/time"
+          className={cn(linkButton, "bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]")}
+        >
+          <Play className="h-4 w-4" aria-hidden="true" />
+          {timer ? "Open timer" : "Start tracking"}
         </Link>
-      </div>
+      </section>
 
-      <div className="ui-kpi-grid">
-        <StatCard index={0} icon={Clock} label="Today" value={formatDuration(data.personal_report.hours_today_seconds)} accent="blue" />
-        <StatCard index={1} icon={TrendingUp} label="Selected range" value={formatDuration(data.personal_report.hours_in_range_seconds ?? data.range_total_seconds ?? 0)} />
-        <StatCard index={2} label="This month" value={formatDuration(data.personal_report.hours_month_seconds)} />
-        <StatCard index={3} label="Pending OT" value={String(data.overtime_summary?.pending_count ?? 0)} accent="amber" />
-      </div>
+      <section aria-label="At a glance" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric label="Today" icon={<Clock className="h-4 w-4" />} value={hoursLabel(data.personal_report.hours_today_seconds)} />
+        <Metric
+          label="Hours in range"
+          icon={<CalendarRange className="h-4 w-4" />}
+          value={hoursLabel(rangeSeconds)}
+          detail={`This month ${hoursLabel(data.personal_report.hours_month_seconds)}`}
+        />
+        <Metric
+          label="Utilization"
+          icon={<Gauge className="h-4 w-4" />}
+          value={percentLabel(utilization)}
+          progress={utilization}
+          detail="Tracked vs. expected hours"
+        />
+        <Metric
+          label="Overtime pending"
+          icon={<Hourglass className="h-4 w-4" />}
+          value={pendingOvertime}
+          tone={pendingOvertime > 0 ? "attention" : "default"}
+          detail="Waiting for approval"
+        />
+      </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card animate={false}>
-          <CardHeader title="Recent activity" description="Your latest tracked sessions" />
-          {data.recent_sessions.length === 0 ? (
-            <UiEmptyState icon={Activity} title="No sessions yet" description="Start tracking to see activity here." />
-          ) : (
-            <ul className="space-y-2">
-              {data.recent_sessions.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] px-3 py-2.5"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{entry.project_name ?? "General time"}</p>
-                    <p className="text-xs text-zinc-500">{formatTime(entry.start_time)}</p>
-                  </div>
-                  <span className="font-mono text-sm font-semibold tabular-nums">
-                    {formatDuration(entry.duration ?? 0)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-        <Card animate={false}>
-          <CardHeader title="My projects" description={`${data.assigned_projects.length} assigned`} />
-          {data.assigned_projects.length === 0 ? (
-            <UiEmptyState icon={Briefcase} title="No projects" description="Ask your manager to assign you." />
-          ) : (
-            <ul className="space-y-2">
-              {data.assigned_projects.map((project) => (
-                <li key={project.id} className="rounded-lg border border-[var(--border-subtle)] px-3 py-2.5">
-                  <p className="text-sm font-medium">{project.name}</p>
-                  <p className="text-xs text-zinc-500">{project.client_name}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="min-w-0 flex-[999_1_480px]">
+          <Panel
+            title="Recent sessions"
+            description="Your latest tracked time"
+            action={<SeeAll href="/time" label="Time" />}
+            flush
+          >
+            {data.recent_sessions.length === 0 ? (
+              <p className="px-5 pb-6 text-sm text-[var(--muted)]">No sessions yet. Start the timer to see activity here.</p>
+            ) : (
+              <ul className="divide-y divide-[var(--border-subtle)] border-t border-[var(--border-subtle)]">
+                {data.recent_sessions.map((entry) => (
+                  <li key={entry.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--foreground)]">
+                        {entry.project_name ?? "General time"}
+                      </p>
+                      <p className="tnum text-xs text-[var(--muted)]">
+                        {new Date(entry.start_time).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                        {" · "}
+                        {formatTime(entry.start_time)}
+                      </p>
+                    </div>
+                    <span className="num shrink-0 text-sm font-semibold text-[var(--foreground)]">
+                      {formatDuration(entry.duration ?? 0)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
+        <div className="min-w-0 flex-[1_1_300px]">
+          <Panel title="My projects" description={`${data.assigned_projects.length} assigned`} flush>
+            {data.assigned_projects.length === 0 ? (
+              <p className="px-5 pb-6 text-sm text-[var(--muted)]">No projects yet. Ask your manager to assign you.</p>
+            ) : (
+              <ul className="divide-y divide-[var(--border-subtle)] border-t border-[var(--border-subtle)]">
+                {data.assigned_projects.map((project) => (
+                  <li key={project.id} className="flex items-center gap-3 px-5 py-3">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--primary)]" aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--foreground)]">{project.name}</p>
+                      <p className="truncate text-xs text-[var(--muted)]">{project.client_name}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
       </div>
     </div>
   );
 }
 
-function ManagerView({ data, filter }: { data: ManagerDashboard; filter?: ReactNode }) {
+function ManagerTeamPanel({ team }: { team: ManagerTeamReport }) {
+  const tracking = team.member_breakdown.filter((member) => member.has_active_timer).length;
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Team overview"
-        description="Hours, utilization, and approvals for your teams"
+    <Panel
+      title={team.team_name}
+      description={`${tracking} of ${team.member_breakdown.length} tracking now`}
+      action={
+        <span className="tnum rounded-full bg-[var(--primary-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--primary)]">
+          {percentLabel(team.utilization_percent)}
+        </span>
+      }
+      flush
+    >
+      <div className="grid grid-cols-2 gap-3 px-5 pb-4">
+        <div className="rounded-xl bg-[var(--accent-sand)] px-3 py-2.5">
+          <p className="text-xs text-[var(--muted)]">Today</p>
+          <p className="tnum mt-0.5 font-semibold text-[var(--foreground)]">{hoursLabel(team.hours_today_seconds)}</p>
+        </div>
+        <div className="rounded-xl bg-[var(--accent-sand)] px-3 py-2.5">
+          <p className="text-xs text-[var(--muted)]">Active projects</p>
+          <p className="tnum mt-0.5 font-semibold text-[var(--foreground)]">{team.active_projects}</p>
+        </div>
+      </div>
+      {team.member_breakdown.length > 0 ? (
+        <ul className="divide-y divide-[var(--border-subtle)] border-t border-[var(--border-subtle)]">
+          {team.member_breakdown.slice(0, 6).map((member) => (
+            <li key={member.user_id} className="flex items-center justify-between gap-3 px-5 py-2.5">
+              <span className="flex min-w-0 items-center gap-3">
+                <Avatar name={member.name} size="sm" />
+                <span className="truncate text-sm text-[var(--foreground)]">{member.name}</span>
+              </span>
+              <TrackingPill active={member.has_active_timer} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </Panel>
+  );
+}
+
+function ManagerView({ data, filter }: { data: ManagerDashboard; filter?: ReactNode }) {
+  const utilization = data.summary.team_utilization_percent;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <DashboardGreeting
+        filter={filter}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {filter}
-            <Link href="/reports">
-              <Button variant="secondary" size="sm">
-                Full reports
-              </Button>
-            </Link>
-          </div>
+          <Link
+            href="/reports"
+            className={cn(linkButton, "border border-[var(--border)] bg-[var(--card-elevated)] font-medium text-[var(--foreground)] hover:bg-[var(--accent-sand)]")}
+          >
+            Full reports
+          </Link>
         }
       />
 
-      <div className="ui-kpi-grid">
-        <StatCard index={0} icon={Users} label="Teams" value={String(data.team_count)} accent="blue" />
-        <StatCard index={1} icon={Clock} label="Hours today" value={formatDuration(data.summary.hours_today_seconds)} />
-        <StatCard index={2} label="Range hours" value={formatDuration(data.summary.hours_in_range_seconds ?? 0)} />
-        <StatCard index={3} label="Utilization" value={formatUtilization(data.summary.team_utilization_percent)} accent="amber" />
-      </div>
+      <section aria-label="At a glance" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric label="Teams" icon={<Users className="h-4 w-4" />} value={data.team_count} detail={`${data.summary.active_projects} active projects`} />
+        <Metric label="Hours today" icon={<Clock className="h-4 w-4" />} value={hoursLabel(data.summary.hours_today_seconds)} />
+        <Metric label="Hours in range" icon={<Activity className="h-4 w-4" />} value={hoursLabel(data.summary.hours_in_range_seconds ?? 0)} />
+        <Metric
+          label="Team utilization"
+          icon={<Gauge className="h-4 w-4" />}
+          value={percentLabel(utilization)}
+          progress={utilization}
+          detail="Tracked vs. expected hours"
+        />
+      </section>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="space-y-4 xl:col-span-2">
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="min-w-0 flex-[999_1_560px]">
           {data.teams.length === 0 ? (
-            <UiEmptyState icon={Users} title="No teams" description="An admin will assign you as a team manager." />
+            <Panel title="Your teams">
+              <p className="text-sm text-[var(--muted)]">An admin will assign you as a team manager.</p>
+            </Panel>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2">
               {data.teams.map((team) => (
-                <ManagerTeamCard key={team.team_id} team={team} />
+                <ManagerTeamPanel key={team.team_id} team={team} />
               ))}
             </div>
           )}
         </div>
-        <div className="space-y-4">
+        <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
           <ManualApprovalQueue />
           <OvertimeApprovalQueue title="Overtime approvals" />
-        </div>
+        </aside>
       </div>
     </div>
   );

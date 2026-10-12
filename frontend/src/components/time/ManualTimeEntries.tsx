@@ -8,11 +8,11 @@ import type { TimeEntry, TimeEntryStatus } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STATUS_STYLES: Record<TimeEntryStatus, string> = {
-  running: "bg-green-100 text-green-700",
-  stopped: "bg-zinc-100 text-zinc-600",
-  pending: "bg-amber-100 text-amber-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
+  running: "bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]",
+  stopped: "bg-[var(--accent-sand)] text-[var(--muted)]",
+  pending: "bg-[var(--accent-copper-soft)] text-[var(--accent-copper)]",
+  approved: "bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]",
+  rejected: "bg-[var(--accent-coral-soft)] text-[var(--danger)]",
 };
 
 function StatusBadge({ status }: { status: TimeEntryStatus }) {
@@ -69,13 +69,13 @@ export function ManualTimeEntries({
   );
 
   return (
-    <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">
             My manual entries
           </h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Submitted entries appear here with approval status.
           </p>
         </div>
@@ -87,27 +87,27 @@ export function ManualTimeEntries({
         />
       </div>
       {loading ? (
-        <div className="h-24 animate-pulse rounded-lg bg-zinc-200/60 dark:bg-zinc-800/60" />
+        <div className="h-24 animate-pulse rounded-lg bg-[var(--accent-sand)]" />
       ) : null}
       {error ? (
-        <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="mb-3 text-sm text-[var(--danger)]">{error}</p>
       ) : null}
       {!loading && entries.length === 0 ? (
-        <p className="text-sm text-zinc-500">No manual entries on your record yet.</p>
+        <p className="text-sm text-[var(--muted)]">No manual entries on your record yet.</p>
       ) : null}
       {!loading && entries.length > 0 ? (
         <ul className="space-y-3">
           {entries.map((entry) => (
             <li
               key={entry.id}
-              className="flex flex-col gap-2 rounded-lg border border-zinc-100 px-3 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
+              className="flex flex-col gap-2 rounded-lg border border-[var(--border-subtle)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                <p className="text-sm font-medium text-[var(--foreground)]">
                   {new Date(entry.start_time).toLocaleDateString()} ·{" "}
                   {entry.project_name ?? "General time"}
                 </p>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-[var(--muted)]">
                   {formatDuration(entry.duration ?? 0)}
                   {entry.manager_name ? ` · ${entry.manager_name}` : ""}
                   {entry.description ? ` — ${entry.description}` : ""}

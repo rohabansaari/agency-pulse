@@ -8,17 +8,19 @@ import {
 import { useDesktopAgentStatus } from "@/hooks/useDesktopAgentStatus";
 import type { User } from "@/lib/types";
 import { Monitor } from "lucide-react";
+import { useState } from "react";
 
 export function DesktopAgentBanner({ user }: { user: User }) {
   const requiresAgent = user.role === "employee" || user.role === "manager";
-  const { connected, checking } = useDesktopAgentStatus(requiresAgent);
+  const { connected, checking, refresh } = useDesktopAgentStatus(requiresAgent);
+  const [rechecking, setRechecking] = useState(false);
   const downloadUrl = getAgentDownloadUrl();
 
   if (!requiresAgent) {
     return null;
   }
 
-  if (checking || connected) {
+  if ((checking && !rechecking) || connected) {
     return null;
   }
 
@@ -60,6 +62,18 @@ export function DesktopAgentBanner({ user }: { user: User }) {
           <li>Sign in once when prompted — setup finishes automatically</li>
           <li>{AGENT_SETUP_STEPS[2]}</li>
         </ol>
+        <button
+          type="button"
+          onClick={async () => {
+            setRechecking(true);
+            await refresh();
+            setRechecking(false);
+          }}
+          disabled={rechecking}
+          className="mt-3 inline-flex min-h-9 items-center rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--accent-sand)] disabled:opacity-60"
+        >
+          {rechecking ? "Checking…" : "I've installed it — check again"}
+        </button>
         <p className="mt-3 text-xs text-[var(--muted)]">
           Windows may warn about an unknown publisher — this is expected for an unsigned
           internal app. Choose &quot;More info&quot; → &quot;Run anyway&quot; if prompted.
