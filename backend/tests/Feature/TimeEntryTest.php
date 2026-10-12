@@ -52,10 +52,11 @@ class TimeEntryTest extends TestCase
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-        $this->connectDesktopAgent($user);
         $headers = $this->tenantHeaders($user);
 
+        // Heartbeats are refreshed after each time jump, as the running agent would.
         $this->travelTo(now()->setTime(10, 0));
+        $this->connectDesktopAgent($user);
         $this->withHeaders($headers)->postJson('/api/v1/time/start')->assertCreated();
 
         $this->travelTo(now()->setTime(10, 20));
@@ -72,6 +73,7 @@ class TimeEntryTest extends TestCase
             ->assertJsonPath('meta.total_duration', 1200);
 
         $this->travelTo(now()->setTime(10, 45));
+        $this->connectDesktopAgent($user);
         $this->withHeaders($headers)->postJson('/api/v1/time/resume')
             ->assertCreated()
             ->assertJsonPath('entry.status', TimeEntryStatus::Running->value);
@@ -89,6 +91,7 @@ class TimeEntryTest extends TestCase
             ->assertJsonPath('meta.paused_timer', null)
             ->assertJsonPath('meta.session_elapsed', 0);
 
+        $this->connectDesktopAgent($user);
         $this->withHeaders($headers)->postJson('/api/v1/time/start')->assertCreated();
         $this->withHeaders($headers)->getJson('/api/v1/time/today')
             ->assertJsonPath('meta.session_elapsed', 0);

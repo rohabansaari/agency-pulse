@@ -142,8 +142,9 @@ class ReportingTest extends TestCase
             'type' => \App\Enums\TimeEntryType::Tracked,
             'duration' => 7200,
             'status' => TimeEntryStatus::Stopped,
-            'start_time' => Carbon::today()->subDays(1),
-            'end_time' => Carbon::today()->subDays(1)->addHours(2),
+            // Today, not yesterday: the report defaults to this week, which starts on Monday.
+            'start_time' => Carbon::today(),
+            'end_time' => Carbon::today()->addHours(2),
         ]);
 
         Sanctum::actingAs($admin);

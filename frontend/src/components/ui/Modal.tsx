@@ -59,23 +59,24 @@ export function Modal({
           exit={{ opacity: 0, scale: 0.96, y: 8 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
           className={cn(
-            "relative z-10 w-full rounded-xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900",
+            "relative z-10 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] p-6 text-[var(--foreground)] shadow-2xl",
             sizeClass,
           )}
         >
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
-              <h2 id="modal-title" className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              <h2 id="modal-title" className="text-lg font-semibold tracking-tight text-[var(--foreground)]">
                 {title}
               </h2>
               {description ? (
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{description}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
               ) : null}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              aria-label="Close"
+              className="rounded-lg p-1.5 text-[var(--muted)] transition hover:bg-[var(--sidebar-hover)] hover:text-[var(--foreground)]"
             >
               <X className="h-4 w-4" />
             </button>

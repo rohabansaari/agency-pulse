@@ -1,6 +1,8 @@
 "use client";
 
-import { AppShell } from "@/components/dashboard/AppShell";
+import { OrganizationsTable } from "@/components/platform/OrganizationsTable";
+import { PlatformShell } from "@/components/platform/PlatformShell";
+import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import {
   ApiError,
@@ -15,42 +17,38 @@ import {
   updatePlatformOrganization,
   updateSuperAdminPassword,
 } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import type { PlatformDashboard, PlatformMailStatus, PlatformOrganization } from "@/lib/types";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { Building2, Mail, Plus, Send, Users } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useState, type ReactNode } from "react";
+
+type Dialog =
+  | { kind: "create" }
+  | { kind: "mail-test" }
+  | { kind: "password" }
+  | { kind: "edit-email"; organization: PlatformOrganization }
+  | { kind: "suspend"; organization: PlatformOrganization }
+  | { kind: "delete"; organization: PlatformOrganization }
+  | null;
+
+type Notice = { text: string; tone: "success" | "error" } | null;
+
+function apiMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? formatApiErrors(err.errors) || err.message : fallback;
+}
 
 export default function PlatformPage() {
   const [data, setData] = useState<PlatformDashboard | null>(null);
   const [organizations, setOrganizations] = useState<PlatformOrganization[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [orgName, setOrgName] = useState("");
-  const [adminName, setAdminName] = useState("");
-  const [adminEmail, setAdminEmail] = useState("");
-  const [createError, setCreateError] = useState("");
-  const [createSuccess, setCreateSuccess] = useState("");
-  const [savingOrg, setSavingOrg] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordMessage, setPasswordMessage] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [editingOrg, setEditingOrg] = useState<PlatformOrganization | null>(null);
-  const [editEmail, setEditEmail] = useState("");
-  const [editError, setEditError] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [rowActionId, setRowActionId] = useState<number | null>(null);
-  const [rowMessage, setRowMessage] = useState("");
-  const [rowMessageIsError, setRowMessageIsError] = useState(false);
   const [mailStatus, setMailStatus] = useState<PlatformMailStatus | null>(null);
-  const [mailTestEmail, setMailTestEmail] = useState("");
-  const [mailTestMessage, setMailTestMessage] = useState("");
-  const [mailTestError, setMailTestError] = useState("");
-  const [sendingMailTest, setSendingMailTest] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [notice, setNotice] = useState<Notice>(null);
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    setError("");
+    setLoadError("");
     try {
       const [dashboard, orgs, mail] = await Promise.all([
         fetchPlatformDashboard(),
@@ -61,7 +59,7 @@ export default function PlatformPage() {
       setOrganizations(orgs);
       setMailStatus(mail);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Unable to load platform dashboard.");
+      setLoadError(err instanceof ApiError ? err.message : "Unable to load platform dashboard.");
     } finally {
       setLoading(false);
     }
@@ -71,642 +69,626 @@ export default function PlatformPage() {
     void load();
   }, [load]);
 
-  async function handleCreateOrganization(event: FormEvent<HTMLFormElement>) {
+  const closeDialog = useCallback(() => setDialog(null), []);
+
+  async function runRowAction(
+    organization: PlatformOrganization,
+    action: () => Promise<string>,
+    fallbackError: string,
+  ) {
+    setBusyId(organization.id);
+    setNotice(null);
+    try {
+      const message = await action();
+      setNotice({ text: message, tone: "success" });
+      await load();
+    } catch (err) {
+      setNotice({ text: apiMessage(err, fallbackError), tone: "error" });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const actions = {
+    onEditEmail: (organization: PlatformOrganization) => setDialog({ kind: "edit-email", organization }),
+    onSuspend: (organization: PlatformOrganization) => setDialog({ kind: "suspend", organization }),
+    onDelete: (organization: PlatformOrganization) => setDialog({ kind: "delete", organization }),
+    onReactivate: (organization: PlatformOrganization) =>
+      void runRowAction(
+        organization,
+        async () => {
+          await updatePlatformOrganization(organization.id, { status: "active" });
+          return `“${organization.name}” reactivated.`;
+        },
+        "Failed to reactivate organization.",
+      ),
+    onResendInvitation: (organization: PlatformOrganization) =>
+      void runRowAction(
+        organization,
+        async () => (await resendPlatformAdminInvitation(organization.id)).message,
+        "Failed to resend admin invitation.",
+      ),
+  };
+
+  const mailNeedsAttention =
+    mailStatus !== null && (!mailStatus.configured || Boolean(mailStatus.render_smtp_blocked_hint));
+
+  return (
+    <PlatformShell onChangePassword={() => setDialog({ kind: "password" })}>
+      <div className="flex flex-col gap-6">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[13px] text-[var(--muted)]">Platform console</p>
+            <h1 className="mt-1 text-[28px] font-semibold tracking-[-0.02em]">Organizations</h1>
+            <p className="mt-1 max-w-xl text-sm text-[var(--muted)]">
+              Create organizations, manage their admins and suspend inactive tenants. Organization HR
+              data is never visible from this account.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => setDialog({ kind: "mail-test" })}
+              disabled={!mailStatus?.configured}
+              title={mailStatus?.configured ? undefined : "Configure email delivery first"}
+            >
+              <Send className="h-4 w-4" aria-hidden="true" />
+              Send test email
+            </Button>
+            <Button size="lg" onClick={() => setDialog({ kind: "create" })}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New organization
+            </Button>
+          </div>
+        </header>
+
+        {loadError ? <Alert tone="error">{loadError}</Alert> : null}
+        {notice ? <Alert tone={notice.tone}>{notice.text}</Alert> : null}
+
+        {mailNeedsAttention && mailStatus ? <MailWarning status={mailStatus} /> : null}
+
+        <section aria-label="Platform health" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {loading && !data ? (
+            [0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-[118px] animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
+            ))
+          ) : data ? (
+            <>
+              <StatCard
+                icon={<Building2 className="h-4 w-4" />}
+                label="Organizations"
+                value={data.organizations_total}
+                detail={`${data.organizations_active} active`}
+                dot="var(--primary)"
+              />
+              <StatCard
+                icon={<Building2 className="h-4 w-4" />}
+                label="Suspended"
+                value={data.organizations_suspended}
+                detail={data.organizations_suspended ? "Can be reactivated or deleted" : "None suspended"}
+                dot={data.organizations_suspended ? "var(--accent-coral)" : "var(--muted-foreground)"}
+              />
+              <StatCard
+                icon={<Users className="h-4 w-4" />}
+                label="Tenant users"
+                value={data.tenant_users_total}
+                detail="Across all organizations"
+                dot="var(--accent-emerald)"
+              />
+              <StatCard
+                icon={<Mail className="h-4 w-4" />}
+                label="Email delivery"
+                value={mailStatus?.mailer ? capitalize(mailStatus.mailer) : "—"}
+                detail={
+                  mailStatus?.configured
+                    ? mailStatus.from_address
+                      ? `Sending as ${mailStatus.from_address}`
+                      : "Configured"
+                    : "Not configured"
+                }
+                dot={mailStatus?.configured ? "var(--accent-emerald)" : "var(--accent-coral)"}
+              />
+            </>
+          ) : null}
+        </section>
+
+        <OrganizationsTable organizations={organizations} busyId={busyId} actions={actions} />
+      </div>
+
+      {dialog?.kind === "create" ? (
+        <CreateOrganizationDialog
+          onClose={closeDialog}
+          onCreated={async (message, emailFailed) => {
+            closeDialog();
+            setNotice({
+              text: emailFailed
+                ? `${message} The invitation email was not delivered — use “Resend invite” after fixing email delivery.`
+                : message,
+              tone: emailFailed ? "error" : "success",
+            });
+            await load();
+          }}
+        />
+      ) : null}
+
+      {dialog?.kind === "mail-test" ? (
+        <MailTestDialog fromAddress={mailStatus?.from_address ?? null} onClose={closeDialog} />
+      ) : null}
+
+      {dialog?.kind === "password" ? <PasswordDialog onClose={closeDialog} /> : null}
+
+      {dialog?.kind === "edit-email" ? (
+        <EditEmailDialog
+          organization={dialog.organization}
+          onClose={closeDialog}
+          onSaved={async () => {
+            closeDialog();
+            setNotice({ text: "Admin email updated.", tone: "success" });
+            await load();
+          }}
+        />
+      ) : null}
+
+      {dialog?.kind === "suspend" ? (
+        <ConfirmDialog
+          title={`Suspend ${dialog.organization.name}?`}
+          body="Its admin and employees lose access immediately. Nothing is deleted — you can reactivate it later, or delete it once suspended."
+          confirmLabel="Suspend organization"
+          onClose={closeDialog}
+          onConfirm={() => {
+            const organization = dialog.organization;
+            closeDialog();
+            void runRowAction(
+              organization,
+              async () => {
+                await updatePlatformOrganization(organization.id, { status: "suspended" });
+                return `“${organization.name}” suspended. Use Delete to remove it permanently.`;
+              },
+              "Failed to suspend organization.",
+            );
+          }}
+        />
+      ) : null}
+
+      {dialog?.kind === "delete" ? (
+        <ConfirmDialog
+          title={`Delete ${dialog.organization.name}?`}
+          body="This permanently removes the organization and all of its data — people, time entries, screenshots and payroll. It can't be undone."
+          confirmLabel="Delete permanently"
+          requireText={dialog.organization.name}
+          onClose={closeDialog}
+          onConfirm={() => {
+            const organization = dialog.organization;
+            closeDialog();
+            void runRowAction(
+              organization,
+              async () => {
+                await deletePlatformOrganization(organization.id);
+                setOrganizations((current) => current.filter((org) => org.id !== organization.id));
+                return `“${organization.name}” permanently deleted.`;
+              },
+              "Failed to delete organization. Suspend it first, then delete.",
+            );
+          }}
+        />
+      ) : null}
+    </PlatformShell>
+  );
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function Alert({ tone, children }: { tone: "success" | "error"; children: ReactNode }) {
+  return (
+    <p
+      role={tone === "error" ? "alert" : "status"}
+      className={cn(
+        "rounded-xl border px-4 py-3 text-sm",
+        tone === "error"
+          ? "border-[var(--accent-coral)]/30 bg-[var(--accent-coral-soft)] text-[var(--accent-coral)]"
+          : "border-[var(--accent-emerald)]/30 bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]",
+      )}
+    >
+      {children}
+    </p>
+  );
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  detail,
+  dot,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number | string;
+  detail: string;
+  dot: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
+      <div className="flex items-center justify-between text-[var(--muted)]">
+        <p className="text-[13px]">{label}</p>
+        <span aria-hidden="true">{icon}</span>
+      </div>
+      <p
+        className={cn(
+          "mt-2 truncate text-[26px] font-semibold tracking-[-0.01em] text-[var(--foreground)]",
+          typeof value === "number" && "num",
+        )}
+      >
+        {value}
+      </p>
+      <p className="mt-1.5 flex items-center gap-2 text-[13px] text-[var(--muted)]" title={detail}>
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot }} aria-hidden="true" />
+        <span className="truncate">{detail}</span>
+      </p>
+    </div>
+  );
+}
+
+function MailWarning({ status }: { status: PlatformMailStatus }) {
+  return (
+    <section
+      aria-labelledby="mail-warning"
+      className="rounded-2xl border border-[var(--accent-copper)]/30 bg-[var(--accent-copper-soft)] p-5 text-[var(--foreground)]"
+    >
+      <h2 id="mail-warning" className="text-sm font-semibold text-[var(--accent-copper)]">
+        {status.configured ? "Email delivery is failing" : "Email delivery isn’t configured"}
+      </h2>
+      <p className="mt-1 text-sm text-[var(--muted)]">
+        Organization invitations won’t reach inboxes until this is fixed in the API’s environment variables.
+      </p>
+      {[status.issue, status.render_smtp_blocked_hint, status.brevo_sender_verification_hint]
+        .filter(Boolean)
+        .map((line) => (
+          <p key={line} className="mt-2 text-sm">
+            {line}
+          </p>
+        ))}
+      <p className="mt-3 text-xs text-[var(--muted)]">
+        Mailer <span className="num">{status.mailer}</span>
+        {status.recommended_mailer ? (
+          <>
+            {" "}
+            · recommended <span className="num">{status.recommended_mailer}</span>
+          </>
+        ) : null}
+        {status.host ? (
+          <>
+            {" "}
+            · <span className="num">{status.host}:{status.port}</span>
+          </>
+        ) : null}
+      </p>
+    </section>
+  );
+}
+
+const fieldClass =
+  "min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1.5 text-[13px] font-medium text-[var(--foreground)]">
+      {label}
+      {children}
+      {hint ? <span className="text-xs font-normal text-[var(--muted)]">{hint}</span> : null}
+    </label>
+  );
+}
+
+function FormError({ message }: { message: string }) {
+  return message ? (
+    <p role="alert" className="text-sm text-[var(--danger)]">
+      {message}
+    </p>
+  ) : null;
+}
+
+function DialogActions({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap justify-end gap-2 pt-2">{children}</div>;
+}
+
+function CreateOrganizationDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (message: string, emailFailed: boolean) => Promise<void>;
+}) {
+  const [orgName, setOrgName] = useState("");
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setCreateError("");
-    setCreateSuccess("");
-    setSavingOrg(true);
+    setError("");
+    setSaving(true);
     try {
       const response = await createPlatformOrganization({
         organization_name: orgName,
         admin_name: adminName,
         admin_email: adminEmail,
       });
-      if (response.invitation_email_sent === false) {
-        setCreateError(
-          "Organization was created, but the invitation email was not delivered. Use Resend invitation after fixing mail settings.",
-        );
-      }
-      setCreateSuccess(response.message);
-      setOrgName("");
-      setAdminName("");
-      setAdminEmail("");
-      setShowCreate(false);
-      await load();
+      await onCreated(response.message, response.invitation_email_sent === false);
     } catch (err) {
-      setCreateError(
-        err instanceof ApiError
-          ? formatApiErrors(err.errors) || err.message
-          : "Failed to create organization.",
-      );
-    } finally {
-      setSavingOrg(false);
-    }
-  }
-
-  async function handleMailTest(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setMailTestMessage("");
-    setMailTestError("");
-    setSendingMailTest(true);
-    try {
-      const response = await sendPlatformMailTest(mailTestEmail.trim() || undefined);
-      setMailTestMessage(response.message);
-    } catch (err) {
-      setMailTestError(
-        err instanceof ApiError
-          ? formatApiErrors(err.errors) || err.message
-          : "Mail test failed.",
-      );
-    } finally {
-      setSendingMailTest(false);
-    }
-  }
-
-  async function handlePasswordReset(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPasswordError("");
-    setPasswordMessage("");
-    setSavingPassword(true);
-    try {
-      const response = await updateSuperAdminPassword({
-        current_password: currentPassword,
-        password: newPassword,
-        password_confirmation: confirmPassword,
-      });
-      setPasswordMessage(response.message);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (err) {
-      setPasswordError(
-        err instanceof ApiError
-          ? formatApiErrors(err.errors) || err.message
-          : "Password update failed.",
-      );
-    } finally {
-      setSavingPassword(false);
-    }
-  }
-
-  function openEditEmail(organization: PlatformOrganization) {
-    setEditingOrg(organization);
-    setEditEmail(organization.admin_email ?? "");
-    setEditError("");
-  }
-
-  async function handleEditEmail(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!editingOrg) return;
-
-    setEditError("");
-    setSavingEdit(true);
-    try {
-      await updatePlatformOrganization(editingOrg.id, { admin_email: editEmail.trim() });
-      setEditingOrg(null);
-      setRowMessage("Admin email updated.");
-      await load();
-    } catch (err) {
-      setEditError(
-        err instanceof ApiError
-          ? formatApiErrors(err.errors) || err.message
-          : "Failed to update admin email.",
-      );
-    } finally {
-      setSavingEdit(false);
-    }
-  }
-
-  async function handleSuspend(organization: PlatformOrganization) {
-    if (
-      !window.confirm(
-        `Suspend "${organization.name}"? The organization will become inactive and can then be deleted.`,
-      )
-    ) {
-      return;
-    }
-
-    setRowActionId(organization.id);
-    setRowMessage("");
-    setRowMessageIsError(false);
-    try {
-      await updatePlatformOrganization(organization.id, { status: "suspended" });
-      setRowMessage(`"${organization.name}" suspended. Use Delete to remove it from the platform.`);
-      await load();
-    } catch (err) {
-      setRowMessageIsError(true);
-      setRowMessage(
-        err instanceof ApiError
-          ? formatApiErrors(err.errors) || err.message
-          : "Failed to suspend organization.",
-      );
-    } finally {
-      setRowActionId(null);
-    }
-  }
-
-  async function handleReactivate(organization: PlatformOrganization) {
-    setRowActionId(organization.id);
-    setRowMessage("");
-    setRowMessageIsError(false);
-    try {
-      await updatePlatformOrganization(organization.id, { status: "active" });
-      setRowMessage(`"${organization.name}" reactivated.`);
-      await load();
-    } catch (err) {
-      setRowMessageIsError(true);
-      setRowMessage(
-        err instanceof ApiError
-          ? formatApiErrors(err.errors) || err.message
-          : "Failed to reactivate organization.",
-      );
-    } finally {
-      setRowActionId(null);
-    }
-  }
-
-  async function handleResendAdminInvitation(organization: PlatformOrganization) {
-    setRowActionId(organization.id);
-    setRowMessage("");
-    setRowMessageIsError(false);
-    try {
-      const response = await resendPlatformAdminInvitation(organization.id);
-      setRowMessage(response.message);
-      await load();
-    } catch (err) {
-      setRowMessageIsError(true);
-      setRowMessage(
-        err instanceof ApiError
-          ? formatApiErrors(err.errors) || err.message
-          : "Failed to resend admin invitation.",
-      );
-    } finally {
-      setRowActionId(null);
-    }
-  }
-
-  async function handleDelete(organization: PlatformOrganization) {
-    if (
-      !window.confirm(
-        `Permanently delete "${organization.name}" and all tenant data? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
-
-    setRowActionId(organization.id);
-    setRowMessage("");
-    setRowMessageIsError(false);
-    try {
-      await deletePlatformOrganization(organization.id);
-      setOrganizations((current) => current.filter((org) => org.id !== organization.id));
-      setRowMessage(`"${organization.name}" permanently deleted.`);
-      await load();
-    } catch (err) {
-      setRowMessageIsError(true);
-      setRowMessage(
-        err instanceof ApiError
-          ? formatApiErrors(err.errors) || err.message
-          : "Failed to delete organization. Suspend the organization first, then click Delete.",
-      );
-    } finally {
-      setRowActionId(null);
+      setError(apiMessage(err, "Failed to create organization."));
+      setSaving(false);
     }
   }
 
   return (
-    <AppShell>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Platform overview
-            </h1>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Create organizations, manage admin accounts, suspend inactive tenants, and monitor
-              counts. No organization HR data is accessible from this account.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowCreate((value) => !value)}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            {showCreate ? "Cancel" : "Create organization"}
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="h-40 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />
-        ) : null}
-
-        {error ? (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
-            {error}
-          </p>
-        ) : null}
-
-        {rowMessage ? (
-          <p
-            className={
-              rowMessageIsError
-                ? "rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300"
-                : "rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200"
-            }
-          >
-            {rowMessage}
-          </p>
-        ) : null}
-
-        {mailStatus && (!mailStatus.configured || mailStatus.render_smtp_blocked_hint) ? (
-          <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
-            <h2 className="font-semibold text-amber-900 dark:text-amber-200">
-              {mailStatus.configured ? "SMTP blocked on Render free tier" : "Email delivery not configured"}
-            </h2>
-            <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
-              {mailStatus.configured
-                ? "Gmail SMTP credentials can be correct and still fail with a timeout on Render free services."
-                : "Invitations will not reach inboxes until mail is configured on the API service (Render environment variables)."}
-            </p>
-            {mailStatus.issue ? (
-              <p className="mt-2 text-sm font-medium text-amber-900 dark:text-amber-200">{mailStatus.issue}</p>
-            ) : null}
-            {mailStatus.render_smtp_blocked_hint ? (
-              <p className="mt-2 text-sm text-amber-900 dark:text-amber-200">{mailStatus.render_smtp_blocked_hint}</p>
-            ) : null}
-            {mailStatus.brevo_sender_verification_hint ? (
-              <p className="mt-2 text-sm text-amber-900 dark:text-amber-200">{mailStatus.brevo_sender_verification_hint}</p>
-            ) : null}
-            <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
-              Current mailer: <span className="font-mono">{mailStatus.mailer}</span>
-              {mailStatus.recommended_mailer ? (
-                <>
-                  {" "}
-                  · recommended: <span className="font-mono">{mailStatus.recommended_mailer}</span>
-                </>
-              ) : null}
-              {mailStatus.host ? (
-                <>
-                  {" "}
-                  · {mailStatus.host}:{mailStatus.port}
-                </>
-              ) : null}
-            </p>
-            {mailStatus.providers && !mailStatus.configured ? (
-              <ul className="mt-3 space-y-2 text-xs text-amber-900 dark:text-amber-200">
-                {mailStatus.providers.map((provider) => (
-                  <li key={provider.id} className="rounded-lg border border-amber-200/80 bg-white/60 p-2 dark:border-amber-800 dark:bg-amber-950/20">
-                    <span className="font-semibold">
-                      {provider.name}
-                      {provider.recommended ? " (recommended)" : ""}
-                      {!provider.domain_required ? " · no domain required" : ""}
-                    </span>
-                    {" — "}
-                    {provider.free_emails_per_month}
-                    {provider.free_daily_limit ? `, ${provider.free_daily_limit}` : ""}
-                    . {provider.unique_recipients}. No credit card.
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-        ) : null}
-
-        {mailStatus?.configured ? (
-          <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Test email delivery</h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Sends a test message
-              {mailStatus.from_address ? (
-                <>
-                  {" "}
-                  via <span className="font-mono">{mailStatus.from_address}</span>
-                </>
-              ) : (
-                " using the provider shared sender"
-              )}{" "}
-              before inviting admins.
-            </p>
-            <form className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleMailTest}>
-              <input
-                type="email"
-                placeholder="Recipient email (optional — defaults to you)"
-                value={mailTestEmail}
-                onChange={(event) => setMailTestEmail(event.target.value)}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950"
-              />
-              <button
-                type="submit"
-                disabled={sendingMailTest}
-                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-              >
-                {sendingMailTest ? "Sending…" : "Send test email"}
-              </button>
-            </form>
-            {mailTestError ? <p className="mt-2 text-sm text-red-600">{mailTestError}</p> : null}
-            {mailTestMessage ? <p className="mt-2 text-sm text-green-600">{mailTestMessage}</p> : null}
-          </section>
-        ) : null}
-
-        {data ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="Organizations" value={data.organizations_total} />
-            <MetricCard label="Active organizations" value={data.organizations_active} />
-            <MetricCard label="Suspended organizations" value={data.organizations_suspended} />
-            <MetricCard label="Tenant users" value={data.tenant_users_total} />
-          </div>
-        ) : null}
-
-        {showCreate ? (
-          <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800/50">
-            <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">New organization</h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Creates the organization and emails the admin an invitation to set their password.
-            </p>
-            <form className="mt-4 grid gap-4 sm:grid-cols-2" onSubmit={handleCreateOrganization}>
-              <input
-                required
-                placeholder="Organization name"
-                value={orgName}
-                onChange={(event) => setOrgName(event.target.value)}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-              />
-              <input
-                required
-                placeholder="Admin full name"
-                value={adminName}
-                onChange={(event) => setAdminName(event.target.value)}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-              />
-              <input
-                required
-                type="email"
-                placeholder="Admin email"
-                value={adminEmail}
-                onChange={(event) => setAdminEmail(event.target.value)}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-              />
-              <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
-                <button
-                  type="submit"
-                  disabled={savingOrg}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                >
-                  {savingOrg ? "Creating…" : "Create organization"}
-                </button>
-                {createError ? <p className="text-sm text-red-600">{createError}</p> : null}
-                {createSuccess ? <p className="text-sm text-green-600">{createSuccess}</p> : null}
-              </div>
-            </form>
-          </section>
-        ) : null}
-
-        <section className="ui-table-wrap rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-            <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Registered organizations</h2>
-            <p className="text-xs text-zinc-500">
-              {organizations.length} organization{organizations.length === 1 ? "" : "s"} on the platform.
-              Suspending keeps a tenant visible — use <span className="font-medium">Delete</span> (after suspend)
-              to remove it permanently.
-            </p>
-          </div>
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/50">
-              <tr>
-                <th className="px-4 py-2 font-medium">Organization</th>
-                <th className="px-4 py-2 font-medium">Admin</th>
-                <th className="px-4 py-2 font-medium">Employees</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Created</th>
-                <th className="px-4 py-2 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {organizations.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
-                    No organizations yet. Create the first one above.
-                  </td>
-                </tr>
-              ) : (
-                organizations.map((organization) => (
-                  <OrganizationRow
-                    key={organization.id}
-                    organization={organization}
-                    busy={rowActionId === organization.id}
-                    onEditEmail={() => openEditEmail(organization)}
-                    onSuspend={() => void handleSuspend(organization)}
-                    onReactivate={() => void handleReactivate(organization)}
-                    onResendInvitation={() => void handleResendAdminInvitation(organization)}
-                    onDelete={() => void handleDelete(organization)}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
-        </section>
-
-        <section className="max-w-lg rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Change password</h2>
-          <p className="mt-1 text-xs text-zinc-500">Only you can update the super admin password.</p>
-          <form className="mt-4 space-y-3" onSubmit={handlePasswordReset}>
-            <input
-              required
-              type="password"
-              placeholder="Current password"
-              value={currentPassword}
-              onChange={(event) => setCurrentPassword(event.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950"
-            />
-            <input
-              required
-              type="password"
-              minLength={8}
-              placeholder="New password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950"
-            />
-            <input
-              required
-              type="password"
-              minLength={8}
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950"
-            />
-            {passwordError ? <p className="text-sm text-red-600">{passwordError}</p> : null}
-            {passwordMessage ? <p className="text-sm text-green-600">{passwordMessage}</p> : null}
-            <button
-              type="submit"
-              disabled={savingPassword}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-            >
-              {savingPassword ? "Saving…" : "Update password"}
-            </button>
-          </form>
-        </section>
-      </div>
-
-      {editingOrg ? (
-        <Modal title={`Edit admin email — ${editingOrg.name}`} onClose={() => setEditingOrg(null)}>
-          <form className="space-y-4" onSubmit={handleEditEmail}>
-            <p className="text-sm text-zinc-500">
-              Current admin: {editingOrg.admin_name ?? "Unknown"}
-            </p>
+    <Modal
+      title="New organization"
+      description="Creates the organization and emails its admin an invitation to set a password."
+      onClose={onClose}
+    >
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        <Field label="Organization name">
+          <input required value={orgName} onChange={(e) => setOrgName(e.target.value)} className={fieldClass} />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Admin full name">
+            <input required value={adminName} onChange={(e) => setAdminName(e.target.value)} className={fieldClass} />
+          </Field>
+          <Field label="Admin email">
             <input
               required
               type="email"
-              value={editEmail}
-              onChange={(event) => setEditEmail(event.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950"
+              autoComplete="off"
+              value={adminEmail}
+              onChange={(e) => setAdminEmail(e.target.value)}
+              className={fieldClass}
             />
-            {editError ? <p className="text-sm text-red-600">{editError}</p> : null}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setEditingOrg(null)}
-                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingEdit}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-              >
-                {savingEdit ? "Saving…" : "Save email"}
-              </button>
-            </div>
-          </form>
-        </Modal>
-      ) : null}
-    </AppShell>
+          </Field>
+        </div>
+        <FormError message={error} />
+        <DialogActions>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" size="lg" disabled={saving}>
+            {saving ? "Creating…" : "Create organization"}
+          </Button>
+        </DialogActions>
+      </form>
+    </Modal>
   );
 }
 
-function OrganizationRow({
+function MailTestDialog({ fromAddress, onClose }: { fromAddress: string | null; onClose: () => void }) {
+  const [recipient, setRecipient] = useState("");
+  const [result, setResult] = useState<Notice>(null);
+  const [sending, setSending] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setResult(null);
+    setSending(true);
+    try {
+      const response = await sendPlatformMailTest(recipient.trim() || undefined);
+      setResult({ text: response.message, tone: "success" });
+    } catch (err) {
+      setResult({ text: apiMessage(err, "Mail test failed."), tone: "error" });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <Modal
+      title="Send a test email"
+      description={
+        fromAddress ? `Sent from ${fromAddress}. Check spam if it doesn’t arrive.` : "Uses the configured sender."
+      }
+      onClose={onClose}
+    >
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        <Field label="Recipient" hint="Leave empty to send it to yourself.">
+          <input
+            type="email"
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            placeholder="name@company.com"
+            className={fieldClass}
+          />
+        </Field>
+        {result ? <Alert tone={result.tone}>{result.text}</Alert> : null}
+        <DialogActions>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>
+            Close
+          </Button>
+          <Button type="submit" size="lg" disabled={sending}>
+            {sending ? "Sending…" : "Send test email"}
+          </Button>
+        </DialogActions>
+      </form>
+    </Modal>
+  );
+}
+
+function PasswordDialog({ onClose }: { onClose: () => void }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [result, setResult] = useState<Notice>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setResult(null);
+    setSaving(true);
+    try {
+      const response = await updateSuperAdminPassword({
+        current_password: current,
+        password: next,
+        password_confirmation: confirm,
+      });
+      setResult({ text: response.message, tone: "success" });
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+    } catch (err) {
+      setResult({ text: apiMessage(err, "Password update failed."), tone: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="Change password" description="Only you can change the super admin password." onClose={onClose} size="sm">
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        <Field label="Current password">
+          <input
+            required
+            type="password"
+            autoComplete="current-password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="New password" hint="At least 8 characters.">
+          <input
+            required
+            type="password"
+            minLength={8}
+            autoComplete="new-password"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="Confirm new password">
+          <input
+            required
+            type="password"
+            minLength={8}
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className={fieldClass}
+          />
+        </Field>
+        {result ? <Alert tone={result.tone}>{result.text}</Alert> : null}
+        <DialogActions>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>
+            Close
+          </Button>
+          <Button type="submit" size="lg" disabled={saving}>
+            {saving ? "Saving…" : "Update password"}
+          </Button>
+        </DialogActions>
+      </form>
+    </Modal>
+  );
+}
+
+function EditEmailDialog({
   organization,
-  busy,
-  onEditEmail,
-  onSuspend,
-  onReactivate,
-  onResendInvitation,
-  onDelete,
+  onClose,
+  onSaved,
 }: {
   organization: PlatformOrganization;
-  busy: boolean;
-  onEditEmail: () => void;
-  onSuspend: () => void;
-  onReactivate: () => void;
-  onResendInvitation: () => void;
-  onDelete: () => void;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
 }) {
-  const isSuspended = organization.status === "suspended";
-  const adminPending = organization.admin_status === "invited";
+  const [email, setEmail] = useState(organization.admin_email ?? "");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSaving(true);
+    try {
+      await updatePlatformOrganization(organization.id, { admin_email: email.trim() });
+      await onSaved();
+    } catch (err) {
+      setError(apiMessage(err, "Failed to update admin email."));
+      setSaving(false);
+    }
+  }
 
   return (
-    <tr>
-      <td className="px-4 py-3" data-label="Organization">
-        <p className="font-medium text-zinc-900 dark:text-zinc-50">{organization.name}</p>
-        <p className="text-xs text-zinc-500">{organization.slug}</p>
-      </td>
-      <td className="px-4 py-3" data-label="Admin">
-        <p>{organization.admin_name ?? "—"}</p>
-        <p className="text-xs text-zinc-500">{organization.admin_email ?? "—"}</p>
-        {adminPending ? (
-          <p className="mt-1 text-xs font-medium text-blue-600 dark:text-blue-400">
-            Pending invitation
-          </p>
+    <Modal
+      title="Edit admin email"
+      description={`${organization.name} · admin ${organization.admin_name ?? "unknown"}`}
+      onClose={onClose}
+      size="sm"
+    >
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        <Field label="Admin email" hint="The admin signs in with this address.">
+          <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={fieldClass} />
+        </Field>
+        <FormError message={error} />
+        <DialogActions>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" size="lg" disabled={saving}>
+            {saving ? "Saving…" : "Save email"}
+          </Button>
+        </DialogActions>
+      </form>
+    </Modal>
+  );
+}
+
+function ConfirmDialog({
+  title,
+  body,
+  confirmLabel,
+  requireText,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  requireText?: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [typed, setTyped] = useState("");
+  const blocked = Boolean(requireText) && typed.trim() !== requireText;
+
+  return (
+    <Modal title={title} onClose={onClose} size="sm">
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!blocked) onConfirm();
+        }}
+      >
+        <p className="text-sm leading-relaxed text-[var(--muted)]">{body}</p>
+        {requireText ? (
+          <Field label={`Type “${requireText}” to confirm`}>
+            <input value={typed} onChange={(e) => setTyped(e.target.value)} className={fieldClass} autoComplete="off" />
+          </Field>
         ) : null}
-      </td>
-      <td className="px-4 py-3" data-label="Employees">
-        {organization.employee_count}
-      </td>
-      <td className="px-4 py-3 capitalize" data-label="Status">
-        <StatusBadge status={organization.status} />
-      </td>
-      <td className="px-4 py-3 text-zinc-500" data-label="Created">
-        {organization.created_at
-          ? new Date(organization.created_at).toLocaleDateString()
-          : "—"}
-      </td>
-      <td className="px-4 py-3" data-label="Actions">
-        <div className="flex flex-wrap gap-2">
+        <DialogActions>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>
+            Cancel
+          </Button>
           <button
-            type="button"
-            disabled={busy || !organization.admin_email}
-            onClick={onEditEmail}
-            className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+            type="submit"
+            disabled={blocked}
+            className="inline-flex h-11 items-center rounded-xl bg-[var(--danger)] px-5 text-sm font-semibold text-[var(--primary-foreground)] transition hover:brightness-110 disabled:opacity-50"
           >
-            Edit email
+            {confirmLabel}
           </button>
-          {adminPending ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onResendInvitation}
-              className="rounded-md border border-violet-300 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 disabled:opacity-50 dark:border-violet-800 dark:text-violet-300"
-            >
-              Resend invitation
-            </button>
-          ) : null}
-          {isSuspended ? (
-            <>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onReactivate}
-                className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300"
-              >
-                Reactivate
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onDelete}
-                className="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300"
-              >
-                Delete
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onSuspend}
-              className="rounded-md border border-amber-300 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-800 dark:text-amber-300"
-            >
-              Suspend
-            </button>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-function StatusBadge({ status }: { status: PlatformOrganization["status"] }) {
-  const styles =
-    status === "active"
-      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-      : status === "suspended"
-        ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-        : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300";
-
-  return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${styles}`}>
-      {status}
-    </span>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-xs uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{value}</p>
-    </div>
+        </DialogActions>
+      </form>
+    </Modal>
   );
 }
