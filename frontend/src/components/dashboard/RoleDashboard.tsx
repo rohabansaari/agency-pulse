@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminDashboardView } from "@/components/dashboard/AdminDashboardView";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -7,12 +8,10 @@ import { EmptyState as UiEmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatDuration, formatTime, formatUtilization } from "@/lib/time";
 import type {
-  AdminDashboard,
   DashboardData,
   EmployeeDashboard,
   ManagerDashboard,
   ManagerTeamReport,
-  WorkTeam,
 } from "@/lib/types";
 import { ManualApprovalQueue } from "@/components/time/ManualApprovalQueue";
 import { OvertimeApprovalQueue } from "@/components/time/OvertimeApprovalQueue";
@@ -27,22 +26,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-
-function AdminTeamCard({ team }: { team: WorkTeam }) {
-  return (
-    <div className="ui-card rounded-xl p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">{team.name}</h3>
-          <p className="mt-0.5 text-xs text-zinc-500">Manager: {team.manager_name ?? "Unassigned"}</p>
-        </div>
-        <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800">
-          {team.members_count ?? team.members?.length ?? 0} members
-        </span>
-      </div>
-    </div>
-  );
-}
 
 function ManagerTeamCard({ team }: { team: ManagerTeamReport }) {
   return (
@@ -222,97 +205,6 @@ function ManagerView({ data, filter }: { data: ManagerDashboard; filter?: ReactN
   );
 }
 
-function AdminView({ data, filter }: { data: AdminDashboard; filter?: ReactNode }) {
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Control center"
-        description="Organization-wide workforce metrics and approvals"
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {filter}
-            <Link href="/reports">
-              <Button variant="secondary" size="sm">
-                Full reports
-              </Button>
-            </Link>
-          </div>
-        }
-      />
-
-      <div className="ui-kpi-grid">
-        <StatCard index={0} icon={Users} label="Workforce" value={String(data.employee_count)} sub="Employees + managers" accent="blue" />
-        <StatCard index={1} label="Teams" value={String(data.team_count)} accent="violet" />
-        <StatCard index={2} label="Active projects" value={String(data.active_projects)} />
-        <StatCard index={3} icon={Timer} label="Live timers" value={String(data.running_timers)} accent="green" />
-        <StatCard index={4} label="Hours in range" value={formatDuration(data.range_tracked_seconds ?? data.week_tracked_seconds)} />
-        <StatCard index={5} label="Utilization" value={formatUtilization(data.range_utilization_percent ?? data.organization_utilization_percent)} accent="amber" />
-        <StatCard index={6} label="Overtime pending" value={String(data.overtime_summary?.pending_count ?? 0)} />
-        <StatCard index={7} label="OT approved" value={formatDuration(data.overtime_summary?.approved_seconds ?? 0)} />
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
-          <Card animate={false}>
-            <CardHeader
-              title="Team utilization"
-              description="Tracked hours by team in selected range"
-              action={
-                <Link href="/teams" className="text-xs font-medium text-[var(--primary)] hover:underline">
-                  Manage teams
-                </Link>
-              }
-            />
-            {data.team_utilization.length === 0 ? (
-              <UiEmptyState title="No data yet" description="Utilization appears once teams track time." />
-            ) : (
-              <div className="ui-table-wrap">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--border)]">
-                      <th className="px-3 py-2 text-left">Team</th>
-                      <th className="px-3 py-2 text-left">Tracked</th>
-                      <th className="px-3 py-2 text-left">Utilization</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--border-subtle)]">
-                    {data.team_utilization.map((row) => (
-                      <tr key={row.team_id}>
-                        <td className="px-3 py-2.5 font-medium">{row.team_name}</td>
-                        <td className="px-3 py-2.5 font-mono tabular-nums">{formatDuration(row.tracked_seconds)}</td>
-                        <td className="px-3 py-2.5 font-mono tabular-nums">{formatUtilization(row.utilization_percent)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-
-          {data.teams.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {data.teams.map((team) => (
-                <AdminTeamCard key={team.id} team={team} />
-              ))}
-            </div>
-          ) : null}
-
-          {data.unassigned_employees > 0 ? (
-            <p className="text-sm text-amber-600 dark:text-amber-400">
-              {data.unassigned_employees} employee(s) not assigned to a team.
-            </p>
-          ) : null}
-        </div>
-
-        <div className="space-y-4">
-          <ManualApprovalQueue />
-          <OvertimeApprovalQueue title="Overtime queue" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function RoleDashboard({
   data,
   dateRangeFilter,
@@ -322,5 +214,5 @@ export function RoleDashboard({
 }) {
   if (data.role === "employee") return <EmployeeView data={data} filter={dateRangeFilter} />;
   if (data.role === "manager") return <ManagerView data={data} filter={dateRangeFilter} />;
-  return <AdminView data={data} filter={dateRangeFilter} />;
+  return <AdminDashboardView data={data} filter={dateRangeFilter} />;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { RoleBadge } from "@/components/dashboard/RoleBadge";
+import { PulseLogo } from "@/components/brand/PulseLogo";
+import { ROLE_LABELS } from "@/lib/navigation";
 import { navItemsForRole } from "@/lib/navigation";
 import type { NavItem } from "@/lib/navigation";
 import type { User, UserRole } from "@/lib/types";
@@ -115,25 +116,28 @@ export function DashboardSidebar({
 
   const homeHref = user.role === "super_admin" ? "/platform" : "/dashboard";
 
+  const initials = user.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
   return (
-    <div className="app-sidebar-inner">
-      <div className="shrink-0 px-4 py-5">
-        <Link href={homeHref} className="flex items-center gap-3" onClick={onNavigate}>
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--primary)] text-xs font-bold text-[var(--primary-foreground)] shadow-sm">
-            AP
-          </span>
-          <div className="min-w-0">
-            <p className="text-heading truncate text-sm text-[var(--foreground)]">AgencyPulse</p>
-            <p className="text-[11px] text-[var(--sidebar-muted)]">Workforce platform</p>
-          </div>
+    <div className="app-sidebar-inner bg-[var(--night)] text-[var(--night-text)]">
+      <div className="shrink-0 px-5 pb-4 pt-6">
+        <Link href={homeHref} onClick={onNavigate} aria-label="AgencyPulse home">
+          <PulseLogo tone="dark" className="text-[15px]" markClassName="h-8 w-8" />
         </Link>
       </div>
 
-      <nav className="app-sidebar-nav space-y-6 px-3 py-2">
+      <nav aria-label="Main" className="app-sidebar-nav space-y-5 px-3 pb-4">
         {groups.map((group) => (
           <div key={group.id}>
             {groups.length > 1 ? (
-              <p className="text-label mb-2 px-3">{group.label}</p>
+              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--night-muted)]">
+                {group.label}
+              </p>
             ) : null}
             <div className="space-y-0.5">
               {group.items.map((item) => {
@@ -144,31 +148,29 @@ export function DashboardSidebar({
                     key={`${group.id}-${item.label}-${item.href}`}
                     href={item.href}
                     onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] transition-all duration-150",
+                      "group relative flex min-h-11 items-center gap-3 rounded-[10px] px-3 text-sm transition-colors duration-150",
                       active
-                        ? "bg-[var(--sidebar-active-bg)] font-semibold text-[var(--sidebar-active-text)] shadow-sm"
-                        : "font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--foreground)]",
+                        ? "bg-[var(--night-raised)] font-medium text-white"
+                        : "text-[var(--night-text)] hover:bg-white/[0.06] hover:text-white",
                     )}
                   >
                     {active ? (
                       <motion.span
                         layoutId="sidebar-active-indicator"
-                        className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--sidebar-active-accent)]"
+                        className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--pulse-on-dark)]"
                         transition={{ type: "spring", stiffness: 380, damping: 30 }}
                       />
                     ) : null}
                     {Icon ? (
-                      <span
+                      <Icon
                         className={cn(
-                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-                          active
-                            ? "bg-[var(--primary-muted)] text-[var(--sidebar-active-accent)]"
-                            : "bg-transparent text-[var(--sidebar-muted)] group-hover:bg-[var(--sidebar-hover)] group-hover:text-[var(--foreground)]",
+                          "h-[18px] w-[18px] shrink-0",
+                          active ? "text-[var(--pulse-on-dark)]" : "text-[var(--night-muted)] group-hover:text-white",
                         )}
-                      >
-                        <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.25 : 1.75} />
-                      </span>
+                        strokeWidth={active ? 2.1 : 1.8}
+                      />
                     ) : null}
                     <span className="flex-1 truncate">{item.label}</span>
                   </Link>
@@ -179,19 +181,23 @@ export function DashboardSidebar({
         ))}
       </nav>
 
-      <div className="shrink-0 border-t border-[var(--sidebar-border)] p-3">
-        <div className="mb-2 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 py-3">
-          <p className="truncate text-sm font-semibold text-[var(--foreground)]">{user.name}</p>
-          <p className="truncate text-xs text-[var(--muted)]">{user.email}</p>
-          <RoleBadge role={user.role} className="mt-2" />
+      <div className="shrink-0 border-t border-[var(--night-border)] p-3">
+        <div className="flex items-center gap-3 px-2 py-2">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--night-raised)] text-xs font-semibold text-white">
+            {initials || "?"}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-white">{user.name}</p>
+            <p className="truncate text-xs text-[var(--night-muted)]">{ROLE_LABELS[user.role]}</p>
+          </div>
         </div>
         <button
           type="button"
           onClick={onLogout}
           disabled={loggingOut}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--muted)] transition hover:bg-[var(--accent-coral-soft)] hover:text-[var(--danger)] disabled:opacity-60"
+          className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-[10px] px-3 text-sm text-[var(--night-text)] transition hover:bg-white/[0.06] hover:text-white disabled:opacity-60"
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4" aria-hidden="true" />
           {loggingOut ? "Signing out…" : "Sign out"}
         </button>
       </div>
