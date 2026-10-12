@@ -18,11 +18,14 @@ import {
 import { clearToken, getToken } from "@/lib/auth";
 import { normalizeStepStates } from "@/lib/onboarding";
 import type { OnboardingStatus, UserRole } from "@/lib/types";
-import { Button } from "@/components/ui/Button";
-import { FormField, Input, Select } from "@/components/ui/Input";
+import { PulseLogo } from "@/components/brand/PulseLogo";
+import { Segmented } from "@/components/ledger/Segmented";
+import { Select } from "@/components/ui/Input";
+import { cn } from "@/lib/cn";
+import { Check, KeyRound, Plus, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState, type ReactNode } from "react";
+import { FormEvent, useCallback, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 const STEPS = [
   { id: 1, title: "Organization", required: true, blurb: "Name your workspace and set regional preferences." },
@@ -53,7 +56,7 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 ];
 
 const inputClass =
-  "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50";
+  "min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-muted)]";
 
 export function OnboardingWizard() {
   const router = useRouter();
@@ -279,8 +282,8 @@ export function OnboardingWizard() {
 
   if (loading) {
     return (
-      <div className="onboarding-shell flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <p className="text-sm text-zinc-500">Loading onboarding…</p>
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--background)]">
+        <p className="text-sm text-[var(--muted)]">Loading setup…</p>
       </div>
     );
   }
@@ -290,335 +293,366 @@ export function OnboardingWizard() {
   const current = STEPS.find((item) => item.id === step) ?? STEPS[0];
 
   return (
-    <div className="onboarding-shell">
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
-        <header className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <Link href="/" className="text-xs font-semibold tracking-widest text-blue-600 uppercase dark:text-blue-400">
-              AgencyPulse
-            </Link>
-            <h1 className="mt-1 text-xl font-semibold text-zinc-900 sm:text-2xl dark:text-zinc-50">
-              Set up your workspace
-            </h1>
-          </div>
-          <span className="text-sm font-semibold text-blue-600 tabular-nums dark:text-blue-400">
-            {displayPercent}%
-          </span>
-        </header>
-
-        <OnboardingProgressTrack
-          steps={STEPS}
-          currentStep={step}
-          percent={displayPercent}
-        />
-
-        <nav className="mb-4 flex shrink-0 flex-wrap gap-1.5 sm:gap-2" aria-label="Onboarding steps">
-          {STEPS.map((item) => {
-            const active = item.id === step;
-            const state = stepStates.find((s) => s.step === item.id);
-            const done = state?.completed ?? item.id < step;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  if (done || active) void goToStep(item.id);
-                }}
-                disabled={!done && !active}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition sm:px-3 sm:text-xs ${
-                  active
-                    ? "border-[var(--primary)] bg-[var(--primary-muted)] text-[var(--primary)]"
-                    : done
-                      ? "border-[var(--accent-emerald)]/40 bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]"
-                      : "border-[var(--border)] bg-[var(--card)] text-[var(--muted)]"
-                }`}
-              >
-                <span>{item.id}</span>
-                <span className="hidden sm:inline">{item.title}</span>
-                <span
-                  className={`rounded px-1 py-0.5 text-[9px] uppercase ${
-                    item.required
-                      ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                      : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                  }`}
-                >
-                  {item.required ? "Req" : "Opt"}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-6">
-          <aside className="onboarding-card hidden justify-center rounded-2xl border border-zinc-200/80 bg-white/80 p-6 backdrop-blur lg:flex dark:border-zinc-800 dark:bg-zinc-900/80">
-            <div className="flex flex-col justify-center">
-              <p className="text-xs font-semibold tracking-wide text-blue-600 uppercase dark:text-blue-400">
-                Step {current.id} of {STEPS.length}
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{current.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{current.blurb}</p>
-              <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-500">
-                {current.required ? "Required before dashboard access." : "Optional — skip anytime."}
-              </p>
-            </div>
-          </aside>
-
-          <section className="onboarding-card rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 lg:p-6 dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="mb-3 lg:hidden">
-              <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Step {current.id}</p>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{current.title}</h2>
-            </div>
-
-            {error ? <Alert tone="error">{error}</Alert> : null}
-            {success ? <Alert tone="success">{success}</Alert> : null}
-
-            <div key={step} className="animate-fade-in">
-              {step === 1 ? (
-                <form onSubmit={handleOrganizationSubmit} className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Organization name *" className="sm:col-span-2">
-                    <input required value={orgName} onChange={(e) => setOrgName(e.target.value)} className={inputClass} />
-                  </Field>
-                  <Field label="Timezone">
-                    <Select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={inputClass}>
-                      <option value="">Optional</option>
-                      {TIMEZONES.map((tz) => (
-                        <option key={tz} value={tz}>{tz}</option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label="Website">
-                    <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" className={inputClass} />
-                  </Field>
-                  <Field label="Organization logo" className="sm:col-span-2">
-                    <LogoUploadField value={logoUrl} onChange={setLogoUrl} disabled={submitting} />
-                  </Field>
-                  <ActionRow submitting={submitting} showBack={false} continueLabel="Save & Continue" className="sm:col-span-2" />
-                </form>
-              ) : null}
-
-              {step === 2 ? (
-                <form onSubmit={handlePayrollPinSubmit} className="grid gap-3 sm:grid-cols-2">
-                  <p className="rounded-lg bg-blue-50 px-3 py-2.5 text-sm text-blue-800 sm:col-span-2 dark:bg-blue-950 dark:text-blue-200">
-                    Payroll PIN protects access to salaries, payroll generation, payroll exports, and salary updates.
-                  </p>
-                  <Field label="PIN *">
-                    <input required type="password" inputMode="numeric" pattern="\d{4,8}" value={payrollPin} onChange={(e) => setPayrollPin(e.target.value)} className={inputClass} />
-                  </Field>
-                  <Field label="Confirm PIN *">
-                    <input required type="password" inputMode="numeric" pattern="\d{4,8}" value={payrollPinConfirmation} onChange={(e) => setPayrollPinConfirmation(e.target.value)} className={inputClass} />
-                  </Field>
-                  <ActionRow submitting={submitting} onBack={() => goToStep(1)} continueLabel="Save & Continue" className="sm:col-span-2" />
-                </form>
-              ) : null}
-
-              {step === 3 ? (
-                <div className="space-y-3">
-                  <TabSwitch active={employeeMode} onChange={setEmployeeMode} />
-                  {employeeMode === "manual" ? (
-                    <form onSubmit={handleEmployeeManualSubmit} className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Name *">
-                        <input required value={employeeName} onChange={(e) => setEmployeeName(e.target.value)} className={inputClass} />
-                      </Field>
-                      <Field label="Email *">
-                        <input required type="email" value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} className={inputClass} />
-                      </Field>
-                      <Field label="Salary *">
-                        <input required type="number" min="0" step="0.01" value={employeeSalary} onChange={(e) => setEmployeeSalary(e.target.value)} className={inputClass} />
-                      </Field>
-                      <Field label="Salary type *">
-                        <Select value={employeeSalaryType} onChange={(e) => setEmployeeSalaryType(e.target.value as "monthly" | "hourly")} className={inputClass}>
-                          <option value="monthly">Monthly</option>
-                          <option value="hourly">Hourly</option>
-                        </Select>
-                      </Field>
-                      <Field label="Role" className="sm:col-span-2">
-                        <Select value={employeeRole} onChange={(e) => setEmployeeRole(e.target.value as UserRole)} className={inputClass}>
-                          {ROLE_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </Select>
-                      </Field>
-                      <div className="sm:col-span-2">
-                        <button type="submit" disabled={submitting} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
-                          Add employee
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <EmployeeCsvImport
-                      submitting={submitting}
-                      onSubmittingChange={setSubmitting}
-                      onStatusChange={setStatus}
-                    />
-                  )}
-                  <OptionalActions submitting={submitting} onBack={() => goToStep(2)} onSkip={handleSkipOptional} onContinue={() => goToStep(4)} />
-                </div>
-              ) : null}
-
-              {step === 4 ? (
-                <div className="space-y-3">
-                  <form onSubmit={handleTeamSubmit} className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <input placeholder="Team name" value={teamName} onChange={(e) => setTeamName(e.target.value)} className={inputClass} />
-                    <button type="submit" disabled={submitting || !teamName.trim()} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
-                      Create
-                    </button>
-                  </form>
-                  {teamsCreated.length > 0 ? (
-                    <CreatedList items={teamsCreated} />
-                  ) : null}
-                  <OptionalActions submitting={submitting} onBack={() => goToStep(3)} onSkip={handleSkipOptional} onContinue={() => goToStep(5)} />
-                </div>
-              ) : null}
-
-              {step === 5 ? (
-                <div className="space-y-3">
-                  <form onSubmit={handleProjectSubmit} className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Project name *">
-                      <input required value={projectName} onChange={(e) => setProjectName(e.target.value)} className={inputClass} />
-                    </Field>
-                    <Field label="Client *">
-                      <input required value={projectClient} onChange={(e) => setProjectClient(e.target.value)} className={inputClass} />
-                    </Field>
-                    <div className="sm:col-span-2">
-                      <button type="submit" disabled={submitting} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
-                        Create project
-                      </button>
-                    </div>
-                  </form>
-                  {projectsCreated.length > 0 ? (
-                    <CreatedList items={projectsCreated} />
-                  ) : null}
-                  <OptionalActions submitting={submitting} onBack={() => goToStep(4)} onSkip={handleSkipOptional} onContinue={() => void handleFinish()} continueLabel="Finish setup" />
-                </div>
-              ) : null}
-            </div>
-          </section>
-        </div>
-
-        <footer className="shrink-0 pt-3 text-center">
+    <div className="min-h-dvh bg-[var(--background)]">
+      <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <Link href="/" aria-label="AgencyPulse home">
+            <PulseLogo className="text-lg" markClassName="h-8 w-8" />
+          </Link>
           <button
             type="button"
             onClick={() => {
               clearToken();
               router.push("/login");
             }}
-            className="text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
+            className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-medium text-[var(--primary)] hover:bg-[var(--primary-muted)]"
           >
-            Sign out
+            Save and finish later
           </button>
-        </footer>
+        </header>
+
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
+          <aside aria-label="Setup progress" className="min-w-0">
+            <h1 className="text-[22px] font-semibold tracking-[-0.01em] text-[var(--foreground)]">Set up your workspace</h1>
+            <div className="mt-3 flex items-center gap-3">
+              <div
+                className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--border-subtle)]"
+                role="progressbar"
+                aria-label="Setup progress"
+                aria-valuenow={displayPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="h-full rounded-full bg-[var(--primary)] transition-all duration-500 ease-out"
+                  style={{ width: `${displayPercent}%` }}
+                />
+              </div>
+              <span className="tnum text-[13px] text-[var(--muted)]">{displayPercent}%</span>
+            </div>
+
+            <ol className="mt-6 flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-1 lg:overflow-visible">
+              {STEPS.map((item) => {
+                const active = item.id === step;
+                const state = stepStates.find((s) => s.step === item.id);
+                const done = state?.completed ?? item.id < step;
+                const reachable = done || active;
+                return (
+                  <li key={item.id} className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (reachable) void goToStep(item.id);
+                      }}
+                      disabled={!reachable}
+                      aria-current={active ? "step" : undefined}
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition",
+                        active ? "bg-[var(--card)] shadow-[var(--shadow-sm)]" : reachable ? "hover:bg-[var(--accent-sand)]" : "",
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                          done && !active
+                            ? "bg-[var(--accent-emerald)] text-white"
+                            : active
+                              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                              : "border border-[var(--border)] text-[var(--muted)]",
+                        )}
+                      >
+                        {done && !active ? <Check className="h-3.5 w-3.5" /> : item.id}
+                      </span>
+                      <span className="min-w-0">
+                        <span
+                          className={cn(
+                            "block text-sm font-medium",
+                            active || done ? "text-[var(--foreground)]" : "text-[var(--muted)]",
+                          )}
+                        >
+                          {item.title}
+                        </span>
+                        <span className="hidden text-xs text-[var(--muted)] lg:block">
+                          {item.required ? "Required" : "Optional"}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </aside>
+
+          <section
+            aria-labelledby="onboarding-step-title"
+            className="min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-8"
+          >
+            <p className="text-[13px] text-[var(--muted)]">
+              Step {current.id} of {STEPS.length} · {current.required ? "Required" : "Optional"}
+            </p>
+            <h2 id="onboarding-step-title" className="mt-1 text-[26px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+              {STEP_HEADINGS[current.id]}
+            </h2>
+            <p className="mt-1.5 text-sm text-[var(--muted)]">{current.blurb}</p>
+
+            <div className="mt-6">
+              {error ? <Notice tone="error">{error}</Notice> : null}
+              {success ? <Notice tone="success">{success}</Notice> : null}
+
+              <div key={step} className="animate-fade-in">
+                {step === 1 ? (
+                  <form onSubmit={handleOrganizationSubmit} className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Organization name" required className="sm:col-span-2">
+                      <input required value={orgName} onChange={(e) => setOrgName(e.target.value)} className={inputClass} />
+                    </Field>
+                    <Field label="Timezone">
+                      <Select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+                        <option value="">Optional</option>
+                        {TIMEZONES.map((tz) => (
+                          <option key={tz} value={tz}>{tz}</option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Field label="Website">
+                      <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" className={inputClass} />
+                    </Field>
+                    <Field label="Organization logo" className="sm:col-span-2">
+                      <LogoUploadField value={logoUrl} onChange={setLogoUrl} disabled={submitting} />
+                    </Field>
+                    <StepFooter className="sm:col-span-2">
+                      <span />
+                      <PrimaryButton type="submit" disabled={submitting}>
+                        {submitting ? "Saving…" : "Save and continue"}
+                      </PrimaryButton>
+                    </StepFooter>
+                  </form>
+                ) : null}
+
+                {step === 2 ? (
+                  <form onSubmit={handlePayrollPinSubmit} className="grid gap-4 sm:grid-cols-2">
+                    <div className="flex items-start gap-3 rounded-xl bg-[var(--primary-muted)] px-4 py-3 text-sm text-[var(--foreground)] sm:col-span-2">
+                      <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-[var(--primary)]" aria-hidden="true" />
+                      Payroll PIN protects access to salaries, payroll generation, payroll exports, and salary updates.
+                    </div>
+                    <Field label="PIN" required hint="4–8 digits">
+                      <input required type="password" inputMode="numeric" pattern="\d{4,8}" value={payrollPin} onChange={(e) => setPayrollPin(e.target.value)} className={inputClass} />
+                    </Field>
+                    <Field label="Confirm PIN" required>
+                      <input required type="password" inputMode="numeric" pattern="\d{4,8}" value={payrollPinConfirmation} onChange={(e) => setPayrollPinConfirmation(e.target.value)} className={inputClass} />
+                    </Field>
+                    <StepFooter className="sm:col-span-2">
+                      <SecondaryButton onClick={() => goToStep(1)}>Back</SecondaryButton>
+                      <PrimaryButton type="submit" disabled={submitting}>
+                        {submitting ? "Saving…" : "Save and continue"}
+                      </PrimaryButton>
+                    </StepFooter>
+                  </form>
+                ) : null}
+
+                {step === 3 ? (
+                  <div className="flex flex-col gap-4">
+                    <Segmented
+                      label="How to add employees"
+                      options={[
+                        { value: "manual", label: "Add one by one" },
+                        { value: "csv", label: "Import a CSV" },
+                      ]}
+                      value={employeeMode}
+                      onChange={setEmployeeMode}
+                      className="self-start"
+                    />
+                    {employeeMode === "manual" ? (
+                      <form onSubmit={handleEmployeeManualSubmit} className="grid gap-4 sm:grid-cols-2">
+                        <Field label="Name" required>
+                          <input required value={employeeName} onChange={(e) => setEmployeeName(e.target.value)} className={inputClass} />
+                        </Field>
+                        <Field label="Email" required>
+                          <input required type="email" value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} className={inputClass} />
+                        </Field>
+                        <Field label="Salary" required>
+                          <input required type="number" min="0" step="0.01" value={employeeSalary} onChange={(e) => setEmployeeSalary(e.target.value)} className={inputClass} />
+                        </Field>
+                        <Field label="Salary type" required>
+                          <Select value={employeeSalaryType} onChange={(e) => setEmployeeSalaryType(e.target.value as "monthly" | "hourly")}>
+                            <option value="monthly">Monthly</option>
+                            <option value="hourly">Hourly</option>
+                          </Select>
+                        </Field>
+                        <Field label="Role" className="sm:col-span-2">
+                          <Select value={employeeRole} onChange={(e) => setEmployeeRole(e.target.value as UserRole)}>
+                            {ROLE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </Select>
+                        </Field>
+                        <div className="sm:col-span-2">
+                          <SecondaryButton type="submit" disabled={submitting}>
+                            <UserPlus className="h-4 w-4" aria-hidden="true" />
+                            Send invitation
+                          </SecondaryButton>
+                        </div>
+                      </form>
+                    ) : (
+                      <EmployeeCsvImport
+                        submitting={submitting}
+                        onSubmittingChange={setSubmitting}
+                        onStatusChange={setStatus}
+                      />
+                    )}
+                    <OptionalFooter submitting={submitting} onBack={() => goToStep(2)} onSkip={handleSkipOptional} onContinue={() => goToStep(4)} />
+                  </div>
+                ) : null}
+
+                {step === 4 ? (
+                  <div className="flex flex-col gap-4">
+                    <form onSubmit={handleTeamSubmit} className="flex flex-wrap items-end gap-3">
+                      <Field label="Team name" className="min-w-0 flex-[1_1_240px]">
+                        <input placeholder="e.g. Creative" value={teamName} onChange={(e) => setTeamName(e.target.value)} className={inputClass} />
+                      </Field>
+                      <SecondaryButton type="submit" disabled={submitting || !teamName.trim()}>
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                        Add team
+                      </SecondaryButton>
+                    </form>
+                    {teamsCreated.length > 0 ? <CreatedList items={teamsCreated} /> : null}
+                    <OptionalFooter submitting={submitting} onBack={() => goToStep(3)} onSkip={handleSkipOptional} onContinue={() => goToStep(5)} />
+                  </div>
+                ) : null}
+
+                {step === 5 ? (
+                  <div className="flex flex-col gap-4">
+                    <form onSubmit={handleProjectSubmit} className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                      <Field label="Project name" required>
+                        <input required value={projectName} onChange={(e) => setProjectName(e.target.value)} className={inputClass} />
+                      </Field>
+                      <Field label="Client" required>
+                        <input required value={projectClient} onChange={(e) => setProjectClient(e.target.value)} className={inputClass} />
+                      </Field>
+                      <SecondaryButton type="submit" disabled={submitting}>
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                        Add project
+                      </SecondaryButton>
+                    </form>
+                    {projectsCreated.length > 0 ? <CreatedList items={projectsCreated} /> : null}
+                    <OptionalFooter
+                      submitting={submitting}
+                      onBack={() => goToStep(4)}
+                      onSkip={handleSkipOptional}
+                      onContinue={() => void handleFinish()}
+                      continueLabel="Finish setup"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );
 }
 
-function OnboardingProgressTrack({
-  steps,
-  currentStep,
-  percent,
+const STEP_HEADINGS: Record<number, string> = {
+  1: "Name your workspace",
+  2: "Protect payroll with a PIN",
+  3: "Invite your team",
+  4: "Create teams",
+  5: "Add your first projects",
+};
+
+function Field({
+  label,
+  required = false,
+  hint,
+  children,
+  className,
 }: {
-  steps: readonly { id: number; title: string; required: boolean }[];
-  currentStep: number;
-  percent: number;
+  label: string;
+  required?: boolean;
+  hint?: string;
+  children: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="mb-4 shrink-0">
-      <div className="mb-2 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-        <span>
-          Step {currentStep} of {steps.length}
-        </span>
-        <span className="tabular-nums">{percent}% complete</span>
-      </div>
-      <div
-        className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--border)]"
-        role="progressbar"
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div
-          className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent-emerald)] transition-all duration-500 ease-out"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
-  return (
-    <label className={`block ${className}`}>
-      <span className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">{label}</span>
+    <label className={cn("block", className)}>
+      <span className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">
+        {label}
+        {required ? <span className="text-[var(--danger)]"> *</span> : null}
+      </span>
       {children}
+      {hint ? <span className="mt-1 block text-xs text-[var(--muted)]">{hint}</span> : null}
     </label>
   );
 }
 
-function Alert({ tone, children }: { tone: "error" | "success"; children: ReactNode }) {
-  const styles =
-    tone === "error"
-      ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
-      : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300";
-  return <div className={`mb-3 rounded-lg border px-3 py-2 text-sm ${styles}`}>{children}</div>;
-}
-
-function TabSwitch({ active, onChange }: { active: "manual" | "csv"; onChange: (mode: "manual" | "csv") => void }) {
+function Notice({ tone, children }: { tone: "error" | "success"; children: ReactNode }) {
   return (
-    <div className="inline-flex rounded-lg border border-zinc-200 p-0.5 dark:border-zinc-700">
-      {(["manual", "csv"] as const).map((mode) => (
-        <button
-          key={mode}
-          type="button"
-          onClick={() => onChange(mode)}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize ${
-            active === mode ? "bg-blue-600 text-white" : "text-zinc-600 dark:text-zinc-400"
-          }`}
-        >
-          {mode === "csv" ? "CSV import" : "Manual"}
-        </button>
-      ))}
+    <div
+      role={tone === "error" ? "alert" : "status"}
+      className={cn(
+        "mb-4 rounded-xl border px-4 py-2.5 text-sm",
+        tone === "error"
+          ? "border-[var(--accent-coral)]/30 bg-[var(--accent-coral-soft)] text-[var(--danger)]"
+          : "border-[var(--accent-emerald)]/30 bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]",
+      )}
+    >
+      {children}
     </div>
   );
 }
 
 function CreatedList({ items }: { items: string[] }) {
   return (
-    <ul className="flex flex-wrap gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+    <ul className="flex flex-wrap gap-2">
       {items.map((name) => (
-        <li key={name} className="rounded-full bg-zinc-100 px-2.5 py-1 dark:bg-zinc-800">✓ {name}</li>
+        <li
+          key={name}
+          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-emerald-soft)] px-3 py-1 text-[13px] font-medium text-[var(--accent-emerald)]"
+        >
+          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+          {name}
+        </li>
       ))}
     </ul>
   );
 }
 
-function ActionRow({
-  submitting,
-  onBack,
-  showBack = true,
-  continueLabel,
-  className = "",
-}: {
-  submitting: boolean;
-  onBack?: () => void;
-  showBack?: boolean;
-  continueLabel: string;
-  className?: string;
-}) {
+function StepFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-700 ${className}`}>
-      {showBack && onBack ? (
-        <button type="button" onClick={onBack} className="text-sm text-zinc-600 dark:text-zinc-400">Back</button>
-      ) : (
-        <span />
-      )}
-      <button type="submit" disabled={submitting} className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
-        {submitting ? "Saving…" : continueLabel}
-      </button>
+    <div className={cn("mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-5", className)}>
+      {children}
     </div>
   );
 }
 
-function OptionalActions({
+function PrimaryButton({ className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      {...props}
+      className={cn(
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)] disabled:opacity-60",
+        className,
+      )}
+    />
+  );
+}
+
+function SecondaryButton({ className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      {...props}
+      className={cn(
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-4 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--accent-sand)] disabled:opacity-60",
+        className,
+      )}
+    />
+  );
+}
+
+function OptionalFooter({
   submitting,
   onBack,
   onSkip,
@@ -632,12 +666,21 @@ function OptionalActions({
   continueLabel?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-700">
-      <button type="button" onClick={onBack} className="text-sm text-zinc-600 dark:text-zinc-400">Back</button>
-      <div className="flex gap-2">
-        <button type="button" disabled={submitting} onClick={onSkip} className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600">Skip</button>
-        <button type="button" disabled={submitting} onClick={onContinue} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white">{continueLabel}</button>
+    <StepFooter>
+      <SecondaryButton onClick={onBack}>Back</SecondaryButton>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={onSkip}
+          className="inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-medium text-[var(--muted)] hover:bg-[var(--accent-sand)] hover:text-[var(--foreground)] disabled:opacity-60"
+        >
+          Skip for now
+        </button>
+        <PrimaryButton disabled={submitting} onClick={onContinue}>
+          {continueLabel}
+        </PrimaryButton>
       </div>
-    </div>
+    </StepFooter>
   );
 }

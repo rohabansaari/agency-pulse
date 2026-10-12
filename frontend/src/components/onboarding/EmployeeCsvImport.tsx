@@ -134,24 +134,24 @@ export function EmployeeCsvImport({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
+      <div className="rounded-lg border border-[var(--primary)]/30 bg-[var(--primary-muted)] p-4">
         <button
           type="button"
           onClick={() => void downloadSampleCsv()}
-          className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+          className="text-sm font-medium text-[var(--primary)] hover:underline"
         >
           Download sample CSV
         </button>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-md bg-white/80 p-3 text-xs dark:bg-zinc-900/80">
-            <p className="font-semibold text-zinc-700 dark:text-zinc-300">Allowed roles</p>
-            <p className="mt-1 text-zinc-600 dark:text-zinc-400">employee, manager, sub_admin</p>
-            <p className="mt-2 text-zinc-500">Admin and Super Admin cannot be imported.</p>
+          <div className="rounded-lg bg-[var(--card)] p-3 text-xs">
+            <p className="font-semibold text-[var(--foreground)]">Allowed roles</p>
+            <p className="mt-1 text-[var(--muted)]">employee, manager, sub_admin</p>
+            <p className="mt-2 text-[var(--muted)]">Admin and Super Admin cannot be imported.</p>
           </div>
-          <div className="rounded-md bg-white/80 p-3 text-xs dark:bg-zinc-900/80">
-            <p className="font-semibold text-zinc-700 dark:text-zinc-300">Allowed salary types</p>
-            <p className="mt-1 text-zinc-600 dark:text-zinc-400">monthly, hourly</p>
-            <p className="mt-2 text-zinc-500">Extra columns are ignored automatically.</p>
+          <div className="rounded-lg bg-[var(--card)] p-3 text-xs">
+            <p className="font-semibold text-[var(--foreground)]">Allowed salary types</p>
+            <p className="mt-1 text-[var(--muted)]">monthly, hourly</p>
+            <p className="mt-2 text-[var(--muted)]">Extra columns are ignored automatically.</p>
           </div>
         </div>
       </div>
@@ -161,39 +161,39 @@ export function EmployeeCsvImport({
           type="file"
           accept=".csv,text/csv"
           onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)}
-          className="text-sm sm:col-span-2"
+          className="text-sm text-[var(--muted)] file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-xl file:border file:border-[var(--border)] file:bg-[var(--card-elevated)] file:px-4 file:text-sm file:font-medium file:text-[var(--foreground)] hover:file:bg-[var(--accent-sand)] sm:col-span-2"
         />
         <button
           type="button"
           disabled={submitting || !csvFile}
           onClick={() => void handleCsvImport()}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 sm:col-span-2 dark:bg-zinc-100 dark:text-zinc-900"
+          className="inline-flex min-h-11 items-center justify-center justify-self-start rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)] disabled:opacity-60 sm:col-span-2"
         >
           {submitting ? "Importing…" : "Import CSV"}
         </button>
       </div>
 
-      {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+      {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
       {importReport ? (
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Import complete</p>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{importReport.message}</p>
-          <div className="mt-2 flex flex-wrap gap-4 text-xs text-zinc-500">
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--accent-sand)] p-4">
+          <p className="text-sm font-semibold text-[var(--foreground)]">Import complete</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">{importReport.message}</p>
+          <div className="mt-2 flex flex-wrap gap-4 text-xs text-[var(--muted)]">
             <span>Total records: {importReport.total}</span>
             <span>Created: {importReport.created}</span>
             <span>Emails sent: {importReport.emails_sent}</span>
             <span>Invalid rows: {importReport.failed_count}</span>
           </div>
           {importReport.emails_failed > 0 ? (
-            <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
+            <p className="mt-2 text-sm text-[var(--accent-copper)]">
               {importReport.emails_failed} invitation email
               {importReport.emails_failed === 1 ? "" : "s"} could not be delivered. Resend from Employees
               after verifying your MailerSend domain.
             </p>
           ) : null}
           {importReport.failed_count > 0 ? (
-            <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
+            <p className="mt-2 text-sm text-[var(--accent-copper)]">
               {importReport.failed_count} record{importReport.failed_count === 1 ? "" : "s"} require attention.
             </p>
           ) : null}
@@ -202,7 +202,7 @@ export function EmployeeCsvImport({
               <button
                 type="button"
                 onClick={downloadFailedRecords}
-                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium dark:border-zinc-600"
+                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium"
               >
                 Download failed records
               </button>
@@ -210,7 +210,7 @@ export function EmployeeCsvImport({
             <button
               type="button"
               onClick={downloadImportResults}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium dark:border-zinc-600"
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium"
             >
               Download import results
             </button>
