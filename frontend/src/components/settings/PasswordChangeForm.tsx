@@ -1,10 +1,10 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/EmptyState";
+import { FormField, Input } from "@/components/ui/Input";
 import { ApiError, formatApiErrors, updatePassword } from "@/lib/api";
 import { FormEvent, useState } from "react";
-
-const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
 
 export function PasswordChangeForm() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -42,69 +42,52 @@ export function PasswordChangeForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
-      {success ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
-          {success}
-        </p>
-      ) : null}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {error ? <Alert variant="error">{error}</Alert> : null}
+      {success ? <Alert variant="success">{success}</Alert> : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block sm:col-span-2">
-          <span className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Current password
-          </span>
-          <input
-            required
-            type="password"
-            autoComplete="current-password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            New password
-          </span>
-          <input
+        <div className="sm:col-span-2 sm:max-w-[calc(50%-0.5rem)]">
+          <FormField label="Current password" htmlFor="current-password" required>
+            <Input
+              id="current-password"
+              required
+              type="password"
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+          </FormField>
+        </div>
+        <FormField label="New password" htmlFor="new-password" required hint="At least 8 characters.">
+          <Input
+            id="new-password"
             required
             type="password"
             minLength={8}
             autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className={inputClass}
           />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Confirm new password
-          </span>
-          <input
+        </FormField>
+        <FormField label="Confirm new password" htmlFor="confirm-password" required>
+          <Input
+            id="confirm-password"
             required
             type="password"
             minLength={8}
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className={inputClass}
           />
-        </label>
+        </FormField>
       </div>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-      >
-        {submitting ? "Updating…" : "Update password"}
-      </button>
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[var(--border-subtle)] pt-4">
+        <Button type="submit" size="lg" disabled={submitting}>
+          {submitting ? "Updating…" : "Update password"}
+        </Button>
+      </div>
     </form>
   );
 }

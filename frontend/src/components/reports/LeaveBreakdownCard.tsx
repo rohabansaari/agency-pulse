@@ -3,6 +3,12 @@
 import { formatDuration } from "@/lib/time";
 import type { LeaveBreakdownPeriod } from "@/lib/types";
 
+const ROWS = [
+  { key: "paid_seconds", label: "Paid", dot: "bg-[var(--accent-emerald)]" },
+  { key: "pending_seconds", label: "Pending", dot: "bg-[var(--accent-copper)]" },
+  { key: "rejected_seconds", label: "Rejected", dot: "bg-[var(--accent-coral)]" },
+] as const;
+
 export function LeaveBreakdownCard({
   title,
   breakdown,
@@ -11,30 +17,19 @@ export function LeaveBreakdownCard({
   breakdown: LeaveBreakdownPeriod;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-100 px-4 py-3 dark:border-zinc-800">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-        {title}
-      </p>
-      <div className="grid gap-2 text-sm sm:grid-cols-3">
-        <div>
-          <p className="text-zinc-500">Paid leave</p>
-          <p className="font-mono font-semibold tabular-nums text-green-700 dark:text-green-400">
-            {formatDuration(breakdown.paid_seconds)}
-          </p>
-        </div>
-        <div>
-          <p className="text-zinc-500">Pending leave</p>
-          <p className="font-mono font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-            {formatDuration(breakdown.pending_seconds)}
-          </p>
-        </div>
-        <div>
-          <p className="text-zinc-500">Rejected leave</p>
-          <p className="font-mono font-semibold tabular-nums text-red-700 dark:text-red-400">
-            {formatDuration(breakdown.rejected_seconds)}
-          </p>
-        </div>
-      </div>
+    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--card-elevated)] px-4 py-3">
+      <p className="mb-2 text-xs font-medium uppercase tracking-[0.04em] text-[var(--muted)]">{title}</p>
+      <dl className="flex flex-col gap-1.5 text-sm">
+        {ROWS.map((row) => (
+          <div key={row.key} className="flex items-center justify-between gap-3">
+            <dt className="flex items-center gap-2 text-[var(--muted)]">
+              <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${row.dot}`} />
+              {row.label} leave
+            </dt>
+            <dd className="num font-medium text-[var(--foreground)]">{formatDuration(breakdown[row.key])}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }
