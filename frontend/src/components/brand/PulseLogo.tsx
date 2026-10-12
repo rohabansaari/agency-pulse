@@ -3,10 +3,10 @@ import { cn } from "@/lib/cn";
 type Tone = "light" | "dark";
 
 const STROKES: Record<Tone, { letter: string; pulse: string }> = {
-  // On light grounds: ink letter, blue pulse.
-  light: { letter: "#111723", pulse: "#2F5BEA" },
-  // On dark grounds: white letter, lightened pulse.
-  dark: { letter: "#FFFFFF", pulse: "#7C9BFF" },
+  // On light grounds: ink letter, plum pulse.
+  light: { letter: "#111723", pulse: "#9D2A8C" },
+  // On dark grounds: white letter, lightened plum pulse.
+  dark: { letter: "#FFFFFF", pulse: "#F08BDF" },
 };
 
 /** The "Pulse A" mark: the A of Agency with a heartbeat for its crossbar. */
