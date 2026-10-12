@@ -112,8 +112,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         ) : null}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-[var(--app-sidebar-width)] max-w-[85vw] border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] shadow-2xl transition-transform duration-300 ease-out md:hidden ${
-            mobileNavOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
+          className={`fixed inset-y-0 left-0 z-50 w-[var(--app-sidebar-width)] max-w-[85vw] border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] transition-[transform,visibility]  duration-300 ease-out md:hidden ${
+            mobileNavOpen ? "visible translate-x-0 shadow-2xl" : "invisible -translate-x-full pointer-events-none"
           }`}
           aria-hidden={!mobileNavOpen}
         >

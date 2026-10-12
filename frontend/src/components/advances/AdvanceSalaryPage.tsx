@@ -1,11 +1,21 @@
 "use client";
 
-import { Badge } from "@/components/ui/Badge";
+import {
+  ApproveRejectButtons,
+  formatShortDate,
+  PanelEmpty,
+  RequestItem,
+  RequestList,
+  RequestPanel,
+  StatusPill,
+} from "@/components/leave/approvals";
+import { Avatar } from "@/components/ledger/Avatar";
+import { ledgerTable } from "@/components/ledger/table";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { MoneyAmount } from "@/components/ui/MoneyAmount";
-import { Alert } from "@/components/ui/EmptyState";
+import { Alert, Spinner } from "@/components/ui/EmptyState";
 import { FormField, Input } from "@/components/ui/Input";
+import { MoneyAmount } from "@/components/ui/MoneyAmount";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   ApiError,
   approveSalaryAdvance,
@@ -16,15 +26,9 @@ import {
   rejectSalaryAdvance,
 } from "@/lib/api";
 import type { SalaryAdvanceRequest } from "@/lib/types";
-import { motion } from "framer-motion";
+import { cn } from "@/lib/cn";
+import { Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-
-const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "danger"> = {
-  pending: "warning",
-  approved: "success",
-  rejected: "danger",
-  deducted: "default",
-};
 
 export function EmployeeAdvancePage() {
   const [requests, setRequests] = useState<SalaryAdvanceRequest[]>([]);
@@ -69,73 +73,75 @@ export function EmployeeAdvancePage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Advance salary</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Request an advance against your upcoming salary. Approved advances are deducted automatically from payroll.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="My requests"
+        title="Advance salary"
+        description="Request an advance against your upcoming salary. Approved advances are deducted automatically from payroll."
+      />
 
-      <Card className="p-5">
-        <h2 className="text-lg font-semibold">New request</h2>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          {error ? <Alert variant="error">{error}</Alert> : null}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Amount" required>
+      <div className="flex flex-wrap items-start gap-6">
+        <section
+          aria-labelledby="advance-new-heading"
+          className="min-w-0 flex-[1_1_340px] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
+        >
+          <h2 id="advance-new-heading" className="text-lg font-semibold text-[var(--foreground)]">
+            New request
+          </h2>
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+            {error ? <Alert variant="error">{error}</Alert> : null}
+            <FormField label="Amount" htmlFor="advance-amount" required>
               <Input
+                id="advance-amount"
                 type="number"
+                inputMode="decimal"
                 min={1}
                 step="0.01"
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 5000"
+                className="tnum"
               />
             </FormField>
-            <FormField label="Reason (optional)">
+            <FormField label="Reason (optional)" htmlFor="advance-reason">
               <Input
+                id="advance-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Brief reason for the advance"
               />
             </FormField>
-          </div>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Submitting…" : "Submit request"}
-          </Button>
-        </form>
-      </Card>
+            <p className="text-[13px] text-[var(--muted)]">
+              Goes to your admin for approval. Approved amounts are deducted from the next payroll run.
+            </p>
+            <Button type="submit" size="lg" disabled={submitting} className="min-h-12 w-full">
+              {submitting ? "Submitting…" : "Submit request"}
+            </Button>
+          </form>
+        </section>
 
-      <Card className="p-5">
-        <h2 className="mb-4 text-lg font-semibold">Request history</h2>
-        {loading ? (
-          <p className="text-sm text-[var(--muted)]">Loading…</p>
-        ) : requests.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">No advance requests yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {requests.map((req, i) => (
-              <motion.div
-                key={req.id}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] p-4"
-              >
-                <div>
-                  <MoneyAmount amount={req.amount} size="md" />
-                  {req.reason ? <p className="mt-1 text-sm text-[var(--muted)]">{req.reason}</p> : null}
-                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                    {req.created_at ? new Date(req.created_at).toLocaleDateString() : ""}
-                  </p>
-                </div>
-                <Badge variant={STATUS_VARIANT[req.status] ?? "default"}>{req.status_label}</Badge>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </Card>
+        <RequestPanel title="Request history" className="flex-[999_1_460px]">
+          {loading ? (
+            <Spinner />
+          ) : requests.length === 0 ? (
+            <PanelEmpty icon={Wallet} title="No advance requests yet" description="Requests you submit appear here with their status." />
+          ) : (
+            <RequestList>
+              {requests.map((req) => (
+                <RequestItem
+                  key={req.id}
+                  kind="advance"
+                  who={<MoneyAmount amount={req.amount} size="sm" className="font-medium" />}
+                  status={<StatusPill status={req.status} label={req.status_label} />}
+                  what={req.created_at ? `Requested ${formatShortDate(req.created_at)}` : "Salary advance"}
+                  note={req.reason || undefined}
+                />
+              ))}
+            </RequestList>
+          )}
+        </RequestPanel>
+      </div>
     </div>
   );
 }
@@ -188,84 +194,87 @@ export function AdminAdvancePage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Advance salary management</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Review and approve employee advance requests. Approved amounts are deducted from the next payroll run.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Approvals"
+        title="Advance salary management"
+        description="Review and approve employee advance requests. Approved amounts are deducted from the next payroll run."
+      />
 
-      <Card className="p-5">
-        <h2 className="mb-4 text-lg font-semibold">Pending approval</h2>
+      <RequestPanel title="Pending approval" count={loading ? undefined : pending.length}>
         {loading ? (
-          <p className="text-sm text-[var(--muted)]">Loading…</p>
+          <Spinner />
         ) : pending.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">No pending requests.</p>
+          <PanelEmpty title="All caught up" description="No pending requests." />
         ) : (
-          <div className="space-y-3">
-            {pending.map((req) => (
-              <div
-                key={req.id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[var(--border)] p-4"
-              >
-                <div>
-                  <p className="font-medium">{req.user?.name ?? `User #${req.user_id}`}</p>
-                  <MoneyAmount amount={req.amount} size="lg" />
-                  {req.reason ? <p className="mt-1 text-sm text-[var(--muted)]">{req.reason}</p> : null}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    disabled={acting === req.id}
-                    onClick={() => void handleApprove(req.id)}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    disabled={acting === req.id}
-                    onClick={() => void handleReject(req.id)}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <RequestList>
+            {pending.map((req) => {
+              const who = req.user?.name ?? `User #${req.user_id}`;
+              return (
+                <RequestItem
+                  key={req.id}
+                  kind="advance"
+                  who={who}
+                  status={<StatusPill status={req.status} label={req.status_label} />}
+                  what={
+                    <>
+                      Salary advance · <MoneyAmount amount={req.amount} size="sm" className="font-medium" />
+                      {req.created_at ? ` · requested ${formatShortDate(req.created_at)}` : ""}
+                    </>
+                  }
+                  note={req.reason || undefined}
+                  actions={
+                    <ApproveRejectButtons
+                      subject={`${who}'s salary advance`}
+                      disabled={acting === req.id}
+                      onApprove={() => void handleApprove(req.id)}
+                      onReject={() => void handleReject(req.id)}
+                    />
+                  }
+                />
+              );
+            })}
+          </RequestList>
         )}
-      </Card>
+      </RequestPanel>
 
-      <Card className="p-5">
-        <h2 className="mb-4 text-lg font-semibold">History</h2>
+      <section aria-labelledby="advance-history-heading" className={ledgerTable.card}>
+        <div className="px-5 pb-3 pt-4">
+          <h2 id="advance-history-heading" className="text-base font-semibold text-[var(--foreground)]">
+            History
+          </h2>
+          <p className="mt-0.5 text-[13px] text-[var(--muted)]">Reviewed and deducted requests.</p>
+        </div>
         {history.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">No reviewed requests yet.</p>
+          <PanelEmpty title="No reviewed requests yet" />
         ) : (
-          <div className="ui-table-wrap overflow-x-auto">
-            <table className="text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border)]">
-                  <th className="px-3 py-2 text-left">Employee</th>
-                  <th className="px-3 py-2 text-left">Amount</th>
-                  <th className="px-3 py-2 text-left">Status</th>
-                  <th className="px-3 py-2 text-left">Reviewed</th>
+          <div className={ledgerTable.wrap}>
+            <table className={cn(ledgerTable.table, "min-w-[560px]")}>
+              <thead className={ledgerTable.thead}>
+                <tr>
+                  <th scope="col" className={ledgerTable.th}>Employee</th>
+                  <th scope="col" className={cn(ledgerTable.th, "text-right")}>Amount</th>
+                  <th scope="col" className={ledgerTable.th}>Status</th>
+                  <th scope="col" className={ledgerTable.th}>Reviewed</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className={ledgerTable.tbody}>
                 {history.map((req) => (
-                  <tr key={req.id} className="border-b border-[var(--border-subtle)]">
-                    <td className="px-3 py-3">{req.user?.name}</td>
-                    <td className="px-3 py-3">
+                  <tr key={req.id} className={ledgerTable.rowHover}>
+                    <td className={ledgerTable.td}>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={req.user?.name ?? ""} size="sm" />
+                        <span className="font-medium text-[var(--foreground)]">{req.user?.name}</span>
+                      </div>
+                    </td>
+                    <td className={cn(ledgerTable.td, "text-right")}>
                       <MoneyAmount amount={req.amount} size="sm" />
                     </td>
-                    <td className="px-3 py-3">
-                      <Badge variant={STATUS_VARIANT[req.status] ?? "default"}>
-                        {req.status_label}
-                      </Badge>
+                    <td className={ledgerTable.td}>
+                      <StatusPill status={req.status} label={req.status_label} />
                     </td>
-                    <td className="px-3 py-3 text-[var(--muted)]">
-                      {req.reviewed_at ? new Date(req.reviewed_at).toLocaleDateString() : "—"}
+                    <td className={cn(ledgerTable.td, "tnum text-[var(--muted)]")}>
+                      {req.reviewed_at ? formatShortDate(req.reviewed_at) : "—"}
                     </td>
                   </tr>
                 ))}
@@ -273,7 +282,7 @@ export function AdminAdvancePage() {
             </table>
           </div>
         )}
-      </Card>
+      </section>
     </div>
   );
 }

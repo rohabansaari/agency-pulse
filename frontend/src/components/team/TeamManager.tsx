@@ -1,7 +1,13 @@
 "use client";
 
-import { Modal } from "@/components/ui/Modal";
-import { Select } from "@/components/ui/Input";
+import { Avatar } from "@/components/ledger/Avatar";
+import { Panel } from "@/components/ledger/Panel";
+import { ledgerTable, rowButton } from "@/components/ledger/table";
+import { Button } from "@/components/ui/Button";
+import { Alert, Spinner } from "@/components/ui/EmptyState";
+import { FormField, Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { cn } from "@/lib/cn";
 import {
   ApiError,
   createEmployee,
@@ -13,12 +19,13 @@ import {
 } from "@/lib/api";
 import { canManageOrgEmployees, CREATION_ROLES, isAdmin, ROLE_LABELS } from "@/lib/navigation";
 import type { MemberStatus, PayrollVaultStatus, TeamMember, User, UserRole } from "@/lib/types";
+import { UserPlus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-const STATUS_STYLES: Record<MemberStatus, string> = {
-  active: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  invited: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  suspended: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+const STATUS_BADGE: Record<MemberStatus, string> = {
+  active: "bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]",
+  invited: "bg-[var(--primary-muted)] text-[var(--primary)]",
+  suspended: "bg-[var(--accent-coral-soft)] text-[var(--accent-coral)]",
 };
 
 function statusLabel(status: MemberStatus): string {
@@ -167,221 +174,208 @@ export function TeamManager({ user }: { user: User }) {
   }
 
   if (loading) {
-    return (
-      <div className="h-64 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />
-    );
+    return <Spinner label="Loading employees…" />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Employees
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Invite team members by email. They set their password from the invitation link.
-          </p>
-        </div>
-        {admin ? (
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            Invite employee
-          </button>
-        ) : null}
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="People"
+        title="Employees"
+        description="Invite team members by email. They set their password from the invitation link."
+        actions={
+          admin ? (
+            <Button size="lg" onClick={() => setShowCreate(true)}>
+              <UserPlus className="h-4 w-4" aria-hidden="true" />
+              Invite employee
+            </Button>
+          ) : null
+        }
+      />
 
-      {error ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
-
-      {success ? (
-        <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700 dark:border-green-900 dark:bg-green-950/50 dark:text-green-300">
-          {success}
-        </p>
-      ) : null}
+      {error ? <Alert variant="error">{error}</Alert> : null}
+      {success ? <Alert variant="success">{success}</Alert> : null}
 
       {showCreate ? (
-        <form
-          onSubmit={handleCreateEmployee}
-          className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/50"
+        <Panel
+          title="Send invitation"
+          description="No password is set here. The employee receives an email to activate their account."
         >
-          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-            Send invitation
-          </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            No password is set here. The employee receives an email to activate their account.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <input
-              required
-              placeholder="Full name"
-              value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-            />
-            <input
-              required
-              type="email"
-              placeholder="Email"
-              value={createEmail}
-              onChange={(e) => setCreateEmail(e.target.value)}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-            />
-            <Select
-              value={createRole}
-              onChange={(e) => setCreateRole(e.target.value as UserRole)}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-            >
-              {CREATION_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {ROLE_LABELS[role]}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-400">
-            Salary contracts are configured under Payroll after the employee activates their account.
-          </p>
-          {vaultStatus?.requires_pin_on_employee_create ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <input
-                required
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                pattern="\d{4,8}"
-                minLength={4}
-                maxLength={8}
-                placeholder="Organization payroll PIN"
-                value={createPayrollPin}
-                onChange={(e) => setCreatePayrollPin(e.target.value)}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-              />
-              <input
-                required
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                pattern="\d{4,8}"
-                minLength={4}
-                maxLength={8}
-                placeholder="Confirm payroll PIN"
-                value={createPayrollPinConfirmation}
-                onChange={(e) => setCreatePayrollPinConfirmation(e.target.value)}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-              />
+          <form onSubmit={handleCreateEmployee} className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField label="Full name" htmlFor="invite-name" required>
+                <Input
+                  id="invite-name"
+                  required
+                  placeholder="Full name"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                />
+              </FormField>
+              <FormField label="Email" htmlFor="invite-email" required>
+                <Input
+                  id="invite-email"
+                  required
+                  type="email"
+                  placeholder="Email"
+                  value={createEmail}
+                  onChange={(e) => setCreateEmail(e.target.value)}
+                />
+              </FormField>
+              <FormField label="Role" htmlFor="invite-role">
+                <Select
+                  id="invite-role"
+                  value={createRole}
+                  onChange={(e) => setCreateRole(e.target.value as UserRole)}
+                >
+                  {CREATION_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {ROLE_LABELS[role]}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
             </div>
-          ) : null}
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-            >
-              {saving ? "Sending…" : "Send invitation"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCreate(false)}
-              className="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+            <p className="rounded-xl bg-[var(--accent-sand)] px-4 py-3 text-[13px] text-[var(--muted)]">
+              Salary contracts are configured under Payroll after the employee activates their account.
+            </p>
+            {vaultStatus?.requires_pin_on_employee_create ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="Organization payroll PIN" htmlFor="invite-pin" required>
+                  <Input
+                    id="invite-pin"
+                    required
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    pattern="\d{4,8}"
+                    minLength={4}
+                    maxLength={8}
+                    placeholder="Organization payroll PIN"
+                    value={createPayrollPin}
+                    onChange={(e) => setCreatePayrollPin(e.target.value)}
+                  />
+                </FormField>
+                <FormField label="Confirm payroll PIN" htmlFor="invite-pin-confirm" required>
+                  <Input
+                    id="invite-pin-confirm"
+                    required
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    pattern="\d{4,8}"
+                    minLength={4}
+                    maxLength={8}
+                    placeholder="Confirm payroll PIN"
+                    value={createPayrollPinConfirmation}
+                    onChange={(e) => setCreatePayrollPinConfirmation(e.target.value)}
+                  />
+                </FormField>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" size="lg" disabled={saving}>
+                {saving ? "Sending…" : "Send invitation"}
+              </Button>
+              <Button type="button" variant="secondary" size="lg" onClick={() => setShowCreate(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Panel>
       ) : null}
 
-      <div className="ui-table-wrap ui-card">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-zinc-100 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50">
-            <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Role</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Projects</th>
-              {canEditMembers ? <th className="px-4 py-3 font-medium">Actions</th> : null}
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((member) => (
-              <tr key={member.id} className="border-b border-zinc-50 dark:border-zinc-800/80">
-                <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-50">
-                  {member.name}
-                </td>
-                <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{member.email}</td>
-                <td className="px-4 py-3 capitalize text-zinc-600 dark:text-zinc-400">
-                  {canEditMembers && member.user_id !== user.id ? (
-                    <Select
-                      value={member.role}
-                      onChange={(e) => handleRoleChange(member, e.target.value as UserRole)}
-                      className="rounded border border-zinc-200 bg-transparent px-2 py-1 text-xs dark:border-zinc-700"
-                    >
-                      <option value="employee">Employee</option>
-                      <option value="manager">Manager</option>
-                      <option value="sub_admin">Sub Admin</option>
-                    </Select>
-                  ) : (
-                    member.role.replace("_", " ")
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_STYLES[member.status]}`}
-                  >
-                    {statusLabel(member.status)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                  {member.assigned_projects_count ?? 0}
-                </td>
+      <Panel title="Members" description={`${members.length} in your organization`} flush>
+        <div className={ledgerTable.wrap}>
+          <table className={cn(ledgerTable.table, "min-w-[760px]")}>
+            <thead className={ledgerTable.thead}>
+              <tr>
+                <th scope="col" className={ledgerTable.th}>Name</th>
+                <th scope="col" className={ledgerTable.th}>Role</th>
+                <th scope="col" className={ledgerTable.th}>Status</th>
+                <th scope="col" className={cn(ledgerTable.th, "text-right")}>Projects</th>
                 {canEditMembers ? (
-                  <td className="px-4 py-3">
-                    {member.user_id !== user.id ? (
-                      <div className="flex flex-wrap gap-2">
-                        {member.status === "invited" ? (
-                          <button
-                            type="button"
-                            onClick={() => void handleResendInvitation(member)}
-                            className="text-xs font-medium text-violet-600 hover:underline"
-                          >
-                            Resend invitation
-                          </button>
-                        ) : null}
-                        {member.status !== "active" ? (
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(member, "active")}
-                            className="text-xs text-green-600 hover:underline"
-                          >
-                            Activate
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(member, "suspended")}
-                            className="text-xs text-red-600 hover:underline"
-                          >
-                            Disable
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-zinc-400">You</span>
-                    )}
-                  </td>
+                  <th scope="col" className={cn(ledgerTable.th, "text-right")}>
+                    <span className="sr-only">Actions</span>
+                  </th>
                 ) : null}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className={ledgerTable.tbody}>
+              {members.map((member) => (
+                <tr key={member.id} className={ledgerTable.rowHover}>
+                  <td className={ledgerTable.td}>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={member.name} size="sm" />
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-[var(--foreground)]">{member.name}</span>
+                        <span className="block truncate text-[13px] text-[var(--muted)]">{member.email}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td className={cn(ledgerTable.td, "capitalize text-[var(--muted)]")}>
+                    {canEditMembers && member.user_id !== user.id ? (
+                      <Select
+                        value={member.role}
+                        onChange={(e) => handleRoleChange(member, e.target.value as UserRole)}
+                        className="min-w-[140px]"
+                      >
+                        <option value="employee">Employee</option>
+                        <option value="manager">Manager</option>
+                        <option value="sub_admin">Sub Admin</option>
+                      </Select>
+                    ) : (
+                      member.role.replace("_", " ")
+                    )}
+                  </td>
+                  <td className={ledgerTable.td}>
+                    <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-medium", STATUS_BADGE[member.status])}>
+                      {statusLabel(member.status)}
+                    </span>
+                  </td>
+                  <td className={cn(ledgerTable.td, "tnum text-right")}>{member.assigned_projects_count ?? 0}</td>
+                  {canEditMembers ? (
+                    <td className={ledgerTable.td}>
+                      {member.user_id !== user.id ? (
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          {member.status === "invited" ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleResendInvitation(member)}
+                              className={cn(rowButton, "text-[var(--primary)] hover:bg-[var(--primary-muted)]")}
+                            >
+                              Resend invitation
+                            </button>
+                          ) : null}
+                          {member.status !== "active" ? (
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(member, "active")}
+                              className={cn(rowButton, "border-transparent bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)] hover:brightness-95")}
+                            >
+                              Activate
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(member, "suspended")}
+                              className={cn(rowButton, "border-[var(--accent-coral)]/40 text-[var(--accent-coral)] hover:bg-[var(--accent-coral-soft)]")}
+                            >
+                              Disable
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-right text-[13px] text-[var(--muted)]">You</p>
+                      )}
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
     </div>
   );
 }

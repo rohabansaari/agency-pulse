@@ -138,8 +138,9 @@ export function CreateEmployeeModal({
           ) : null}
         </div>
 
-        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-          <p className="mb-3 text-sm font-medium text-zinc-900 dark:text-zinc-50">Compensation</p>
+        <fieldset className="rounded-2xl border border-[var(--border)] bg-[var(--accent-sand)]/40 p-4">
+          <legend className="px-1 text-[13px] font-semibold text-[var(--foreground)]">Compensation</legend>
+          <p className="mb-3 text-[13px] text-[var(--muted)]">Stored in the payroll vault and only visible under Payroll.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Salary type" required>
               <Dropdown
@@ -153,9 +154,12 @@ export function CreateEmployeeModal({
             </FormField>
             <FormField
               label={salaryType === "hourly" ? "Hourly rate" : "Monthly salary"}
+              htmlFor="emp-salary-amount"
               required
             >
               <Input
+                id="emp-salary-amount"
+                className="num"
                 required
                 type="number"
                 min={0.01}
@@ -166,12 +170,13 @@ export function CreateEmployeeModal({
               />
             </FormField>
           </div>
-        </div>
+        </fieldset>
 
         {vaultStatus?.requires_pin_on_employee_create ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Payroll PIN" required>
+            <FormField label="Payroll PIN" htmlFor="emp-payroll-pin" required>
               <PasswordInput
+                id="emp-payroll-pin"
                 required
                 inputMode="numeric"
                 pattern="\d{4,8}"
@@ -179,8 +184,9 @@ export function CreateEmployeeModal({
                 onChange={(e) => setPayrollPin(e.target.value)}
               />
             </FormField>
-            <FormField label="Confirm payroll PIN" required>
+            <FormField label="Confirm payroll PIN" htmlFor="emp-payroll-pin-confirm" required>
               <PasswordInput
+                id="emp-payroll-pin-confirm"
                 required
                 inputMode="numeric"
                 pattern="\d{4,8}"
@@ -191,12 +197,12 @@ export function CreateEmployeeModal({
           </div>
         ) : null}
 
-        <div className="flex gap-2 pt-2">
-          <Button type="submit" disabled={saving}>
-            {saving ? "Sending invitation…" : "Send invitation"}
-          </Button>
-          <Button type="button" variant="secondary" onClick={handleClose}>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
+          <Button type="button" variant="secondary" size="lg" onClick={handleClose}>
             Cancel
+          </Button>
+          <Button type="submit" size="lg" disabled={saving}>
+            {saving ? "Sending invitation…" : "Send invitation"}
           </Button>
         </div>
       </form>

@@ -15,8 +15,10 @@ import {
 } from "@/lib/dates";
 import type { LeaveCategory, LeaveContext, UserRole } from "@/lib/types";
 import { Dropdown } from "@/components/ui/Dropdown";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/EmptyState";
 import { FormField, Select } from "@/components/ui/Input";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 
 const PAST_DATE_ERROR = "Past dates are not allowed for leave requests";
 const PAST_DATE_HINT = "Past date leave requests are not allowed";
@@ -38,6 +40,7 @@ export function LeaveRequestForm({
   onSubmitted?: () => void;
   compact?: boolean;
 }) {
+  const fieldId = useId();
   const [context, setContext] = useState<LeaveContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -169,17 +172,17 @@ export function LeaveRequestForm({
   if (loading) {
     return (
       <div
-        className={`animate-pulse rounded-lg bg-zinc-200/60 dark:bg-zinc-800/60 ${
-          compact ? "h-32" : "h-48"
-        }`}
+        role="status"
+        aria-label="Loading leave form"
+        className={`animate-pulse rounded-xl bg-[var(--accent-sand)] ${compact ? "h-32" : "h-48"}`}
       />
     );
   }
 
   if (role === "employee" && !context?.can_request) {
     return (
-      <div className="rounded-lg border border-dashed border-amber-200 bg-amber-50/80 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/20">
-        <p className="text-sm text-amber-800 dark:text-amber-200">
+      <div className="rounded-xl border border-dashed border-[var(--accent-copper)]/40 bg-[var(--accent-copper-soft)] px-4 py-3">
+        <p className="text-sm text-[var(--accent-copper)]">
           {context?.reason ?? "Leave requests are not available for your account yet."}
         </p>
       </div>
@@ -198,15 +201,12 @@ export function LeaveRequestForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error ? (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-      ) : null}
-      {success ? (
-        <p className="text-sm text-[var(--accent-emerald)]">{success}</p>
-      ) : null}
+      {error ? <Alert variant="error">{error}</Alert> : null}
+      {success ? <Alert variant="success">{success}</Alert> : null}
 
-      <FormField label="Leave type" required>
+      <FormField label="Leave type" htmlFor={`${fieldId}-type`} required>
         <Dropdown
+          id={`${fieldId}-type`}
           value={leaveCategory}
           onChange={(v) => setLeaveCategory(v as LeaveCategory)}
           options={LEAVE_TYPE_OPTIONS}
@@ -214,15 +214,13 @@ export function LeaveRequestForm({
       </FormField>
 
       {showEmployeePicker ? (
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
-            Employee *
-          </span>
+        <FormField label="Employee" htmlFor={`${fieldId}-employee`} required>
           <Select
+            id={`${fieldId}-employee`}
             required
             value={userId}
             onChange={(event) => setUserId(event.target.value)}
-            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-full"
           >
             {role === "admin"
               ? (context?.employees ?? []).map((member) => (
@@ -236,11 +234,12 @@ export function LeaveRequestForm({
                   </option>
                 ))}
           </Select>
-        </label>
+        </FormField>
       ) : null}
 
-      <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm text-[var(--foreground)]">
         <input
+          className="h-4 w-4 rounded accent-[var(--primary)]"
           type="checkbox"
           checked={useRange}
           onChange={(event) => setUseRange(event.target.checked)}
@@ -250,7 +249,7 @@ export function LeaveRequestForm({
 
       <div className={`grid gap-4 ${compact ? "sm:grid-cols-2" : "sm:grid-cols-2"}`}>
         <LeaveDateInput
-          id="leave-start-date"
+          id={`${fieldId}-start-date`}
           label={useRange ? "Start date *" : "Date *"}
           value={startDate}
           onChange={handleStartDateChange}
@@ -260,7 +259,7 @@ export function LeaveRequestForm({
 
         {useRange ? (
           <LeaveDateInput
-            id="leave-end-date"
+            id={`${fieldId}-end-date`}
             label="End date *"
             value={endDate}
             onChange={setEndDate}
@@ -274,25 +273,19 @@ export function LeaveRequestForm({
         ) : null}
       </div>
 
-      <label className="block text-sm">
-        <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">
-          Reason *
-        </span>
+      <FormField label="Reason" htmlFor={`${fieldId}-reason`} required>
         <textarea
+          id={`${fieldId}-reason`}
           required
           rows={compact ? 2 : 3}
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           placeholder="Why are you requesting leave?"
-          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3.5 py-2.5 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
         />
-      </label>
+      </FormField>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-      >
+      <Button type="submit" size="lg" disabled={submitting} className="min-h-12 w-full">
         {submitting
           ? "Submitting…"
           : forSelf
@@ -302,7 +295,7 @@ export function LeaveRequestForm({
             : role === "admin"
               ? "Assign paid leave"
               : "Record team leave"}
-      </button>
+      </Button>
     </form>
   );
 }

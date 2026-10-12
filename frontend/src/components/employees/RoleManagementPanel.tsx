@@ -1,6 +1,9 @@
 "use client";
 
-import { RoleBadge } from "@/components/dashboard/RoleBadge";
+import { LedgerRoleBadge } from "@/components/employees/employee-ui";
+import { Panel } from "@/components/ledger/Panel";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/EmptyState";
 import { ApiError, updateTeamMember, formatApiErrors } from "@/lib/api";
 import {
   canChangeMemberRole,
@@ -9,7 +12,7 @@ import {
   ROLE_LABELS,
 } from "@/lib/navigation";
 import type { User, UserRole } from "@/lib/types";
-import { Select } from "@/components/ui/Input";
+import { Label, Select } from "@/components/ui/Input";
 import { useState } from "react";
 
 type RoleManagementPanelProps = {
@@ -59,28 +62,28 @@ export function RoleManagementPanel({
   }
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Role management</h2>
-      <p className="mt-1 text-xs text-zinc-500">
-        {canChangeEmployeeRoles(viewer.role)
+    <Panel
+      title="Role"
+      description={
+        canChangeEmployeeRoles(viewer.role)
           ? "Employee and manager roles can be changed by admins. Admin and sub admin roles are fixed at creation."
-          : "View-only. Role changes require an organization admin."}
-      </p>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <div>
-          <p className="text-xs text-zinc-500">Current role</p>
-          <RoleBadge role={currentRole} className="mt-1" />
+          : "View-only. Role changes require an organization admin."
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--accent-sand)]/60 px-4 py-3">
+          <span className="text-[13px] text-[var(--muted)]">Current role</span>
+          <LedgerRoleBadge role={currentRole} />
         </div>
 
         {canChangeRole ? (
           <div className="flex flex-wrap items-end gap-2">
-            <div>
-              <label className="mb-1 block text-xs text-zinc-500">Change role</label>
+            <div className="min-w-[160px] flex-1">
+              <Label htmlFor={`role-select-${membershipId}`}>Change role</Label>
               <Select
+                id={`role-select-${membershipId}`}
                 value={selectedRole}
                 onChange={(event) => setSelectedRole(event.target.value as UserRole)}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
               >
                 {MUTABLE_ROLES.map((role) => (
                   <option key={role} value={role}>
@@ -89,37 +92,37 @@ export function RoleManagementPanel({
                 ))}
               </Select>
             </div>
-            <button
+            <Button
               type="button"
+              size="lg"
               disabled={saving || selectedRole === currentRole}
               onClick={() => void handleSaveRole()}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save role"}
-            </button>
+            </Button>
           </div>
         ) : null}
 
         {isSelf ? (
-          <p className="text-xs text-amber-600 dark:text-amber-400">
+          <p className="rounded-xl bg-[var(--accent-copper-soft)] px-4 py-2.5 text-[13px] text-[var(--accent-copper)]">
             You cannot change your own role.
           </p>
         ) : null}
 
         {!canChangeRole && !isSelf && canChangeEmployeeRoles(viewer.role) ? (
-          <p className="text-xs text-zinc-500">
+          <p className="text-[13px] text-[var(--muted)]">
             {ROLE_LABELS[currentRole]} roles cannot be changed after account creation.
           </p>
         ) : null}
-      </div>
 
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-      {success ? <p className="mt-3 text-sm text-green-600">{success}</p> : null}
-      {!canChangeEmployeeRoles(viewer.role) ? (
-        <p className="mt-3 text-xs text-zinc-500">
-          {memberName} is assigned the {ROLE_LABELS[currentRole]} role.
-        </p>
-      ) : null}
-    </section>
+        {error ? <Alert variant="error">{error}</Alert> : null}
+        {success ? <Alert variant="success">{success}</Alert> : null}
+        {!canChangeEmployeeRoles(viewer.role) ? (
+          <p className="text-[13px] text-[var(--muted)]">
+            {memberName} is assigned the {ROLE_LABELS[currentRole]} role.
+          </p>
+        ) : null}
+      </div>
+    </Panel>
   );
 }

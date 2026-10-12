@@ -168,9 +168,9 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export const ROLE_BADGE_STYLES: Record<UserRole, string> = {
-  super_admin: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950 dark:text-fuchsia-200",
-  admin: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
-  sub_admin: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200",
-  manager: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
-  employee: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200",
+  super_admin: "bg-[var(--night)] text-[var(--pulse-on-dark)]",
+  admin: "bg-[var(--primary-muted)] text-[var(--primary)]",
+  sub_admin: "bg-[var(--primary-muted)] text-[var(--primary)]",
+  manager: "bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]",
+  employee: "bg-[var(--accent-sand)] text-[var(--muted)]",
 };

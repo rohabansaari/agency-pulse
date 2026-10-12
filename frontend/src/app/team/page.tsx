@@ -18,7 +18,7 @@ function LegacyTeamRedirectContent() {
     }
   }, [user.role, router]);
 
-  return <div className="h-32 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60" />;
+  return <div className="h-32 animate-pulse rounded-xl bg-[var(--accent-sand)]" />;
 }
 
 export default function LegacyTeamRedirectPage() {

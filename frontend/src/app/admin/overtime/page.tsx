@@ -3,6 +3,7 @@
 import { AppShell, useAppUser } from "@/components/dashboard/AppShell";
 import { useRoleRedirect } from "@/components/leave/RoleRouteGuard";
 import { OvertimeApprovalQueue } from "@/components/time/OvertimeApprovalQueue";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 function AdminOvertimePageContent() {
   const user = useAppUser();
@@ -14,14 +15,11 @@ function AdminOvertimePageContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Overtime management
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Review and approve manager overtime requests across the organization.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Approvals"
+        title="Overtime management"
+        description="Review and approve manager overtime requests across the organization."
+      />
       <OvertimeApprovalQueue title="Pending overtime approvals" />
     </div>
   );

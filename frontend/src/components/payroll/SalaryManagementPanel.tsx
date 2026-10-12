@@ -10,7 +10,13 @@ import {
 } from "@/lib/api";
 import { todayDdMmYyyy } from "@/lib/dates";
 import type { SalaryType, TeamMember } from "@/lib/types";
-import { Select } from "@/components/ui/Input";
+import { FormField, Input, Select } from "@/components/ui/Input";
+import { Avatar } from "@/components/ledger/Avatar";
+import { Panel } from "@/components/ledger/Panel";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Alert, Spinner } from "@/components/ui/EmptyState";
+import { Lock } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export function SalaryManagementPanel() {
@@ -103,104 +109,107 @@ export function SalaryManagementPanel() {
   const selectedEmployee = employees.find((e) => e.user_id === selectedUserId);
 
   return (
-    <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Salary management</h2>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-        Select an employee and enter a new salary contract. Values are encrypted and never displayed.
-      </p>
+    <Panel
+      title="Salary management"
+      description="Select an employee and enter a new salary contract. Values are encrypted and never displayed."
+    >
+      <div className="space-y-4">
+        {error ? <Alert variant="error">{error}</Alert> : null}
+        {success ? <Alert variant="success">{success}</Alert> : null}
 
-      {error ? <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
-      {success ? <p className="mt-4 text-sm text-green-600 dark:text-green-400">{success}</p> : null}
+        {loading ? (
+          <Spinner label="Loading employees…" />
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,28rem)_1fr] lg:items-end">
+              <FormField label="Employee" htmlFor="salary-employee" required>
+                <Select
+                  id="salary-employee"
+                  required
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : "")}
+                  className="w-full"
+                >
+                  <option value="">Select employee…</option>
+                  {employees.map((member) => (
+                    <option key={member.user_id} value={member.user_id}>
+                      {member.name} ({member.email})
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
 
-      {loading ? (
-        <p className="mt-4 text-sm text-zinc-500">Loading employees…</p>
-      ) : (
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">Employee</span>
-            <Select
-              required
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : "")}
-              className="w-full max-w-md rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-            >
-              <option value="">Select employee…</option>
-              {employees.map((member) => (
-                <option key={member.user_id} value={member.user_id}>
-                  {member.name} ({member.email})
-                </option>
-              ))}
-            </Select>
-          </label>
-
-          {selectedEmployee ? (
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-950/50">
-              <p className="text-zinc-700 dark:text-zinc-300">
-                <span className="font-medium">Contract status:</span>{" "}
-                {hasSalary
-                  ? `Active ${currentType ?? salaryType} contract (amount hidden)`
-                  : "No active contract"}
-              </p>
+              {selectedEmployee ? (
+                <div className="flex min-h-11 flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--accent-sand)]/60 px-4 py-2">
+                  <Avatar name={selectedEmployee.name} size="sm" />
+                  <span className="text-sm font-medium text-[var(--foreground)]">{selectedEmployee.name}</span>
+                  <span className="text-[13px] text-[var(--muted)]">Contract status</span>
+                  {hasSalary ? (
+                    <Badge variant="success" className="gap-1 normal-case">
+                      <Lock className="h-3 w-3" aria-hidden="true" />
+                      Active {currentType ?? salaryType} contract (amount hidden)
+                    </Badge>
+                  ) : (
+                    <Badge variant="default" className="normal-case">No active contract</Badge>
+                  )}
+                </div>
+              ) : null}
             </div>
-          ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">Salary type</span>
-              <Select
-                value={salaryType}
-                onChange={(e) => setSalaryType(e.target.value as SalaryType)}
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              >
-                <option value="hourly">Hourly</option>
-                <option value="monthly">Monthly</option>
-              </Select>
-            </label>
-            {salaryType === "hourly" ? (
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">Hourly rate</span>
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-              </label>
-            ) : (
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium text-zinc-700 dark:text-zinc-300">Monthly salary</span>
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={monthlySalary}
-                  onChange={(e) => setMonthlySalary(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                />
-              </label>
-            )}
-            <LeaveDateInput
-              id="salary-effective-from"
-              label="Effective from"
-              value={effectiveFrom}
-              onChange={setEffectiveFrom}
-              hint="dd/mm/yyyy"
-            />
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <FormField label="Salary type" htmlFor="salary-type">
+                <Select
+                  id="salary-type"
+                  value={salaryType}
+                  onChange={(e) => setSalaryType(e.target.value as SalaryType)}
+                  className="w-full"
+                >
+                  <option value="hourly">Hourly</option>
+                  <option value="monthly">Monthly</option>
+                </Select>
+              </FormField>
+              {salaryType === "hourly" ? (
+                <FormField label="Hourly rate (PKR)" htmlFor="salary-hourly-rate" required>
+                  <Input
+                    id="salary-hourly-rate"
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={hourlyRate}
+                    onChange={(e) => setHourlyRate(e.target.value)}
+                    className="tnum text-right"
+                  />
+                </FormField>
+              ) : (
+                <FormField label="Monthly salary (PKR)" htmlFor="salary-monthly" required>
+                  <Input
+                    id="salary-monthly"
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={monthlySalary}
+                    onChange={(e) => setMonthlySalary(e.target.value)}
+                    className="tnum text-right"
+                  />
+                </FormField>
+              )}
+              <LeaveDateInput
+                id="salary-effective-from"
+                label="Effective from"
+                value={effectiveFrom}
+                onChange={setEffectiveFrom}
+                hint="dd/mm/yyyy"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={saving || !selectedUserId}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {saving ? "Saving…" : hasSalary ? "Save new contract version" : "Create salary contract"}
-          </button>
-        </form>
-      )}
-    </section>
+            <Button type="submit" size="lg" disabled={saving || !selectedUserId}>
+              {saving ? "Saving…" : hasSalary ? "Save new contract version" : "Create salary contract"}
+            </Button>
+          </form>
+        )}
+      </div>
+    </Panel>
   );
 }

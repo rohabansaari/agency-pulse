@@ -40,7 +40,7 @@ export function ExportDropdown({
         type="button"
         disabled={disabled}
         onClick={() => setOpen((value) => !value)}
-        className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        className="inline-flex min-h-11 items-center rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-4 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--accent-sand)] disabled:opacity-50"
       >
         Export
       </button>
@@ -52,13 +52,13 @@ export function ExportDropdown({
             aria-label="Close export menu"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 z-20 mt-1 min-w-[120px] rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="absolute right-0 z-20 mt-1 min-w-[120px] rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] py-1 shadow-lg">
             {formats.map((format) => (
               <button
                 key={format}
                 type="button"
                 onClick={() => handleExport(format)}
-                className="block w-full px-3 py-1.5 text-left text-xs uppercase text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className="block w-full px-3 py-1.5 text-left text-sm uppercase text-[var(--foreground)] hover:bg-[var(--accent-sand)]"
               >
                 {format}
               </button>

@@ -5,6 +5,7 @@ import { useRoleRedirect } from "@/components/leave/RoleRouteGuard";
 import { PayrollNav } from "@/components/payroll/PayrollNav";
 import { PayrollVaultProvider } from "@/components/payroll/PayrollVaultProvider";
 import { SalaryManagementPanel } from "@/components/payroll/SalaryManagementPanel";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 function SalaryManagementPageContent() {
   const user = useAppUser();
@@ -17,12 +18,11 @@ function SalaryManagementPageContent() {
   return (
     <PayrollVaultProvider>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Payroll</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Manage payroll runs and encrypted salary contracts.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Payroll"
+          title="Salary management"
+          description="Manage payroll runs and encrypted salary contracts."
+        />
         <PayrollNav />
         <SalaryManagementPanel />
       </div>

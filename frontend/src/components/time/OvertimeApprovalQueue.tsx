@@ -1,6 +1,15 @@
 "use client";
 
-import { OvertimeStatusBadge } from "@/components/time/OvertimeStatusBadge";
+import {
+  ApproveRejectButtons,
+  PanelEmpty,
+  PanelMessage,
+  QueueSkeleton,
+  RequestItem,
+  RequestList,
+  RequestPanel,
+  StatusPill,
+} from "@/components/leave/approvals";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { OVERTIME_EXPORT_COLUMNS } from "@/lib/export-columns";
 import {
@@ -11,8 +20,14 @@ import {
   rejectOvertimeRequest,
 } from "@/lib/api";
 import { formatDuration } from "@/lib/time";
-import type { OvertimeRequest } from "@/lib/types";
+import type { OvertimeRequest, OvertimeRequestStatus } from "@/lib/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+const STATUS_LABELS: Record<OvertimeRequestStatus, string> = {
+  pending: "Pending",
+  approved: "Approved",
+  rejected: "Rejected",
+};
 
 export function OvertimeApprovalQueue({ title = "Overtime approval queue" }: { title?: string }) {
   const [requests, setRequests] = useState<OvertimeRequest[]>([]);
@@ -76,69 +91,54 @@ export function OvertimeApprovalQueue({ title = "Overtime approval queue" }: { t
   }
 
   if (loading) {
-    return <div className="ui-card h-24 animate-pulse bg-zinc-200/60 dark:bg-zinc-800/60" />;
+    return <QueueSkeleton className="h-24" />;
   }
 
   return (
-    <section className="ui-card p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
-          <p className="text-xs text-zinc-500">{requests.length} pending request{requests.length === 1 ? "" : "s"}</p>
-        </div>
+    <RequestPanel
+      title={title}
+      description={`${requests.length} pending request${requests.length === 1 ? "" : "s"}`}
+      action={
         <ExportDropdown
           filename="overtime-approval-queue"
           columns={OVERTIME_EXPORT_COLUMNS}
           rows={exportRows}
         />
-      </div>
-      {error ? <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+      }
+    >
+      <PanelMessage error={error} />
       {requests.length === 0 ? (
-        <p className="text-sm text-zinc-500">No pending overtime requests.</p>
+        <PanelEmpty title="All caught up" description="No pending overtime requests." />
       ) : (
-        <ul className="space-y-3">
-          {requests.map((request) => (
-            <li
-              key={request.id}
-              className="rounded-lg border border-zinc-100 px-4 py-3 dark:border-zinc-800"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                      {request.user_name ?? `User #${request.user_id}`}
-                    </p>
-                    <OvertimeStatusBadge status={request.status} />
-                  </div>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    {request.work_date} · {request.project_name ?? "Project"} ·{" "}
-                    {formatDuration(request.duration_seconds)}
-                  </p>
-                  <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{request.reason}</p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
+        <RequestList>
+          {requests.map((request) => {
+            const who = request.user_name ?? `User #${request.user_id}`;
+            return (
+              <RequestItem
+                key={request.id}
+                kind="overtime"
+                who={who}
+                status={<StatusPill status={request.status} label={STATUS_LABELS[request.status]} />}
+                what={
+                  <>
+                    <span className="tnum">{request.work_date}</span> · {request.project_name ?? "Project"} ·{" "}
+                    <span className="num">{formatDuration(request.duration_seconds)}</span>
+                  </>
+                }
+                note={request.reason || undefined}
+                actions={
+                  <ApproveRejectButtons
+                    subject={`${who}'s overtime on ${request.work_date}`}
                     disabled={actingId === request.id}
-                    onClick={() => void handleApprove(request.id)}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    type="button"
-                    disabled={actingId === request.id}
-                    onClick={() => void handleReject(request.id)}
-                    className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300"
-                  >
-                    Reject
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+                    onApprove={() => void handleApprove(request.id)}
+                    onReject={() => void handleReject(request.id)}
+                  />
+                }
+              />
+            );
+          })}
+        </RequestList>
       )}
-    </section>
+    </RequestPanel>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { RequestPanel } from "@/components/leave/approvals";
 import { LeaveBalanceSummary } from "@/components/leave/LeaveBalancePanel";
 import {
   LeaveStatusFilter,
@@ -8,7 +9,33 @@ import {
 import { LeaveApprovalQueue } from "@/components/time/LeaveApprovalQueue";
 import { LeaveHistory } from "@/components/time/LeaveHistory";
 import { LeaveRequestForm } from "@/components/time/LeaveRequestForm";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useState } from "react";
+
+function FormCard({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      aria-labelledby={id}
+      className="min-w-0 flex-[1_1_340px] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
+    >
+      <h2 id={id} className="text-base font-semibold text-[var(--foreground)]">
+        {title}
+      </h2>
+      <p className="mt-0.5 text-[13px] text-[var(--muted)]">{description}</p>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
 
 export function ManagerLeaveApprovalsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -19,56 +46,46 @@ export function ManagerLeaveApprovalsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Leave approvals
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Review team leave requests, request leave for yourself, and record approved leave for members.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Approvals"
+        title="Leave approvals"
+        description="Review team leave requests, request leave for yourself, and record approved leave for members."
+      />
 
       <LeaveApprovalQueue key={`queue-${refreshKey}`} onAction={handleUpdated} />
 
-      <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Request leave for yourself
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Your request is sent to admin for approval.
-        </p>
-        <div className="mt-4 space-y-4">
-          <LeaveBalanceSummary />
-          <LeaveRequestForm role="manager" forSelf onSubmitted={handleUpdated} />
-        </div>
-      </section>
+      <div className="flex flex-wrap items-start gap-6">
+        <FormCard
+          id="manager-self-leave-heading"
+          title="Request leave for yourself"
+          description="Your request is sent to admin for approval."
+        >
+          <div className="space-y-4">
+            <LeaveBalanceSummary />
+            <LeaveRequestForm role="manager" forSelf onSubmitted={handleUpdated} />
+          </div>
+        </FormCard>
 
-      <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Record team leave
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Manager-created leave is approved by default and counts as paid leave.
-        </p>
-        <div className="mt-4">
+        <FormCard
+          id="manager-team-leave-heading"
+          title="Record team leave"
+          description="Manager-created leave is approved by default and counts as paid leave."
+        >
           <LeaveRequestForm role="manager" onSubmitted={handleUpdated} />
-        </div>
-      </section>
+        </FormCard>
+      </div>
 
-      <section className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Team and personal leave history
-          </h2>
-          <LeaveStatusFilter value={statusFilter} onChange={setStatusFilter} />
-        </div>
+      <RequestPanel
+        title="Team and personal leave history"
+        action={<LeaveStatusFilter value={statusFilter} onChange={setStatusFilter} />}
+      >
         <LeaveHistory
           key={`history-${refreshKey}-${statusFilter}`}
           showEmployee
           statusFilter={statusFilter}
         />
-      </section>
+      </RequestPanel>
     </div>
   );
 }

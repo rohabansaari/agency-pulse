@@ -1,6 +1,8 @@
 "use client";
 
 import type { LeaveStatusFilter } from "@/components/leave/LeaveStatusFilter";
+import { RequestItem, RequestList, StatusPill } from "@/components/leave/approvals";
+import { Alert, EmptyState } from "@/components/ui/EmptyState";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { Select } from "@/components/ui/Input";
 import { LEAVE_EXPORT_COLUMNS } from "@/lib/export-columns";
@@ -13,25 +15,16 @@ import {
 import { displayLeaveDate } from "@/lib/dates";
 import { formatDuration } from "@/lib/time";
 import type { TimeEntry, TimeEntryStatus } from "@/lib/types";
+import { CalendarDays } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const STATUS_STYLES: Record<TimeEntryStatus, string> = {
-  running: "bg-green-100 text-green-700",
-  stopped: "bg-zinc-100 text-zinc-600",
-  pending: "bg-amber-100 text-amber-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
+const STATUS_LABELS: Record<TimeEntryStatus, string> = {
+  running: "Running",
+  stopped: "Stopped",
+  pending: "Pending",
+  approved: "Approved",
+  rejected: "Rejected",
 };
-
-function StatusBadge({ status }: { status: TimeEntryStatus }) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_STYLES[status]}`}
-    >
-      {status}
-    </span>
-  );
-}
 
 export function LeaveHistory({
   showEmployee = false,
@@ -108,13 +101,19 @@ export function LeaveHistory({
 
   if (loading) {
     return (
-      <div className="h-24 animate-pulse rounded-lg bg-zinc-200/60 dark:bg-zinc-800/60" />
+      <div className="px-5 pb-5">
+        <div className="h-24 animate-pulse rounded-xl bg-[var(--accent-sand)]" role="status" aria-label="Loading" />
+      </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-3 flex justify-end">
+    <div className="@container">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-3">
+        <p className="text-[13px] text-[var(--muted)]">
+          <span className="tnum">{filteredEntries.length}</span>{" "}
+          {filteredEntries.length === 1 ? "entry" : "entries"}
+        </p>
         <ExportDropdown
           filename="leave-entries"
           columns={LEAVE_EXPORT_COLUMNS}
@@ -122,58 +121,67 @@ export function LeaveHistory({
         />
       </div>
       {error ? (
-        <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <div className="px-5 pb-3">
+          <Alert variant="error">{error}</Alert>
+        </div>
       ) : null}
       {filteredEntries.length === 0 ? (
-        <p className="text-sm text-zinc-500">No leave entries match this filter.</p>
+        <div className="px-5 pb-5">
+          <EmptyState icon={CalendarDays} title="No leave entries" description="No leave entries match this filter." className="py-8" />
+        </div>
       ) : (
-        <ul className="space-y-3">
-          {filteredEntries.map((entry) => (
-            <li
-              key={entry.id}
-              className="flex flex-col gap-3 rounded-lg border border-zinc-100 px-3 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
-            >
-              <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                  {showEmployee && entry.user_name ? `${entry.user_name} · ` : ""}
-                  {displayLeaveDate(entry.start_time)}
-                  {entry.source ? ` · ${entry.source}` : ""}
-                </p>
-                <p className="text-xs text-zinc-500">
-                  {formatDuration(entry.duration ?? 0)} paid leave
-                  {entry.team_name ? ` · ${entry.team_name}` : ""}
-                  {entry.description ? ` — ${entry.description}` : ""}
-                </p>
-                {entry.approved_by_name ? (
-                  <p className="mt-1 text-xs text-zinc-400">
-                    Reviewed by {entry.approved_by_name}
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {adminEditable ? (
-                  <Select
-                    value={entry.status}
-                    disabled={savingId === entry.id}
-                    onChange={(event) =>
-                      void handleStatusOverride(
-                        entry,
-                        event.target.value as "pending" | "approved" | "rejected",
-                      )
-                    }
-                    className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
-                  >
-                    <option value="pending">pending</option>
-                    <option value="approved">approved</option>
-                    <option value="rejected">rejected</option>
-                  </Select>
-                ) : (
-                  <StatusBadge status={entry.status} />
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <RequestList>
+          {filteredEntries.map((entry) => {
+            const selectId = `leave-status-${entry.id}`;
+            return (
+              <RequestItem
+                key={entry.id}
+                kind="leave"
+                who={
+                  <>
+                    {showEmployee && entry.user_name ? `${entry.user_name} · ` : ""}
+                    {displayLeaveDate(entry.start_time)}
+                    {entry.source ? <span className="font-normal text-[var(--muted)]"> · {entry.source}</span> : null}
+                  </>
+                }
+                status={adminEditable ? null : <StatusPill status={entry.status} label={STATUS_LABELS[entry.status]} />}
+                what={
+                  <>
+                    <span className="num">{formatDuration(entry.duration ?? 0)}</span> paid leave
+                    {entry.team_name ? ` · ${entry.team_name}` : ""}
+                    {entry.description ? ` — ${entry.description}` : ""}
+                  </>
+                }
+                meta={entry.approved_by_name ? `Reviewed by ${entry.approved_by_name}` : undefined}
+                actions={
+                  adminEditable ? (
+                    <div className="w-full @lg:w-40">
+                      <label htmlFor={selectId} className="sr-only">
+                        Status for {entry.user_name ?? "leave"} on {displayLeaveDate(entry.start_time)}
+                      </label>
+                      <Select
+                        id={selectId}
+                        value={entry.status}
+                        disabled={savingId === entry.id}
+                        onChange={(event) =>
+                          void handleStatusOverride(
+                            entry,
+                            event.target.value as "pending" | "approved" | "rejected",
+                          )
+                        }
+                        className="w-full"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                      </Select>
+                    </div>
+                  ) : undefined
+                }
+              />
+            );
+          })}
+        </RequestList>
       )}
     </div>
   );

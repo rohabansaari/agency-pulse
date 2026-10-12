@@ -9,6 +9,10 @@ import {
 } from "@/lib/api";
 import { clearPayrollPin, setPayrollPin } from "@/lib/payroll-pin";
 import type { PayrollVaultStatus } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/EmptyState";
+import { FormField, Input } from "@/components/ui/Input";
+import { KeyRound, LockKeyhole } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -145,57 +149,72 @@ function PayrollVaultGate() {
     }
   }
 
+  const pinProps = {
+    required: true,
+    type: "password",
+    inputMode: "numeric" as const,
+    autoComplete: "off",
+    pattern: "\\d{4,8}",
+    minLength: 4,
+    maxLength: 8,
+    className: "num tracking-[0.3em]",
+  };
+
   return (
-    <div className="mx-auto max-w-lg space-y-6 py-8">
-      <section className="rounded-xl border border-amber-200 bg-amber-50/80 p-6 dark:border-amber-900/50 dark:bg-amber-950/20">
-        <h1 className="text-xl font-semibold text-amber-900 dark:text-amber-100">
-          {needsSetup ? "Set organization payroll PIN" : "Enter payroll PIN"}
-        </h1>
-        <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+    <div className="mx-auto max-w-md px-0 py-10">
+      <section
+        aria-labelledby="payroll-vault-title"
+        className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6"
+      >
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-copper-soft)] text-[var(--accent-copper)]"
+          >
+            {needsSetup ? <KeyRound className="h-5 w-5" /> : <LockKeyhole className="h-5 w-5" />}
+          </span>
+          <div className="min-w-0">
+            <p className="text-[13px] text-[var(--muted)]">Payroll vault</p>
+            <h1 id="payroll-vault-title" className="text-xl font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+              {needsSetup ? "Set organization payroll PIN" : "Enter payroll PIN"}
+            </h1>
+          </div>
+        </div>
+        <p className="mt-4 text-sm text-[var(--muted)]">
           Payroll is protected. You must enter the PIN every time you access this area —
           including page refresh and new tabs.
         </p>
 
         {(error || localError) && (
-          <p className="mt-3 text-sm text-red-600 dark:text-red-400">{localError || error}</p>
+          <div className="mt-4">
+            <Alert variant="error">{localError || error}</Alert>
+          </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-          <input
-            required
-            type="password"
-            inputMode="numeric"
-            autoComplete="off"
-            pattern="\d{4,8}"
-            minLength={4}
-            maxLength={8}
-            placeholder="Payroll PIN (4–8 digits)"
-            value={pin}
-            onChange={(event) => setPin(event.target.value)}
-            className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm dark:border-amber-800 dark:bg-zinc-900"
-          />
-          {needsSetup ? (
-            <input
-              required
-              type="password"
-              inputMode="numeric"
-              autoComplete="off"
-              pattern="\d{4,8}"
-              minLength={4}
-              maxLength={8}
-              placeholder="Confirm payroll PIN"
-              value={pinConfirmation}
-              onChange={(event) => setPinConfirmation(event.target.value)}
-              className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm dark:border-amber-800 dark:bg-zinc-900"
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          <FormField label="Payroll PIN" htmlFor="payroll-vault-pin" hint="4–8 digits">
+            <Input
+              {...pinProps}
+              id="payroll-vault-pin"
+              placeholder="••••"
+              value={pin}
+              onChange={(event) => setPin(event.target.value)}
             />
+          </FormField>
+          {needsSetup ? (
+            <FormField label="Confirm payroll PIN" htmlFor="payroll-vault-pin-confirm">
+              <Input
+                {...pinProps}
+                id="payroll-vault-pin-confirm"
+                placeholder="••••"
+                value={pinConfirmation}
+                onChange={(event) => setPinConfirmation(event.target.value)}
+              />
+            </FormField>
           ) : null}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-amber-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-60 dark:bg-amber-600"
-          >
+          <Button type="submit" size="lg" disabled={submitting} className="w-full">
             {submitting ? "Verifying…" : needsSetup ? "Save payroll PIN" : "Continue to payroll"}
-          </button>
+          </Button>
         </form>
       </section>
     </div>

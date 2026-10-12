@@ -1,8 +1,12 @@
 "use client";
 
+import { Avatar } from "@/components/ledger/Avatar";
+import { Panel } from "@/components/ledger/Panel";
+import { ledgerTable, rowButton } from "@/components/ledger/table";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { FormField, Input } from "@/components/ui/Input";
+import { EmptyState, Spinner } from "@/components/ui/EmptyState";
+import { Input } from "@/components/ui/Input";
+import { cn } from "@/lib/cn";
 import {
   fetchLeaveBalances,
   fetchMyLeaveBalance,
@@ -10,7 +14,6 @@ import {
   updateLeaveLimit,
 } from "@/lib/api";
 import type { LeaveBalance, LeaveBalanceEntry, LeaveCategory } from "@/lib/types";
-import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 
 const LEAVE_CATEGORIES: { key: LeaveCategory; label: string; limitKey: keyof LeaveBalance; usedKey: keyof LeaveBalance; remainingKey: keyof LeaveBalance }[] = [
@@ -18,6 +21,27 @@ const LEAVE_CATEGORIES: { key: LeaveCategory; label: string; limitKey: keyof Lea
   { key: "casual", label: "Casual Leave", limitKey: "casual_limit_days", usedKey: "casual_used_days", remainingKey: "casual_remaining_days" },
   { key: "annual", label: "Annual Leave", limitKey: "annual_limit_days", usedKey: "used_days", remainingKey: "remaining_days" },
 ];
+
+function toNumber(value: unknown): number {
+  const parsed = Number.parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function UsageBar({ used, limit, label }: { used: number; limit: number; label: string }) {
+  const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+  return (
+    <div
+      role="meter"
+      aria-label={`${label} used`}
+      aria-valuemin={0}
+      aria-valuemax={limit}
+      aria-valuenow={used}
+      className="h-1.5 overflow-hidden rounded-full bg-[var(--border-subtle)]"
+    >
+      <div className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-500" style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
 
 function CategoryProgress({
   label,
@@ -30,25 +54,19 @@ function CategoryProgress({
   limit: number;
   remaining: number;
 }) {
-  const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
-
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-      <p className="text-label">{label}</p>
-      <div className="mt-2 flex items-end justify-between">
-        <p className="text-numeric text-2xl font-bold text-[var(--foreground)]">{remaining}</p>
-        <p className="text-xs text-[var(--muted)]">
-          {used} / {limit} used
-        </p>
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
+      <p className="text-[13px] text-[var(--muted)]">{label}</p>
+      <p className="mt-2 text-[28px] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+        <span className="tnum">{remaining}</span>
+        <span className="text-[15px] font-normal text-[var(--muted)]"> days left</span>
+      </p>
+      <div className="mt-3">
+        <UsageBar used={used} limit={limit} label={label} />
       </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]">
-        <motion.div
-          className="h-full rounded-full bg-[var(--accent-emerald)]"
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-      </div>
+      <p className="mt-2 text-xs text-[var(--muted)]">
+        <span className="tnum">{used}</span> of <span className="tnum">{limit}</span> used
+      </p>
     </div>
   );
 }
@@ -65,20 +83,22 @@ export function LeaveBalanceSummary() {
   if (!balance) return null;
 
   return (
-    <Card className="p-5">
-      <h2 className="text-heading text-lg">Leave balances</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+    <section aria-labelledby="leave-balances-heading">
+      <h2 id="leave-balances-heading" className="sr-only">
+        Leave balances
+      </h2>
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
         {LEAVE_CATEGORIES.map((cat) => (
           <CategoryProgress
             key={cat.key}
             label={cat.label}
-            used={Number.parseFloat(String(balance[cat.usedKey]))}
+            used={toNumber(balance[cat.usedKey])}
             limit={Number(balance[cat.limitKey])}
-            remaining={Number.parseFloat(String(balance[cat.remainingKey]))}
+            remaining={toNumber(balance[cat.remainingKey])}
           />
         ))}
       </div>
-    </Card>
+    </section>
   );
 }
 
@@ -125,84 +145,116 @@ export function LeaveLimitsPanel() {
   }
 
   return (
-    <Card className="p-5">
-      <h2 className="text-heading text-lg">Leave limits by category</h2>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        Set medical, casual, and annual limits. Reset usage per category.
-      </p>
-
+    <Panel
+      title="Leave limits by category"
+      description="Set medical, casual, and annual limits. Reset usage per category."
+      flush
+    >
       {loading ? (
-        <p className="mt-4 text-sm text-[var(--muted)]">Loading…</p>
+        <Spinner label="Loading leave balances…" />
+      ) : entries.length === 0 ? (
+        <div className="px-5 pb-5">
+          <EmptyState title="No employees yet" description="Leave balances appear here once employees are added." />
+        </div>
       ) : (
-        <div className="mt-4 space-y-4">
-          {entries.map((entry) => (
-            <div
-              key={entry.user.id}
-              className="rounded-xl border border-[var(--border)] p-4"
-            >
-              <div className="mb-4">
-                <p className="font-semibold text-[var(--foreground)]">{entry.user.name}</p>
-                <p className="text-xs text-[var(--muted)]">{entry.user.email}</p>
-              </div>
-              <div className="grid gap-3 lg:grid-cols-3">
+        <div className={ledgerTable.wrap}>
+          <table className={cn(ledgerTable.table, "min-w-[900px]")}>
+            <thead className={ledgerTable.thead}>
+              <tr>
+                <th scope="col" className={ledgerTable.th}>Employee</th>
                 {LEAVE_CATEGORIES.map((cat) => (
-                  <div key={cat.key} className="space-y-2">
-                    <CategoryProgress
-                      label={cat.label}
-                      used={Number.parseFloat(String(entry.balance[cat.usedKey]))}
-                      limit={Number(entry.balance[cat.limitKey])}
-                      remaining={Number.parseFloat(String(entry.balance[cat.remainingKey]))}
-                    />
-                    {editing?.userId === entry.user.id && editing.category === cat.key ? (
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={365}
-                          value={limitValue}
-                          onChange={(e) => setLimitValue(e.target.value)}
-                          className="w-full"
-                        />
-                        <Button
-                          size="sm"
-                          disabled={saving}
-                          onClick={() => void handleSaveLimit(entry.user.id, cat.key)}
-                        >
-                          Save
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            setEditing({ userId: entry.user.id, category: cat.key });
-                            setLimitValue(String(entry.balance[cat.limitKey]));
-                          }}
-                        >
-                          Edit limit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={saving}
-                          onClick={() => void handleReset(entry.user.id, cat.key)}
-                        >
-                          Reset used
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  <th key={cat.key} scope="col" className={ledgerTable.th}>
+                    {cat.label}
+                  </th>
                 ))}
-              </div>
-            </div>
-          ))}
+              </tr>
+            </thead>
+            <tbody className={ledgerTable.tbody}>
+              {entries.map((entry) => (
+                <tr key={entry.user.id} className={ledgerTable.rowHover}>
+                  <td className={cn(ledgerTable.td, "align-top")}>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={entry.user.name} size="sm" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-[var(--foreground)]">{entry.user.name}</p>
+                        <p className="truncate text-[13px] text-[var(--muted)]">{entry.user.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  {LEAVE_CATEGORIES.map((cat) => {
+                    const used = toNumber(entry.balance[cat.usedKey]);
+                    const limit = Number(entry.balance[cat.limitKey]);
+                    const remaining = toNumber(entry.balance[cat.remainingKey]);
+                    const isEditing = editing?.userId === entry.user.id && editing.category === cat.key;
+                    const subject = `${cat.label} for ${entry.user.name}`;
+
+                    return (
+                      <td key={cat.key} className={cn(ledgerTable.td, "w-[230px] align-top")}>
+                        <p className="text-[var(--foreground)]">
+                          <span className="tnum font-semibold">{remaining}</span>
+                          <span className="text-[13px] text-[var(--muted)]"> left · </span>
+                          <span className="tnum text-[13px] text-[var(--muted)]">
+                            {used}/{limit} used
+                          </span>
+                        </p>
+                        <div className="mt-2">
+                          <UsageBar used={used} limit={limit} label={subject} />
+                        </div>
+                        {isEditing ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={365}
+                              value={limitValue}
+                              aria-label={`New limit, ${subject}`}
+                              onChange={(e) => setLimitValue(e.target.value)}
+                              className="tnum w-20 flex-1"
+                            />
+                            <Button
+                              size="lg"
+                              disabled={saving}
+                              onClick={() => void handleSaveLimit(entry.user.id, cat.key)}
+                            >
+                              Save
+                            </Button>
+                            <Button size="lg" variant="ghost" onClick={() => setEditing(null)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            <button
+                              type="button"
+                              aria-label={`Edit limit, ${subject}`}
+                              className={cn(rowButton, "min-h-11")}
+                              onClick={() => {
+                                setEditing({ userId: entry.user.id, category: cat.key });
+                                setLimitValue(String(entry.balance[cat.limitKey]));
+                              }}
+                            >
+                              Edit limit
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Reset used days, ${subject}`}
+                              className={cn(rowButton, "min-h-11 text-[var(--muted)]")}
+                              disabled={saving}
+                              onClick={() => void handleReset(entry.user.id, cat.key)}
+                            >
+                              Reset used
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-    </Card>
+    </Panel>
   );
 }
