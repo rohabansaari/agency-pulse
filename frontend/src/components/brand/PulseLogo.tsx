@@ -1,17 +1,19 @@
 import { cn } from "@/lib/cn";
 
-type Tone = "light" | "dark";
+type Tone = "light" | "dark" | "auto";
 
 const STROKES: Record<Tone, { letter: string; pulse: string }> = {
   // On light grounds: ink letter, plum pulse.
   light: { letter: "#111723", pulse: "#9D2A8C" },
   // On dark grounds: white letter, lightened plum pulse.
   dark: { letter: "#FFFFFF", pulse: "#F08BDF" },
+  // Follows the page theme (light or dark color scheme).
+  auto: { letter: "var(--foreground)", pulse: "var(--primary)" },
 };
 
 /** The "Pulse A" mark: the A of Agency with a heartbeat for its crossbar. */
 export function PulseMark({
-  tone = "light",
+  tone = "auto",
   className,
   title,
 }: {
@@ -51,7 +53,7 @@ export function PulseMark({
 
 /** Mark + "AgencyPulse" wordmark, with "Pulse" in the accent color. */
 export function PulseLogo({
-  tone = "light",
+  tone = "auto",
   className,
   markClassName,
 }: {
