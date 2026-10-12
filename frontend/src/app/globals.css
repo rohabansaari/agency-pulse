@@ -327,3 +327,98 @@ body {
     margin-bottom: 0.125rem;
   }
 }
+
+/*
+ * "Ledger" redesign. Scoped so screens move over one at a time: wrapping a
+ * screen in .theme-ledger re-points the shared tokens (and therefore Button,
+ * Modal, Card…) at the new palette and typefaces.
+ */
+.theme-ledger {
+  --font-inter: var(--font-geist);
+  --font-display: var(--font-geist);
+  --font-numeric: var(--font-geist-mono);
+
+  --background: #f4f5f7;
+  --foreground: #111723;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --border: #e3e6eb;
+  --border-subtle: #eef0f3;
+  --muted: #5b6472;
+  --muted-foreground: #7a828f;
+
+  --primary: #2f5bea;
+  --primary-hover: #2446c7;
+  --primary-foreground: #ffffff;
+  --primary-muted: #eef1fc;
+
+  --accent-emerald: #0e7a4f;
+  --accent-emerald-soft: #e7f5ee;
+  --accent-coral: #b42318;
+  --accent-coral-soft: #fdecea;
+  --accent-copper: #b45309;
+  --accent-copper-soft: #fff4e5;
+  --accent-sand: #f1f2f4;
+
+  --success: #0e7a4f;
+  --warning: #b45309;
+  --danger: #b42318;
+
+  --sidebar-hover: rgba(17, 23, 35, 0.05);
+
+  /* Brand */
+  --night: #0e1420;
+  --night-raised: #1b2333;
+  --night-border: #1f2838;
+  --night-text: #c9cfda;
+  --night-muted: #8c95a6;
+  --pulse-on-dark: #7c9bff;
+
+  --shadow-sm: 0 1px 2px rgb(14 20 32 / 0.06);
+  --shadow-md: 0 4px 20px rgb(14 20 32 / 0.08);
+  --shadow-lg: 0 20px 48px rgb(14 20 32 / 0.14);
+
+  font-family: var(--font-geist), system-ui, sans-serif;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-ledger {
+    --background: #0b0f17;
+    --foreground: #e8ebf0;
+    --card: #121826;
+    --card-elevated: #182033;
+    --border: #252e40;
+    --border-subtle: #1b2232;
+    --muted: #9aa3b2;
+    --muted-foreground: #737c8c;
+
+    --primary: #7c9bff;
+    --primary-hover: #9db4ff;
+    --primary-foreground: #0b0f17;
+    --primary-muted: #1c2645;
+
+    --accent-emerald: #3ccb8b;
+    --accent-emerald-soft: rgb(60 203 139 / 0.14);
+    --accent-coral: #ff8a80;
+    --accent-coral-soft: rgb(255 138 128 / 0.14);
+    --accent-copper: #f5b45b;
+    --accent-copper-soft: rgb(245 180 91 / 0.14);
+    --accent-sand: #161d2b;
+
+    --success: #3ccb8b;
+    --warning: #f5b45b;
+    --danger: #ff8a80;
+
+    --sidebar-hover: rgba(255, 255, 255, 0.05);
+    --night: #080b12;
+    --night-raised: #141b29;
+    --night-border: #1a2131;
+  }
+}
+
+.theme-ledger .num {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
