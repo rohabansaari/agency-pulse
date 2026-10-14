@@ -49,7 +49,7 @@ export function OnboardingFollowUpBanner() {
     <section className="rounded-2xl border border-[var(--primary)]/25 bg-[var(--card)] p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[13px] font-medium text-[var(--primary)]">
+          <p className="text-[0.8125rem] font-medium text-[var(--primary)]">
             Complete your setup
           </p>
           <h2 className="text-base font-semibold text-[var(--foreground)]">
@@ -65,7 +65,7 @@ export function OnboardingFollowUpBanner() {
             <Link
               key={step}
               href={meta.href}
-              className="min-w-[220px] shrink-0 rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 transition hover:border-[var(--primary)]/40 hover:bg-[var(--primary-muted)]"
+              className="min-w-[13.75rem] shrink-0 rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 transition hover:border-[var(--primary)]/40 hover:bg-[var(--primary-muted)]"
             >
               <p className="text-sm font-medium text-[var(--foreground)]">{meta.title}</p>
               <p className="mt-1 text-xs text-[var(--muted)]">{meta.description}</p>

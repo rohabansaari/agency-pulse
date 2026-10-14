@@ -462,7 +462,7 @@ export function AdminPayrollPage() {
             </div>
           ) : (
             <div className={ledgerTable.wrap}>
-              <table className={cn(ledgerTable.table, "min-w-[960px]")}>
+              <table className={cn(ledgerTable.table, "min-w-[60rem]")}>
                 <thead className={ledgerTable.thead}>
                   <tr>
                     <th scope="col" className={ledgerTable.th}>Period</th>
@@ -637,7 +637,7 @@ export function AdminPayrollPage() {
                               <div className="border-t border-[var(--border)] bg-[var(--card)]">
                                 <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pb-3 pt-4">
                                   <h3 className="text-sm font-semibold text-[var(--foreground)]">Employees in this run</h3>
-                                  <p className="text-[13px] text-[var(--muted)]">Amounts in PKR</p>
+                                  <p className="text-[0.8125rem] text-[var(--muted)]">Amounts in PKR</p>
                                 </div>
                                 {loadingDetailId === run.id && !detail ? (
                                   <Spinner label="Loading employee lines…" />

@@ -219,12 +219,12 @@ export function EmployeesDirectory({ user }: { user: User }) {
               placeholder="Search by name, email, or team…"
               value={search}
               onChange={setSearch}
-              className="min-w-0 flex-[1_1_220px] sm:max-w-sm"
+              className="min-w-0 flex-[1_1_13.75rem] sm:max-w-sm"
             />
           </div>
 
           <div className={ledgerTable.wrap}>
-            <table className={cn(ledgerTable.table, "min-w-[1080px]")}>
+            <table className={cn(ledgerTable.table, "min-w-[67.5rem]")}>
               <thead className={ledgerTable.thead}>
                 <tr>
                   <th scope="col" className={th}>Employee</th>
@@ -267,7 +267,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
                             >
                               {member.name}
                             </Link>
-                            <span className="block truncate text-[13px] text-[var(--muted)]">{member.email}</span>
+                            <span className="block truncate text-[0.8125rem] text-[var(--muted)]">{member.email}</span>
                           </span>
                         </div>
                       </td>
@@ -277,14 +277,14 @@ export function EmployeesDirectory({ user }: { user: User }) {
                       <td className={td}>
                         <span className="block text-[var(--foreground)]">{member.team_name ?? "—"}</span>
                         {member.manager_name ? (
-                          <span className="block text-[13px] text-[var(--muted)]">Mgr. {member.manager_name}</span>
+                          <span className="block text-[0.8125rem] text-[var(--muted)]">Mgr. {member.manager_name}</span>
                         ) : null}
                       </td>
                       <td className={td}>
                         {canEditStatus && canEditMemberStatus(member.role) ? (
                           <Dropdown
                             size="sm"
-                            className="w-[132px]"
+                            className="w-[8.25rem]"
                             value={member.status}
                             onChange={async (value) => {
                               try {
@@ -305,17 +305,17 @@ export function EmployeesDirectory({ user }: { user: User }) {
                       <td className={td}>
                         <TimerBadge running={Boolean(member.has_active_timer)} />
                       </td>
-                      <td className={cn(td, "num text-right text-[13px]")}>
+                      <td className={cn(td, "num text-right text-[0.8125rem]")}>
                         {formatDuration(member.time_tracked_month_seconds ?? 0)}
                       </td>
-                      <td className={cn(td, "num text-right text-[13px] text-[var(--muted)]")}>
+                      <td className={cn(td, "num text-right text-[0.8125rem] text-[var(--muted)]")}>
                         {formatDuration(member.approved_leave_seconds ?? 0)}
                       </td>
                       <td className={cn(td, "tnum text-right")}>{member.assigned_projects_count ?? 0}</td>
                       <td className={cn(td, "tnum text-right")}>{member.overtime_requests_count ?? 0}</td>
                       <td className={cn(td, "whitespace-nowrap")}>
                         <span className="block">{shortDate(member.joined_at)}</span>
-                        <span className="block text-[13px] text-[var(--muted)]">
+                        <span className="block text-[0.8125rem] text-[var(--muted)]">
                           Active {shortDate(member.last_activity_at)}
                         </span>
                       </td>

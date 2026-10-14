@@ -23,7 +23,7 @@ export function EmployeeLeavePage() {
       <div className="flex flex-wrap items-start gap-6">
         <section
           aria-labelledby="request-leave-heading"
-          className="min-w-0 flex-[1_1_340px] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
+          className="min-w-0 flex-[1_1_21.25rem] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
         >
           <h2 id="request-leave-heading" className="mb-4 text-lg font-semibold text-[var(--foreground)]">
             Request leave
@@ -34,7 +34,7 @@ export function EmployeeLeavePage() {
           />
         </section>
 
-        <RequestPanel title="My leave history" className="flex-[999_1_460px]">
+        <RequestPanel title="My leave history" className="flex-[999_1_28.75rem]">
           <LeaveHistory key={refreshKey} />
         </RequestPanel>
       </div>

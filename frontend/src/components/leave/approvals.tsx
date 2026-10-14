@@ -35,7 +35,7 @@ export function TypeChip({ kind, className }: { kind: RequestKind; className?: s
     <span
       title={KIND_NAME[kind]}
       className={cn(
-        "inline-flex h-8 w-10 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold",
+        "inline-flex h-8 w-10 shrink-0 items-center justify-center rounded-lg text-[0.6875rem] font-semibold",
         style.className,
         className,
       )}
@@ -137,7 +137,7 @@ export function RequestPanel({
               </span>
             ) : null}
           </h2>
-          {description ? <p className="mt-0.5 text-[13px] text-[var(--muted)]">{description}</p> : null}
+          {description ? <p className="mt-0.5 text-[0.8125rem] text-[var(--muted)]">{description}</p> : null}
         </div>
         {action}
       </div>
@@ -174,7 +174,7 @@ export function RequestItem({
             <p className="min-w-0 text-sm font-medium text-[var(--foreground)]">{who}</p>
             {status}
           </div>
-          <p className="mt-0.5 text-[13px] text-[var(--muted)]">{what}</p>
+          <p className="mt-0.5 text-[0.8125rem] text-[var(--muted)]">{what}</p>
           {note ? <p className="mt-2 text-sm leading-relaxed text-[var(--foreground)]/80">{note}</p> : null}
           {meta ? <p className="mt-1 text-xs text-[var(--muted-foreground)]">{meta}</p> : null}
         </div>

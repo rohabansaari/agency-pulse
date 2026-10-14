@@ -72,13 +72,13 @@ export function RoleManagementPanel({
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--accent-sand)]/60 px-4 py-3">
-          <span className="text-[13px] text-[var(--muted)]">Current role</span>
+          <span className="text-[0.8125rem] text-[var(--muted)]">Current role</span>
           <LedgerRoleBadge role={currentRole} />
         </div>
 
         {canChangeRole ? (
           <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[160px] flex-1">
+            <div className="min-w-[10rem] flex-1">
               <Label htmlFor={`role-select-${membershipId}`}>Change role</Label>
               <Select
                 id={`role-select-${membershipId}`}
@@ -104,13 +104,13 @@ export function RoleManagementPanel({
         ) : null}
 
         {isSelf ? (
-          <p className="rounded-xl bg-[var(--accent-copper-soft)] px-4 py-2.5 text-[13px] text-[var(--accent-copper)]">
+          <p className="rounded-xl bg-[var(--accent-copper-soft)] px-4 py-2.5 text-[0.8125rem] text-[var(--accent-copper)]">
             You cannot change your own role.
           </p>
         ) : null}
 
         {!canChangeRole && !isSelf && canChangeEmployeeRoles(viewer.role) ? (
-          <p className="text-[13px] text-[var(--muted)]">
+          <p className="text-[0.8125rem] text-[var(--muted)]">
             {ROLE_LABELS[currentRole]} roles cannot be changed after account creation.
           </p>
         ) : null}
@@ -118,7 +118,7 @@ export function RoleManagementPanel({
         {error ? <Alert variant="error">{error}</Alert> : null}
         {success ? <Alert variant="success">{success}</Alert> : null}
         {!canChangeEmployeeRoles(viewer.role) ? (
-          <p className="text-[13px] text-[var(--muted)]">
+          <p className="text-[0.8125rem] text-[var(--muted)]">
             {memberName} is assigned the {ROLE_LABELS[currentRole]} role.
           </p>
         ) : null}

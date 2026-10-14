@@ -311,9 +311,9 @@ export function OnboardingWizard() {
           </button>
         </header>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[16.25rem_minmax(0,1fr)] lg:gap-10">
           <aside aria-label="Setup progress" className="min-w-0">
-            <h1 className="text-[22px] font-semibold tracking-[-0.01em] text-[var(--foreground)]">Set up your workspace</h1>
+            <h1 className="text-[1.375rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">Set up your workspace</h1>
             <div className="mt-3 flex items-center gap-3">
               <div
                 className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--border-subtle)]"
@@ -328,7 +328,7 @@ export function OnboardingWizard() {
                   style={{ width: `${displayPercent}%` }}
                 />
               </div>
-              <span className="tnum text-[13px] text-[var(--muted)]">{displayPercent}%</span>
+              <span className="tnum text-[0.8125rem] text-[var(--muted)]">{displayPercent}%</span>
             </div>
 
             <ol className="mt-6 flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-1 lg:overflow-visible">
@@ -388,10 +388,10 @@ export function OnboardingWizard() {
             aria-labelledby="onboarding-step-title"
             className="min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-8"
           >
-            <p className="text-[13px] text-[var(--muted)]">
+            <p className="text-[0.8125rem] text-[var(--muted)]">
               Step {current.id} of {STEPS.length} · {current.required ? "Required" : "Optional"}
             </p>
-            <h2 id="onboarding-step-title" className="mt-1 text-[26px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+            <h2 id="onboarding-step-title" className="mt-1 text-[1.625rem] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
               {STEP_HEADINGS[current.id]}
             </h2>
             <p className="mt-1.5 text-sm text-[var(--muted)]">{current.blurb}</p>
@@ -507,7 +507,7 @@ export function OnboardingWizard() {
                 {step === 4 ? (
                   <div className="flex flex-col gap-4">
                     <form onSubmit={handleTeamSubmit} className="flex flex-wrap items-end gap-3">
-                      <Field label="Team name" className="min-w-0 flex-[1_1_240px]">
+                      <Field label="Team name" className="min-w-0 flex-[1_1_15rem]">
                         <input placeholder="e.g. Creative" value={teamName} onChange={(e) => setTeamName(e.target.value)} className={inputClass} />
                       </Field>
                       <SecondaryButton type="submit" disabled={submitting || !teamName.trim()}>
@@ -608,7 +608,7 @@ function CreatedList({ items }: { items: string[] }) {
       {items.map((name) => (
         <li
           key={name}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-emerald-soft)] px-3 py-1 text-[13px] font-medium text-[var(--accent-emerald)]"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-emerald-soft)] px-3 py-1 text-[0.8125rem] font-medium text-[var(--accent-emerald)]"
         >
           <Check className="h-3.5 w-3.5" aria-hidden="true" />
           {name}

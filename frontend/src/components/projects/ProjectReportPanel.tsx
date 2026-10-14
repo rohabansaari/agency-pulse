@@ -45,7 +45,7 @@ export function ProjectReportPanel({
         <div className="space-y-3 py-4" aria-busy="true" aria-label="Loading report">
           <div className="grid gap-3 sm:grid-cols-2">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-[70px] animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
+              <div key={i} className="h-[4.375rem] animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
             ))}
           </div>
           <div className="h-24 animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
@@ -95,7 +95,7 @@ export function ProjectReportPanel({
 function ReportStat({ label, value, progress }: { label: string; value: string; progress?: number }) {
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 py-3">
-      <dt className="text-[13px] text-[var(--muted)]">{label}</dt>
+      <dt className="text-[0.8125rem] text-[var(--muted)]">{label}</dt>
       <dd className="num mt-1 truncate text-lg font-semibold text-[var(--foreground)]">{value}</dd>
       {progress !== undefined ? (
         <div className="mt-2 h-1.5 rounded-full bg-[var(--border-subtle)]" aria-hidden="true">
@@ -123,7 +123,7 @@ function ContributionList({
     <section>
       <h3 className="mb-2 text-sm font-semibold text-[var(--foreground)]">{title}</h3>
       {rows.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-6 text-center text-[13px] text-[var(--muted)]">
+        <p className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-6 text-center text-[0.8125rem] text-[var(--muted)]">
           {empty}
         </p>
       ) : (

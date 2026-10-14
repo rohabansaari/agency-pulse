@@ -31,7 +31,7 @@ export function Segmented<T extends string>({
             aria-selected={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              "min-h-9 rounded-lg px-3 text-[13px] transition",
+              "min-h-9 rounded-lg px-3 text-[0.8125rem] transition",
               selected
                 ? "bg-[var(--card-elevated)] font-medium text-[var(--foreground)] shadow-[var(--shadow-sm)]"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]",

@@ -20,7 +20,7 @@ const STATUS_BADGE: Record<PlatformOrganization["status"], string> = {
 };
 
 const rowButton =
-  "inline-flex min-h-9 items-center rounded-lg border px-3 text-[13px] font-medium transition disabled:opacity-50";
+  "inline-flex min-h-9 items-center rounded-lg border px-3 text-[0.8125rem] font-medium transition disabled:opacity-50";
 
 export type OrganizationActions = {
   onEditEmail: (organization: PlatformOrganization) => void;
@@ -82,7 +82,7 @@ export function OrganizationsTable({
                   aria-selected={selected}
                   onClick={() => setFilter(tab)}
                   className={cn(
-                    "min-h-9 rounded-lg px-3 text-[13px] transition",
+                    "min-h-9 rounded-lg px-3 text-[0.8125rem] transition",
                     selected
                       ? "bg-[var(--card-elevated)] font-medium text-[var(--foreground)] shadow-[var(--shadow-sm)]"
                       : "text-[var(--muted)] hover:text-[var(--foreground)]",
@@ -94,7 +94,7 @@ export function OrganizationsTable({
               );
             })}
           </div>
-          <label className="flex min-h-11 min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3">
+          <label className="flex min-h-11 min-w-[13.75rem] flex-1 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3">
             <Search className="h-4 w-4 text-[var(--muted)]" aria-hidden="true" />
             <span className="sr-only">Search organizations</span>
             <input
@@ -109,7 +109,7 @@ export function OrganizationsTable({
       </div>
 
       <div className="relative overflow-x-auto">
-        <table className="w-full min-w-[880px] text-left text-sm">
+        <table className="w-full min-w-[55rem] text-left text-sm">
           <thead className="border-y border-[var(--border)] bg-[var(--accent-sand)]/60 text-xs uppercase tracking-[0.04em] text-[var(--muted)]">
             <tr>
               <th scope="col" className="px-5 py-3 font-medium">Organization</th>
@@ -159,13 +159,13 @@ function OrganizationRow({
     <tr className={cn(suspended && "text-[var(--muted)]")}>
       <td className="px-5 py-4">
         <p className="font-medium text-[var(--foreground)]">{organization.name}</p>
-        <p className="text-[13px] text-[var(--muted)]">{organization.slug}</p>
+        <p className="text-[0.8125rem] text-[var(--muted)]">{organization.slug}</p>
       </td>
       <td className="px-5 py-4">
         <p>{organization.admin_name ?? "—"}</p>
-        <p className="text-[13px] text-[var(--muted)]">{organization.admin_email ?? "—"}</p>
+        <p className="text-[0.8125rem] text-[var(--muted)]">{organization.admin_email ?? "—"}</p>
         {adminPending ? (
-          <span className="mt-1 inline-flex rounded-full bg-[var(--primary-muted)] px-2 py-0.5 text-[11px] font-medium text-[var(--primary)]">
+          <span className="mt-1 inline-flex rounded-full bg-[var(--primary-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--primary)]">
             Invitation pending
           </span>
         ) : null}

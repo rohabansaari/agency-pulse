@@ -69,7 +69,7 @@ export function MyTeamsView() {
         />
       ) : (
         <div className="flex flex-wrap items-start gap-6">
-          <section aria-label="Team list" className="min-w-0 flex-[1_1_300px] lg:max-w-[380px]">
+          <section aria-label="Team list" className="min-w-0 flex-[1_1_18.75rem] lg:max-w-[23.75rem]">
             <TeamList
               teams={teams}
               selectedId={selectedTeam?.id ?? null}
@@ -81,7 +81,7 @@ export function MyTeamsView() {
           {selectedTeam ? (
             <section
               aria-labelledby="my-team-heading"
-              className="flex min-w-0 flex-[999_1_520px] flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
+              className="flex min-w-0 flex-[999_1_32.5rem] flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
             >
               <div>
                 <h2 id="my-team-heading" className="text-xl font-semibold text-[var(--foreground)]">
@@ -119,7 +119,7 @@ export function MyTeamsView() {
                           <span className="block truncate text-sm font-medium text-[var(--foreground)]">
                             {member.name}
                           </span>
-                          <span className="block truncate text-[13px] text-[var(--muted)]">{member.email}</span>
+                          <span className="block truncate text-[0.8125rem] text-[var(--muted)]">{member.email}</span>
                         </span>
                       </li>
                     ))

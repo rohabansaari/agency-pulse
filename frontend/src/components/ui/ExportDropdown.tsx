@@ -52,7 +52,7 @@ export function ExportDropdown({
             aria-label="Close export menu"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 z-20 mt-1 min-w-[120px] rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] py-1 shadow-lg">
+          <div className="absolute right-0 z-20 mt-1 min-w-[7.5rem] rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] py-1 shadow-lg">
             {formats.map((format) => (
               <button
                 key={format}

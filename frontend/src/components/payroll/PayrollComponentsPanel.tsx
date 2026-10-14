@@ -81,7 +81,7 @@ function ComponentTable({
 
   return (
     <div className={ledgerTable.wrap}>
-      <table className={cn(ledgerTable.table, "min-w-[560px]")}>
+      <table className={cn(ledgerTable.table, "min-w-[35rem]")}>
         <thead className={ledgerTable.thead}>
           <tr>
             <th scope="col" className={ledgerTable.th}>Name</th>

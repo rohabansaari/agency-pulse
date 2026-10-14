@@ -28,11 +28,11 @@ function DashboardGreeting({ filter, actions, subtitle }: { filter?: ReactNode; 
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <p className="text-[13px] text-[var(--muted)]">
+        <p className="text-[0.8125rem] text-[var(--muted)]">
           {now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
           {subtitle ? ` · ${subtitle}` : organizationName ? ` · ${organizationName}` : ""}
         </p>
-        <h1 className="mt-1 text-[28px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+        <h1 className="mt-1 text-[1.75rem] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
           {greeting(now)}, {firstName}
         </h1>
       </div>
@@ -51,7 +51,7 @@ function SeeAll({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-[var(--primary)] hover:bg-[var(--primary-muted)]"
+      className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[0.8125rem] font-medium text-[var(--primary)] hover:bg-[var(--primary-muted)]"
     >
       {label}
       <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -102,12 +102,12 @@ function EmployeeView({ data, filter }: { data: EmployeeDashboard; filter?: Reac
             <Timer className="h-6 w-6" />
           </span>
           <div>
-            <p className="text-[13px] text-[var(--muted)]">Time tracker</p>
+            <p className="text-[0.8125rem] text-[var(--muted)]">Time tracker</p>
             <p className="text-lg font-semibold text-[var(--foreground)]">
               {timer ? `Tracking ${timer.project_name ?? "general time"}` : "Not tracking right now"}
             </p>
             {timer ? (
-              <p className="tnum text-[13px] text-[var(--muted)]">Since {formatTime(timer.start_time)}</p>
+              <p className="tnum text-[0.8125rem] text-[var(--muted)]">Since {formatTime(timer.start_time)}</p>
             ) : null}
           </div>
         </div>
@@ -145,7 +145,7 @@ function EmployeeView({ data, filter }: { data: EmployeeDashboard; filter?: Reac
       </section>
 
       <div className="flex flex-wrap items-start gap-6">
-        <div className="min-w-0 flex-[999_1_480px]">
+        <div className="min-w-0 flex-[999_1_30rem]">
           <Panel
             title="Recent sessions"
             description="Your latest tracked time"
@@ -177,7 +177,7 @@ function EmployeeView({ data, filter }: { data: EmployeeDashboard; filter?: Reac
             )}
           </Panel>
         </div>
-        <div className="min-w-0 flex-[1_1_300px]">
+        <div className="min-w-0 flex-[1_1_18.75rem]">
           <Panel title="My projects" description={`${data.assigned_projects.length} assigned`} flush>
             {data.assigned_projects.length === 0 ? (
               <p className="px-5 pb-6 text-sm text-[var(--muted)]">No projects yet. Ask your manager to assign you.</p>
@@ -273,7 +273,7 @@ function ManagerView({ data, filter }: { data: ManagerDashboard; filter?: ReactN
       </section>
 
       <div className="flex flex-wrap items-start gap-6">
-        <div className="min-w-0 flex-[999_1_560px]">
+        <div className="min-w-0 flex-[999_1_35rem]">
           {data.teams.length === 0 ? (
             <Panel title="Your teams">
               <p className="text-sm text-[var(--muted)]">An admin will assign you as a team manager.</p>
@@ -286,7 +286,7 @@ function ManagerView({ data, filter }: { data: ManagerDashboard; filter?: ReactN
             </div>
           )}
         </div>
-        <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
+        <aside className="flex min-w-0 flex-[1_1_20rem] flex-col gap-4">
           <ManualApprovalQueue />
           <OvertimeApprovalQueue title="Overtime approvals" />
         </aside>

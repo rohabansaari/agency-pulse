@@ -91,7 +91,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </header>
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto w-full max-w-7xl">
+            <div className="mx-auto w-full max-w-7xl min-[100rem]:max-w-[120rem]">
               <PageTransition>
                 {user.role === "employee" || user.role === "manager" ? (
                   <DesktopAgentBanner user={user} />

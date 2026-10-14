@@ -56,7 +56,7 @@ export function TimerFocusPanel({
         <StatusPill state={isRunning ? "running" : isPaused ? "paused" : "idle"} />
       </div>
 
-      <p className="mt-5 text-[13px] text-[var(--muted)]">
+      <p className="mt-5 text-[0.8125rem] text-[var(--muted)]">
         {idle ? "Ready when you are" : `${projectName}${caption ? ` · ${caption}` : ""}`}
       </p>
       <p
@@ -86,35 +86,35 @@ export function TimerFocusPanel({
       <div className="mt-6 flex flex-wrap gap-3">
         {isRunning ? (
           <>
-            <Button variant="secondary" size="lg" onClick={onPause} disabled={actionLoading} className="min-w-[140px]">
+            <Button variant="secondary" size="lg" onClick={onPause} disabled={actionLoading} className="min-w-[8.75rem]">
               <Pause className="h-4 w-4" aria-hidden="true" />
               Pause
             </Button>
-            <Button variant="danger" size="lg" onClick={onStop} disabled={actionLoading} className="min-w-[140px]">
+            <Button variant="danger" size="lg" onClick={onStop} disabled={actionLoading} className="min-w-[8.75rem]">
               <Square className="h-4 w-4" aria-hidden="true" />
               Stop
             </Button>
           </>
         ) : isPaused ? (
           <>
-            <Button size="lg" onClick={onResume} disabled={actionLoading || startBlocked} className="min-w-[140px]">
+            <Button size="lg" onClick={onResume} disabled={actionLoading || startBlocked} className="min-w-[8.75rem]">
               <Play className="h-4 w-4" aria-hidden="true" />
               Resume
             </Button>
-            <Button variant="danger" size="lg" onClick={onStop} disabled={actionLoading} className="min-w-[140px]">
+            <Button variant="danger" size="lg" onClick={onStop} disabled={actionLoading} className="min-w-[8.75rem]">
               <Square className="h-4 w-4" aria-hidden="true" />
               Stop
             </Button>
           </>
         ) : (
-          <Button size="lg" onClick={onStart} disabled={actionLoading || startBlocked} className="min-w-[180px]">
+          <Button size="lg" onClick={onStart} disabled={actionLoading || startBlocked} className="min-w-[11.25rem]">
             <Play className="h-4 w-4" aria-hidden="true" />
             {actionLoading ? "Starting…" : startBlocked ? "Start — agent required" : "Start timer"}
           </Button>
         )}
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-5 text-[13px]">
+      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-5 text-[0.8125rem]">
         <span
           className={cn(
             "inline-flex items-center gap-2 rounded-full px-3 py-1.5",

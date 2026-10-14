@@ -55,7 +55,7 @@ function StatusPill({ active }: { active: boolean }) {
 
 function UtilizationBar({ percent }: { percent: number }) {
   return (
-    <div className="flex min-w-[140px] items-center gap-3">
+    <div className="flex min-w-[8.75rem] items-center gap-3">
       <div className="h-1.5 flex-1 rounded-full bg-[var(--border-subtle)]" aria-hidden="true">
         <div
           className={cn(
@@ -65,7 +65,7 @@ function UtilizationBar({ percent }: { percent: number }) {
           style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
         />
       </div>
-      <span className="tnum w-14 text-right text-[13px] text-[var(--muted)]">
+      <span className="tnum w-14 text-right text-[0.8125rem] text-[var(--muted)]">
         {formatUtilization(percent)}
       </span>
     </div>
@@ -77,11 +77,11 @@ function StatStrip({ label, items }: { label: string; items: { label: string; va
   return (
     <section
       aria-label={label}
-      className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--border-subtle)] sm:grid-cols-[repeat(auto-fit,minmax(160px,1fr))]"
+      className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--border-subtle)] sm:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]"
     >
       {items.map((item) => (
         <div key={item.label} className="flex flex-col gap-1 bg-[var(--card)] px-5 py-4">
-          <span className="text-[13px] text-[var(--muted)]">{item.label}</span>
+          <span className="text-[0.8125rem] text-[var(--muted)]">{item.label}</span>
           <span className="tnum text-xl font-semibold text-[var(--foreground)]">{item.value}</span>
           {item.detail ? <span className="text-xs text-[var(--muted)]">{item.detail}</span> : null}
         </div>
@@ -108,7 +108,7 @@ function HoursBarChart({
       {items.map((item) => (
         <div
           key={item.id}
-          className="grid grid-cols-[minmax(88px,30%)_1fr_auto] items-center gap-3 text-sm"
+          className="grid grid-cols-[minmax(5.5rem,30%)_1fr_auto] items-center gap-3 text-sm"
         >
           <span className="truncate text-[var(--foreground)]">{item.label}</span>
           <div className="h-3 rounded-md bg-[var(--accent-sand)]">
@@ -117,7 +117,7 @@ function HoursBarChart({
               style={{ width: `${(item.seconds / max) * 100}%` }}
             />
           </div>
-          <span className="tnum w-[72px] text-right text-[13px] text-[var(--muted)]">
+          <span className="tnum w-[4.5rem] text-right text-[0.8125rem] text-[var(--muted)]">
             {hoursLabel(item.seconds)}
           </span>
         </div>
@@ -138,8 +138,8 @@ function ReportsHeader({
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <p className="text-[13px] text-[var(--muted)]">Insights</p>
-        <h1 className="mt-1 text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">
+        <p className="text-[0.8125rem] text-[var(--muted)]">Insights</p>
+        <h1 className="mt-1 text-[1.75rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">
           {title}
         </h1>
         <p className="mt-1.5 max-w-2xl text-sm text-[var(--muted)]">{description}</p>
@@ -168,7 +168,7 @@ function OrgTeamUtilizationTable({
 
   return (
     <div className={ledgerTable.wrap}>
-      <table className={cn(ledgerTable.table, "min-w-[520px]")}>
+      <table className={cn(ledgerTable.table, "min-w-[32.5rem]")}>
         <thead className={ledgerTable.thead}>
           <tr>
             <th scope="col" className={ledgerTable.th}>Team</th>
@@ -199,7 +199,7 @@ function OrgEmployeeBreakdownTable({ rows }: { rows: EmployeeReportBreakdown[] }
 
   return (
     <div className={ledgerTable.wrap}>
-      <table className={cn(ledgerTable.table, "min-w-[680px]")}>
+      <table className={cn(ledgerTable.table, "min-w-[42.5rem]")}>
         <thead className={ledgerTable.thead}>
           <tr>
             <th scope="col" className={ledgerTable.th}>Employee</th>
@@ -340,9 +340,9 @@ function AdminReports({
       {hasOvertimeRows || report.leave_breakdown ? (
         <div className="flex flex-wrap items-start gap-6">
           {hasOvertimeRows ? (
-            <Panel title="Overtime breakdown" className="min-w-0 flex-[1_1_420px]" flush>
+            <Panel title="Overtime breakdown" className="min-w-0 flex-[1_1_26.25rem]" flush>
               <div className={ledgerTable.wrap}>
-                <table className={cn(ledgerTable.table, "min-w-[420px]")}>
+                <table className={cn(ledgerTable.table, "min-w-[26.25rem]")}>
                   <thead className={ledgerTable.thead}>
                     <tr>
                       <th scope="col" className={ledgerTable.th}>Employee</th>
@@ -365,8 +365,8 @@ function AdminReports({
           ) : null}
 
           {report.leave_breakdown ? (
-            <Panel title="Leave summary" className="min-w-0 flex-[1_1_420px]">
-              <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+            <Panel title="Leave summary" className="min-w-0 flex-[1_1_26.25rem]">
+              <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(12.5rem,1fr))]">
                 <LeaveBreakdownCard title="Today" breakdown={report.leave_breakdown.today} />
                 <LeaveBreakdownCard title="This week" breakdown={report.leave_breakdown.week} />
                 {report.leave_breakdown.range ? (
@@ -420,7 +420,7 @@ function ManagerTeamReportCard({ team }: { team: ManagerTeamReport }) {
         <EmptyLine>No team members yet.</EmptyLine>
       ) : (
         <div className={ledgerTable.wrap}>
-          <table className={cn(ledgerTable.table, "min-w-[460px]")}>
+          <table className={cn(ledgerTable.table, "min-w-[28.75rem]")}>
             <thead className={ledgerTable.thead}>
               <tr>
                 <th scope="col" className={ledgerTable.th}>Member</th>

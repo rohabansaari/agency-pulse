@@ -40,7 +40,7 @@ export function PayrollEmployeeLines({
 
   return (
     <div className={ledgerTable.wrap}>
-      <table className={cn(ledgerTable.table, "min-w-[900px]")}>
+      <table className={cn(ledgerTable.table, "min-w-[56.25rem]")}>
         <thead className={ledgerTable.thead}>
           <tr>
             <th scope="col" className={ledgerTable.th}>Employee</th>

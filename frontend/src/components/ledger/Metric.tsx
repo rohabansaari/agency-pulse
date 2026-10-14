@@ -33,13 +33,13 @@ export function Metric({
           : "border-[var(--border)] bg-[var(--card)]",
       )}
     >
-      <div className={cn("flex items-center justify-between text-[13px]", attention ? "text-[var(--accent-copper)]" : "text-[var(--muted)]")}>
+      <div className={cn("flex items-center justify-between text-[0.8125rem]", attention ? "text-[var(--accent-copper)]" : "text-[var(--muted)]")}>
         <p>{label}</p>
         {icon ? <span aria-hidden="true">{icon}</span> : null}
       </div>
       <p
         className={cn(
-          "mt-2 truncate text-[28px] font-semibold tracking-[-0.01em] text-[var(--foreground)]",
+          "mt-2 truncate text-[1.75rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]",
           numeric && "tnum",
         )}
       >
@@ -53,7 +53,7 @@ export function Metric({
           />
         </div>
       ) : null}
-      {detail ? <div className="mt-2 text-[13px] text-[var(--muted)]">{detail}</div> : null}
+      {detail ? <div className="mt-2 text-[0.8125rem] text-[var(--muted)]">{detail}</div> : null}
     </div>
   );
 }

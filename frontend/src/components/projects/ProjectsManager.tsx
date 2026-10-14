@@ -346,7 +346,7 @@ export function ProjectsManager({ user }: { user: User }) {
           }))}
         />
         {showArchive ? (
-          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3.5 text-[13px] text-[var(--foreground)]">
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3.5 text-[0.8125rem] text-[var(--foreground)]">
             <input
               type="checkbox"
               checked={includeArchived}

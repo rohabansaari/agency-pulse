@@ -30,7 +30,7 @@ export function Panel({
           <h2 id={id} className="text-base font-semibold text-[var(--foreground)]">
             {title}
           </h2>
-          {description ? <p className="mt-0.5 text-[13px] text-[var(--muted)]">{description}</p> : null}
+          {description ? <p className="mt-0.5 text-[0.8125rem] text-[var(--muted)]">{description}</p> : null}
         </div>
         {action}
       </div>

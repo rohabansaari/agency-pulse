@@ -63,11 +63,11 @@ function TodayPanel({
     >
       <div className="grid grid-cols-2 gap-3 px-5">
         <div className="rounded-xl bg-[var(--accent-sand)] px-4 py-3">
-          <p className="text-[13px] text-[var(--muted)]">Total</p>
+          <p className="text-[0.8125rem] text-[var(--muted)]">Total</p>
           <p className="num mt-1 text-xl font-semibold text-[var(--foreground)]">{hoursLabel(totalSeconds)}</p>
         </div>
         <div className="rounded-xl bg-[var(--accent-sand)] px-4 py-3">
-          <p className="text-[13px] text-[var(--muted)]">Sessions</p>
+          <p className="text-[0.8125rem] text-[var(--muted)]">Sessions</p>
           <p className="num mt-1 text-xl font-semibold text-[var(--foreground)]">{entries.length}</p>
         </div>
       </div>
@@ -101,7 +101,7 @@ function TodayPanel({
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <span className="num text-sm font-semibold text-[var(--foreground)]">{formatDuration(duration)}</span>
                   {isRunning ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--accent-emerald)]">
+                    <span className="inline-flex items-center gap-1 text-[0.6875rem] font-medium text-[var(--accent-emerald)]">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--accent-emerald)]" aria-hidden="true" />
                       Live
                     </span>
@@ -464,7 +464,7 @@ export function TimeTracker({ user }: { user?: User }) {
           ) : null}
 
           <div className="flex flex-wrap items-start gap-6">
-            <div className="min-w-0 flex-[999_1_520px]">
+            <div className="min-w-0 flex-[999_1_32.5rem]">
               <TimerFocusPanel
                 isRunning={Boolean(activeTimer)}
                 isPaused={!activeTimer && Boolean(pausedTimer)}
@@ -488,7 +488,7 @@ export function TimeTracker({ user }: { user?: User }) {
                 projectsNotice={projectsNotice}
               />
             </div>
-            <div className="min-w-0 flex-[1_1_300px]">
+            <div className="min-w-0 flex-[1_1_18.75rem]">
               <TodayPanel
                 entries={sortedEntries}
                 liveElapsed={liveElapsed}

@@ -83,7 +83,7 @@ export function EmployeeAdvancePage() {
       <div className="flex flex-wrap items-start gap-6">
         <section
           aria-labelledby="advance-new-heading"
-          className="min-w-0 flex-[1_1_340px] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
+          className="min-w-0 flex-[1_1_21.25rem] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
         >
           <h2 id="advance-new-heading" className="text-lg font-semibold text-[var(--foreground)]">
             New request
@@ -112,7 +112,7 @@ export function EmployeeAdvancePage() {
                 placeholder="Brief reason for the advance"
               />
             </FormField>
-            <p className="text-[13px] text-[var(--muted)]">
+            <p className="text-[0.8125rem] text-[var(--muted)]">
               Goes to your admin for approval. Approved amounts are deducted from the next payroll run.
             </p>
             <Button type="submit" size="lg" disabled={submitting} className="min-h-12 w-full">
@@ -121,7 +121,7 @@ export function EmployeeAdvancePage() {
           </form>
         </section>
 
-        <RequestPanel title="Request history" className="flex-[999_1_460px]">
+        <RequestPanel title="Request history" className="flex-[999_1_28.75rem]">
           {loading ? (
             <Spinner />
           ) : requests.length === 0 ? (
@@ -243,13 +243,13 @@ export function AdminAdvancePage() {
           <h2 id="advance-history-heading" className="text-base font-semibold text-[var(--foreground)]">
             History
           </h2>
-          <p className="mt-0.5 text-[13px] text-[var(--muted)]">Reviewed and deducted requests.</p>
+          <p className="mt-0.5 text-[0.8125rem] text-[var(--muted)]">Reviewed and deducted requests.</p>
         </div>
         {history.length === 0 ? (
           <PanelEmpty title="No reviewed requests yet" />
         ) : (
           <div className={ledgerTable.wrap}>
-            <table className={cn(ledgerTable.table, "min-w-[560px]")}>
+            <table className={cn(ledgerTable.table, "min-w-[35rem]")}>
               <thead className={ledgerTable.thead}>
                 <tr>
                   <th scope="col" className={ledgerTable.th}>Employee</th>

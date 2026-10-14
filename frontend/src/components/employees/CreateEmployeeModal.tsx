@@ -139,8 +139,8 @@ export function CreateEmployeeModal({
         </div>
 
         <fieldset className="rounded-2xl border border-[var(--border)] bg-[var(--accent-sand)]/40 p-4">
-          <legend className="px-1 text-[13px] font-semibold text-[var(--foreground)]">Compensation</legend>
-          <p className="mb-3 text-[13px] text-[var(--muted)]">Stored in the payroll vault and only visible under Payroll.</p>
+          <legend className="px-1 text-[0.8125rem] font-semibold text-[var(--foreground)]">Compensation</legend>
+          <p className="mb-3 text-[0.8125rem] text-[var(--muted)]">Stored in the payroll vault and only visible under Payroll.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Salary type" required>
               <Dropdown

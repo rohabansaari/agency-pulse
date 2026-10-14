@@ -126,7 +126,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
 
   return (
     <div className="flex flex-col gap-6">
-      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--muted)]">
+      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-[0.8125rem] text-[var(--muted)]">
         <Link
           href="/employees"
           className="inline-flex min-h-9 items-center gap-1 rounded-lg font-medium text-[var(--primary)] hover:underline"
@@ -140,9 +140,9 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
 
       <header className="flex flex-wrap items-start gap-5 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6">
         <Avatar name={profile.name} size="lg" />
-        <div className="min-w-0 flex-[1_1_260px]">
-          <p className="text-[13px] text-[var(--muted)]">Employee profile</p>
-          <h1 className="mt-0.5 break-words text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">
+        <div className="min-w-0 flex-[1_1_16.25rem]">
+          <p className="text-[0.8125rem] text-[var(--muted)]">Employee profile</p>
+          <h1 className="mt-0.5 break-words text-[1.75rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">
             {profile.name}
           </h1>
           <p className="mt-1 break-words text-sm text-[var(--muted)]">
@@ -215,7 +215,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
               {profile.manager_metrics.managed_teams.map((team) => (
                 <li key={team.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
                   <span className="font-medium text-[var(--foreground)]">{team.name}</span>
-                  <span className="tnum text-[13px] text-[var(--muted)]">
+                  <span className="tnum text-[0.8125rem] text-[var(--muted)]">
                     {team.members_count} members · {team.active_projects} projects
                   </span>
                 </li>
@@ -226,7 +226,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
       ) : null}
 
       <div className="flex flex-wrap items-start gap-6">
-        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-6">
+        <div className="flex min-w-0 flex-[999_1_35rem] flex-col gap-6">
           <EmployeePayrollAdjustmentsPanel
             userId={profile.user_id}
             canManage={isOperationalAdmin(viewer.role)}
@@ -252,7 +252,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
               <p className="px-5 pb-5 text-sm text-[var(--muted)]">No leave recorded.</p>
             ) : (
               <div className={ledgerTable.wrap}>
-                <table className={cn(ledgerTable.table, "min-w-[480px]")}>
+                <table className={cn(ledgerTable.table, "min-w-[30rem]")}>
                   <thead className={ledgerTable.thead}>
                     <tr>
                       <th scope="col" className={th}>Start date</th>
@@ -265,7 +265,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
                     {profile.leave_history.map((entry) => (
                       <tr key={entry.id}>
                         <td className={cn(td, "tnum whitespace-nowrap")}>{entry.start_date}</td>
-                        <td className={cn(td, "num text-right text-[13px]")}>{formatDuration(entry.duration_seconds)}</td>
+                        <td className={cn(td, "num text-right text-[0.8125rem]")}>{formatDuration(entry.duration_seconds)}</td>
                         <td className={cn(td, "text-[var(--muted)]")}>{entry.is_paid ? "Paid" : "Unpaid"}</td>
                         <td className={td}><StatusPill status={entry.status} /></td>
                       </tr>
@@ -281,7 +281,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
               <p className="px-5 pb-5 text-sm text-[var(--muted)]">No overtime recorded.</p>
             ) : (
               <div className={ledgerTable.wrap}>
-                <table className={cn(ledgerTable.table, "min-w-[400px]")}>
+                <table className={cn(ledgerTable.table, "min-w-[25rem]")}>
                   <thead className={ledgerTable.thead}>
                     <tr>
                       <th scope="col" className={th}>Work date</th>
@@ -293,7 +293,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
                     {profile.overtime_history.map((entry) => (
                       <tr key={entry.id}>
                         <td className={cn(td, "tnum whitespace-nowrap")}>{entry.work_date}</td>
-                        <td className={cn(td, "num text-right text-[13px]")}>{formatDuration(entry.duration_seconds)}</td>
+                        <td className={cn(td, "num text-right text-[0.8125rem]")}>{formatDuration(entry.duration_seconds)}</td>
                         <td className={td}><StatusPill status={entry.status} /></td>
                       </tr>
                     ))}
@@ -304,7 +304,7 @@ export function EmployeeProfileView({ userId, viewer }: { userId: number; viewer
           </Panel>
         </div>
 
-        <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-6">
+        <aside className="flex min-w-0 flex-[1_1_20rem] flex-col gap-6">
           <Panel title="Basic information">
             {canEditThis ? (
               <form
@@ -375,7 +375,7 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 function ManagerStat({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
     <div className="bg-[var(--card)] px-4 py-3">
-      <dt className="text-[13px] text-[var(--muted)]">{label}</dt>
+      <dt className="text-[0.8125rem] text-[var(--muted)]">{label}</dt>
       <dd className={cn("mt-1 text-xl font-semibold text-[var(--foreground)]", mono ? "num" : "tnum")}>{value}</dd>
     </div>
   );

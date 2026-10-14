@@ -34,12 +34,12 @@ export function AdminLeavePage() {
       <div className="flex flex-wrap items-start gap-6">
         <section
           aria-labelledby="assign-leave-heading"
-          className="min-w-0 flex-[1_1_340px] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
+          className="min-w-0 flex-[1_1_21.25rem] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
         >
           <h2 id="assign-leave-heading" className="text-base font-semibold text-[var(--foreground)]">
             Assign paid leave
           </h2>
-          <p className="mb-4 mt-0.5 text-[13px] text-[var(--muted)]">Recorded directly as approved paid leave.</p>
+          <p className="mb-4 mt-0.5 text-[0.8125rem] text-[var(--muted)]">Recorded directly as approved paid leave.</p>
           <LeaveRequestForm role={user.role} onSubmitted={handleUpdated} />
         </section>
 
@@ -47,7 +47,7 @@ export function AdminLeavePage() {
           title="All leave entries"
           description="Audit visibility across the organization. Override status inline."
           action={<LeaveStatusFilter value={statusFilter} onChange={setStatusFilter} />}
-          className="flex-[999_1_480px]"
+          className="flex-[999_1_30rem]"
         >
           <LeaveHistory
             key={`admin-${refreshKey}-${statusFilter}`}

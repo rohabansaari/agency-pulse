@@ -283,11 +283,11 @@ function AdjustmentGroup({
           aria-hidden="true"
           className={positive ? "h-4 w-4 text-[var(--accent-emerald)]" : "h-4 w-4 text-[var(--accent-coral)]"}
         />
-        <h3 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-[var(--muted)]">{title}</h3>
-        <span className="tnum ml-auto text-[13px] text-[var(--muted)]">{items.length}</span>
+        <h3 className="text-[0.8125rem] font-semibold uppercase tracking-[0.04em] text-[var(--muted)]">{title}</h3>
+        <span className="tnum ml-auto text-[0.8125rem] text-[var(--muted)]">{items.length}</span>
       </div>
       {items.length === 0 ? (
-        <p className="px-4 py-4 text-[13px] text-[var(--muted)]">None active</p>
+        <p className="px-4 py-4 text-[0.8125rem] text-[var(--muted)]">None active</p>
       ) : (
         <ul className="divide-y divide-[var(--border-subtle)]">
           {items.map((item) => (
@@ -297,7 +297,7 @@ function AdjustmentGroup({
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-[var(--foreground)]">{item.name}</p>
-                <p className="tnum text-[13px] text-[var(--muted)]">
+                <p className="tnum text-[0.8125rem] text-[var(--muted)]">
                   {item.value_mode === "percentage" ? `${item.value}%` : formatPKRLabel(item.value)}
                   {item.effective_month ? ` · ${item.effective_month.slice(0, 7)}` : ""}
                 </p>

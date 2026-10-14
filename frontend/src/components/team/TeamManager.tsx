@@ -236,7 +236,7 @@ export function TeamManager({ user }: { user: User }) {
                 </Select>
               </FormField>
             </div>
-            <p className="rounded-xl bg-[var(--accent-sand)] px-4 py-3 text-[13px] text-[var(--muted)]">
+            <p className="rounded-xl bg-[var(--accent-sand)] px-4 py-3 text-[0.8125rem] text-[var(--muted)]">
               Salary contracts are configured under Payroll after the employee activates their account.
             </p>
             {vaultStatus?.requires_pin_on_employee_create ? (
@@ -287,7 +287,7 @@ export function TeamManager({ user }: { user: User }) {
 
       <Panel title="Members" description={`${members.length} in your organization`} flush>
         <div className={ledgerTable.wrap}>
-          <table className={cn(ledgerTable.table, "min-w-[760px]")}>
+          <table className={cn(ledgerTable.table, "min-w-[47.5rem]")}>
             <thead className={ledgerTable.thead}>
               <tr>
                 <th scope="col" className={ledgerTable.th}>Name</th>
@@ -309,7 +309,7 @@ export function TeamManager({ user }: { user: User }) {
                       <Avatar name={member.name} size="sm" />
                       <span className="min-w-0">
                         <span className="block truncate font-medium text-[var(--foreground)]">{member.name}</span>
-                        <span className="block truncate text-[13px] text-[var(--muted)]">{member.email}</span>
+                        <span className="block truncate text-[0.8125rem] text-[var(--muted)]">{member.email}</span>
                       </span>
                     </div>
                   </td>
@@ -318,7 +318,7 @@ export function TeamManager({ user }: { user: User }) {
                       <Select
                         value={member.role}
                         onChange={(e) => handleRoleChange(member, e.target.value as UserRole)}
-                        className="min-w-[140px]"
+                        className="min-w-[8.75rem]"
                       >
                         <option value="employee">Employee</option>
                         <option value="manager">Manager</option>
@@ -366,7 +366,7 @@ export function TeamManager({ user }: { user: User }) {
                           )}
                         </div>
                       ) : (
-                        <p className="text-right text-[13px] text-[var(--muted)]">You</p>
+                        <p className="text-right text-[0.8125rem] text-[var(--muted)]">You</p>
                       )}
                     </td>
                   ) : null}

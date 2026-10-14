@@ -19,10 +19,10 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
         </Link>
 
         <div className="max-w-lg">
-          <p className="text-[40px] font-semibold leading-[1.15] tracking-[-0.025em] text-white">
+          <p className="text-[2.5rem] font-semibold leading-[1.15] tracking-[-0.025em] text-white">
             Time, screenshots and payroll for your agency — in one place.
           </p>
-          <svg viewBox="0 0 520 72" className="mt-10 h-16 w-full max-w-[520px]" aria-hidden="true">
+          <svg viewBox="0 0 520 72" className="mt-10 h-16 w-full max-w-[32.5rem]" aria-hidden="true">
             <path
               d="M0 36h150l22-34 30 68 22-34h296"
               fill="none"
@@ -34,15 +34,15 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
           </svg>
         </div>
 
-        <p className="text-[13px] text-[var(--night-muted)]">© {new Date().getFullYear()} AgencyPulse</p>
+        <p className="text-[0.8125rem] text-[var(--night-muted)]">© {new Date().getFullYear()} AgencyPulse</p>
       </aside>
 
       <main className="flex flex-col px-5 py-8 sm:px-10 lg:justify-center lg:px-16">
         <Link href="/" aria-label="AgencyPulse home" className="self-start lg:hidden">
           <PulseLogo className="text-lg" markClassName="h-8 w-8" />
         </Link>
-        <div className="mx-auto mt-14 w-full max-w-[400px] lg:mt-0">
-          <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</h1>
+        <div className="mx-auto mt-14 w-full max-w-[25rem] lg:mt-0">
+          <h1 className="text-[1.75rem] font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</h1>
           <p className="mt-1.5 text-sm text-[var(--muted)]">{subtitle}</p>
           <div className="mt-8">{children}</div>
           {footer ? <div className="mt-6 text-center text-sm text-[var(--muted)]">{footer}</div> : null}
