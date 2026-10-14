@@ -17,8 +17,11 @@ class DatabaseMigrationTest extends TestCase
         $this->assertTrue(DatabaseMigration::columnIsNullable('users', 'organization_id'));
     }
 
-    public function test_driver_returns_sqlite_in_tests(): void
+    public function test_driver_matches_the_configured_connection(): void
     {
-        $this->assertSame('sqlite', DatabaseMigration::driver());
+        // Local runs use SQLite (phpunit.xml); CI overrides DB_CONNECTION to pgsql.
+        $connection = config('database.default');
+
+        $this->assertSame(config("database.connections.{$connection}.driver"), DatabaseMigration::driver());
     }
 }
