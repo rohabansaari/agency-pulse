@@ -72,6 +72,107 @@ class ScreenshotTest extends TestCase
         ]);
     }
 
+    public function test_upload_records_activity_for_the_capture_window(): void
+    {
+        $user = User::factory()->create();
+        $this->startRunningTimer($user);
+        Sanctum::actingAs($user);
+
+        $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/screenshots', [
+                'image' => self::SAMPLE_IMAGE,
+                'timestamp' => now()->toIso8601String(),
+                'session_id' => Str::uuid()->toString(),
+                'active_seconds' => 216,
+                'window_seconds' => 300,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('screenshot.active_seconds', 216)
+            ->assertJsonPath('screenshot.activity_window_seconds', 300)
+            ->assertJsonPath('screenshot.activity_percent', 72);
+    }
+
+    public function test_upload_without_activity_keeps_it_null(): void
+    {
+        $user = User::factory()->create();
+        $this->startRunningTimer($user);
+        Sanctum::actingAs($user);
+
+        $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/screenshots', [
+                'image' => self::SAMPLE_IMAGE,
+                'timestamp' => now()->toIso8601String(),
+                'session_id' => Str::uuid()->toString(),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('screenshot.activity_percent', null);
+    }
+
+    public function test_active_seconds_are_capped_at_the_window(): void
+    {
+        $user = User::factory()->create();
+        $this->startRunningTimer($user);
+        Sanctum::actingAs($user);
+
+        $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/screenshots', [
+                'image' => self::SAMPLE_IMAGE,
+                'timestamp' => now()->toIso8601String(),
+                'session_id' => Str::uuid()->toString(),
+                'active_seconds' => 400,
+                'window_seconds' => 300,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('screenshot.active_seconds', 300)
+            ->assertJsonPath('screenshot.activity_percent', 100);
+    }
+
+    public function test_activity_requires_both_fields(): void
+    {
+        $user = User::factory()->create();
+        $this->startRunningTimer($user);
+        Sanctum::actingAs($user);
+
+        $this->withHeaders($this->tenantHeaders($user))
+            ->postJson('/api/v1/screenshots', [
+                'image' => self::SAMPLE_IMAGE,
+                'timestamp' => now()->toIso8601String(),
+                'session_id' => Str::uuid()->toString(),
+                'active_seconds' => 100,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('window_seconds');
+    }
+
+    public function test_listing_reports_activity_across_the_range(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $employee = User::factory()->create(['organization_id' => $admin->organization_id]);
+
+        foreach ([[300, 300], [60, 300], [null, null]] as [$active, $window]) {
+            Screenshot::query()->create([
+                'organization_id' => $employee->organization_id,
+                'user_id' => $employee->id,
+                'session_id' => Str::uuid()->toString(),
+                'storage_disk' => 'public',
+                'image_path' => 'org/1/screenshots/test.jpg',
+                'file_size_bytes' => 100,
+                'active_seconds' => $active,
+                'activity_window_seconds' => $window,
+                'captured_at' => now(),
+            ]);
+        }
+
+        Sanctum::actingAs($admin);
+
+        // (300 + 60) / 600; the screenshot without activity data is ignored.
+        $this->withHeaders($this->tenantHeaders($admin))
+            ->getJson('/api/v1/screenshots?per_page=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('activity_percent', 60);
+    }
+
     public function test_upload_without_active_timer_returns_no_active_timer(): void
     {
         $user = User::factory()->create();

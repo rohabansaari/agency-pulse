@@ -372,7 +372,7 @@ export function ProjectsManager({ user }: { user: User }) {
       ) : (
         <section
           aria-label="Project list"
-          className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))]"
+          className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,20rem),1fr))]"
         >
           {filtered.map((project) => (
             <ProjectCard

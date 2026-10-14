@@ -12,6 +12,7 @@ import io
 import json
 import os
 import sys
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -44,6 +45,85 @@ QUIT_PATH = CONFIG_DIR / "quit.signal"
 
 _lock_handle = None
 T = TypeVar("T")
+
+
+def last_input_tick() -> int | None:
+    """Tick (ms since boot) of the last keyboard/mouse input, from Windows' GetLastInputInfo.
+
+    Read-only system query: no input hooks, nothing about what was typed or clicked.
+    Returns None where unsupported (non-Windows).
+    """
+    if os.name != "nt":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    class LASTINPUTINFO(ctypes.Structure):
+        _fields_ = [("cbSize", wintypes.UINT), ("dwTime", wintypes.DWORD)]
+
+    info = LASTINPUTINFO()
+    info.cbSize = ctypes.sizeof(LASTINPUTINFO)
+    if not ctypes.windll.user32.GetLastInputInfo(ctypes.byref(info)):
+        return None
+    return int(info.dwTime)
+
+
+class ActivityMonitor:
+    """Counts seconds with any keyboard/mouse input, sampled once per second.
+
+    A second is active when the last-input tick moved since the previous sample.
+    `take()` returns (active_seconds, window_seconds) since the last reset.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._active = 0
+        self._observed = 0
+        self._last_tick: int | None = None
+        self._supported = last_input_tick() is not None
+        if self._supported:
+            threading.Thread(target=self._run, name="activity-monitor", daemon=True).start()
+
+    @property
+    def supported(self) -> bool:
+        return self._supported
+
+    def _run(self) -> None:
+        while True:
+            time.sleep(1)
+            try:
+                tick = last_input_tick()
+            except Exception:  # never let sampling take the agent down
+                continue
+            with self._lock:
+                self._observed += 1
+                if tick is not None and self._last_tick is not None and tick != self._last_tick:
+                    self._active += 1
+                self._last_tick = tick
+
+    def reset(self) -> None:
+        with self._lock:
+            self._active = 0
+            self._observed = 0
+
+    def restore(self, activity: tuple[int, int]) -> None:
+        """Put back a window whose upload failed so the next capture still reports it."""
+        with self._lock:
+            self._active += activity[0]
+            self._observed += activity[1]
+
+    def take(self) -> tuple[int, int] | None:
+        """Activity since the last reset (then resets), or None if unsupported/empty."""
+        with self._lock:
+            active, observed = self._active, self._observed
+            self._active = 0
+            self._observed = 0
+        if not self._supported or observed == 0:
+            return None
+        return min(active, observed), observed
+
+
+ACTIVITY = ActivityMonitor()
 
 
 def log(message: str) -> None:
@@ -909,6 +989,7 @@ def upload_screenshot(
     config: dict,
     session_id: str,
     project_id: int | None,
+    activity: tuple[int, int] | None = None,
 ) -> bool:
     payload = {
         "image": capture_screen_base64(),
@@ -916,6 +997,8 @@ def upload_screenshot(
         "session_id": session_id,
         "project_id": project_id,
     }
+    if activity is not None:
+        payload["active_seconds"], payload["window_seconds"] = activity
 
     def attempt() -> bool | None:
         response = requests.post(
@@ -994,6 +1077,7 @@ def handle_timer_state(
         session.session_id = str(uuid.uuid4())
         session.project_id = project_id
         session.last_capture_at = 0.0
+        ACTIVITY.reset()
         log(f"Timer active (entry {entry_id}). Taking first screenshot now.")
         force_capture = True
 
@@ -1005,10 +1089,16 @@ def handle_timer_state(
         return
 
     log("Capturing screenshot...")
-    if upload_screenshot(config, session.session_id, session.project_id):
+    # Activity for the window since the previous capture (None on the session's first shot).
+    activity = ACTIVITY.take()
+    if activity is not None:
+        log(f"Activity: {activity[0]}s active of {activity[1]}s.")
+    if upload_screenshot(config, session.session_id, session.project_id, activity):
         session.last_capture_at = time.time()
         log("Screenshot capture cycle complete.")
     else:
+        if activity is not None:
+            ACTIVITY.restore(activity)
         log("Screenshot upload failed — will retry on the next interval.")
         session.last_capture_at = time.time() - (CAPTURE_INTERVAL_SECONDS - 60)
 

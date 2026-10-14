@@ -10,6 +10,7 @@ use App\Models\Screenshot;
 use App\Models\TimeEntry;
 use App\Support\ReportDateRange;
 use App\Services\Projects\ProjectAccessService;
+use App\Services\Screenshots\ActivityService;
 use App\Services\Screenshots\ScreenshotAccessService;
 use App\Services\Screenshots\ScreenshotAgentService;
 use App\Services\Screenshots\ScreenshotStorageService;
@@ -27,7 +28,8 @@ class ScreenshotController extends TenantAppController
         private readonly ScreenshotStorageService $storage,
         private readonly ScreenshotAccessService $access,
         private readonly ProjectAccessService $projectAccess,
-        private readonly ScreenshotAgentService $agent
+        private readonly ScreenshotAgentService $agent,
+        private readonly ActivityService $activity,
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -55,6 +57,9 @@ class ScreenshotController extends TenantAppController
             'image' => ['required', 'string'],
             'timestamp' => ['required', 'date'],
             'session_id' => ['required', 'uuid'],
+            // Keyboard/mouse activity over the capture window (optional: older agents omit it).
+            'active_seconds' => ['nullable', 'integer', 'min:0', 'max:86400', 'required_with:window_seconds'],
+            'window_seconds' => ['nullable', 'integer', 'min:1', 'max:86400', 'required_with:active_seconds'],
             'project_id' => [
                 'nullable',
                 'integer',
@@ -105,6 +110,10 @@ class ScreenshotController extends TenantAppController
             'storage_disk' => $stored['disk'],
             'image_path' => $stored['path'],
             'file_size_bytes' => $stored['size'],
+            'active_seconds' => isset($validated['window_seconds'])
+                ? min((int) $validated['active_seconds'], (int) $validated['window_seconds'])
+                : null,
+            'activity_window_seconds' => $validated['window_seconds'] ?? null,
             'captured_at' => Carbon::parse($validated['timestamp']),
         ]);
 
@@ -196,8 +205,10 @@ class ScreenshotController extends TenantAppController
 
         $perPage = $validated['per_page'] ?? 24;
 
-        return ScreenshotResource::collection(
-            $query->paginate($perPage)
-        );
+        // Across the whole filtered range, not just this page (paginate() limits the builder).
+        $activityPercent = $this->activity->percentForQuery($query);
+
+        return ScreenshotResource::collection($query->paginate($perPage))
+            ->additional(['activity_percent' => $activityPercent]);
     }
 }

@@ -1195,7 +1195,7 @@ export async function fetchScreenshots(params: {
   range?: ReportDateRange;
   page?: number;
   per_page?: number;
-} = {}): Promise<PaginatedResponse<ScreenshotRecord>> {
+} = {}): Promise<PaginatedResponse<ScreenshotRecord> & { activity_percent?: number | null }> {
   const search = new URLSearchParams();
   if (params.user_id) search.set("user_id", String(params.user_id));
   if (params.session_id) search.set("session_id", params.session_id);
@@ -1205,7 +1205,7 @@ export async function fetchScreenshots(params: {
   if (params.per_page) search.set("per_page", String(params.per_page));
 
   const query = search.toString();
-  return apiFetch<PaginatedResponse<ScreenshotRecord>>(
+  return apiFetch<PaginatedResponse<ScreenshotRecord> & { activity_percent?: number | null }>(
     `/screenshots${query ? `?${query}` : ""}`,
   );
 }

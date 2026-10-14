@@ -6,6 +6,7 @@ import {
   defaultReportDateRange,
   type ReportDateRange,
 } from "@/components/reports/ReportDateRangeFilter";
+import { ActivityBadge } from "@/components/ledger/Activity";
 import { Metric } from "@/components/ledger/Metric";
 import { Button } from "@/components/ui/Button";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -21,7 +22,7 @@ import {
   type ScreenshotAgentStatus,
 } from "@/lib/api";
 import type { ScreenshotRecord, TeamMember, User } from "@/lib/types";
-import { Camera, Clock, HardDrive, ImageIcon, Monitor } from "lucide-react";
+import { Camera, Clock, ImageIcon, Monitor, MousePointerClick } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 function formatCapturedAt(value: string): string {
@@ -86,6 +87,7 @@ export function ScreenshotsView({ user }: { user: User }) {
   const [error, setError] = useState<string | null>(null);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [agentStatus, setAgentStatus] = useState<ScreenshotAgentStatus | null>(null);
+  const [rangeActivity, setRangeActivity] = useState<number | null>(null);
 
   const canFilterUsers = user.role === "admin" || user.role === "sub_admin" || user.role === "manager";
 
@@ -120,6 +122,7 @@ export function ScreenshotsView({ user }: { user: User }) {
         ...(selectedUserId ? { user_id: Number(selectedUserId) } : {}),
       });
       setScreenshots(response.data);
+      setRangeActivity(response.activity_percent ?? null);
       setTotalCount(response.meta.total);
       setLastPage(response.meta.last_page);
     } catch (err) {
@@ -250,7 +253,13 @@ export function ScreenshotsView({ user }: { user: User }) {
       <section aria-label="At a glance" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Metric label="Total captures" icon={<ImageIcon className="h-4 w-4" />} value={stats.total.toLocaleString()} detail="In the selected range" />
         <Metric label="Today" icon={<Camera className="h-4 w-4" />} value={stats.todayCount.toLocaleString()} detail="On this page" />
-        <Metric label="Storage" icon={<HardDrive className="h-4 w-4" />} value={formatFileSize(stats.storageBytes)} detail="Screenshots on this page" />
+        <Metric
+          label="Average activity"
+          icon={<MousePointerClick className="h-4 w-4" />}
+          value={rangeActivity === null ? "—" : `${rangeActivity}%`}
+          progress={rangeActivity ?? undefined}
+          detail="Keyboard and mouse, selected range"
+        />
         <Metric
           label="Last capture"
           icon={<Clock className="h-4 w-4" />}
@@ -339,7 +348,7 @@ export function ScreenshotsView({ user }: { user: User }) {
                   {group.items.length} {group.items.length === 1 ? "capture" : "captures"}
                 </span>
               </h2>
-              <ul className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+              <ul className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(13.75rem,1fr))]">
                 {group.items.map(({ shot, index }) => (
                   <li key={shot.id}>
                     <button
@@ -367,7 +376,7 @@ export function ScreenshotsView({ user }: { user: User }) {
                       <span className="flex flex-col gap-0.5 px-3 py-2.5 text-[0.8125rem]">
                         <span className="flex items-baseline justify-between gap-2">
                           <span className="num font-semibold text-[var(--foreground)]">{formatTime(shot.captured_at)}</span>
-                          <span className="tnum shrink-0 text-xs text-[var(--muted)]">{formatFileSize(shot.file_size_bytes)}</span>
+                          <ActivityBadge percent={shot.activity_percent} />
                         </span>
                         <span className="flex items-baseline justify-between gap-2">
                           <span

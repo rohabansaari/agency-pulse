@@ -18,6 +18,8 @@ class Screenshot extends Model
         'storage_disk',
         'image_path',
         'file_size_bytes',
+        'active_seconds',
+        'activity_window_seconds',
         'captured_at',
     ];
 
@@ -25,6 +27,8 @@ class Screenshot extends Model
     {
         return [
             'captured_at' => 'datetime',
+            'active_seconds' => 'integer',
+            'activity_window_seconds' => 'integer',
         ];
     }
 

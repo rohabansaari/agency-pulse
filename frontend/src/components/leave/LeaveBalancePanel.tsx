@@ -87,7 +87,7 @@ export function LeaveBalanceSummary() {
       <h2 id="leave-balances-heading" className="sr-only">
         Leave balances
       </h2>
-      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(12.5rem,1fr))]">
         {LEAVE_CATEGORIES.map((cat) => (
           <CategoryProgress
             key={cat.key}

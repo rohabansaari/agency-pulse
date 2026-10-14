@@ -1,5 +1,6 @@
 "use client";
 
+import { ActivityMeter } from "@/components/ledger/Activity";
 import { Avatar } from "@/components/ledger/Avatar";
 import { Metric } from "@/components/ledger/Metric";
 import { Panel } from "@/components/ledger/Panel";
@@ -48,7 +49,7 @@ function StatusPill({ active }: { active: boolean }) {
     </span>
   ) : (
     <span className="inline-flex rounded-full bg-[var(--accent-sand)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
-      Idle
+      Not tracking
     </span>
   );
 }
@@ -199,13 +200,14 @@ function OrgEmployeeBreakdownTable({ rows }: { rows: EmployeeReportBreakdown[] }
 
   return (
     <div className={ledgerTable.wrap}>
-      <table className={cn(ledgerTable.table, "min-w-[42.5rem]")}>
+      <table className={cn(ledgerTable.table, "min-w-[50rem]")}>
         <thead className={ledgerTable.thead}>
           <tr>
             <th scope="col" className={ledgerTable.th}>Employee</th>
             <th scope="col" className={ledgerTable.th}>Timer</th>
             <th scope="col" className={cn(ledgerTable.th, "text-right")}>Hours</th>
             <th scope="col" className={ledgerTable.th}>Utilization</th>
+            <th scope="col" className={ledgerTable.th}>Activity</th>
           </tr>
         </thead>
         <tbody className={ledgerTable.tbody}>
@@ -228,6 +230,9 @@ function OrgEmployeeBreakdownTable({ rows }: { rows: EmployeeReportBreakdown[] }
               <td className={cn(ledgerTable.td, "num text-right")}>{formatDuration(row.hours_in_range_seconds)}</td>
               <td className={ledgerTable.td}>
                 <UtilizationBar percent={row.utilization_percent} />
+              </td>
+              <td className={ledgerTable.td}>
+                <ActivityMeter percent={row.activity_percent} />
               </td>
             </tr>
           ))}
@@ -420,12 +425,13 @@ function ManagerTeamReportCard({ team }: { team: ManagerTeamReport }) {
         <EmptyLine>No team members yet.</EmptyLine>
       ) : (
         <div className={ledgerTable.wrap}>
-          <table className={cn(ledgerTable.table, "min-w-[28.75rem]")}>
+          <table className={cn(ledgerTable.table, "min-w-[38rem]")}>
             <thead className={ledgerTable.thead}>
               <tr>
                 <th scope="col" className={ledgerTable.th}>Member</th>
                 <th scope="col" className={cn(ledgerTable.th, "text-right")}>Today</th>
                 <th scope="col" className={cn(ledgerTable.th, "text-right")}>Range</th>
+                <th scope="col" className={ledgerTable.th}>Activity</th>
                 <th scope="col" className={ledgerTable.th}>Timer</th>
               </tr>
             </thead>
@@ -441,6 +447,9 @@ function ManagerTeamReportCard({ team }: { team: ManagerTeamReport }) {
                   <td className={cn(ledgerTable.td, "num text-right")}>{formatDuration(member.hours_today_seconds)}</td>
                   <td className={cn(ledgerTable.td, "num text-right")}>
                     {formatDuration(member.hours_in_range_seconds ?? member.hours_week_seconds)}
+                  </td>
+                  <td className={ledgerTable.td}>
+                    <ActivityMeter percent={member.activity_percent} />
                   </td>
                   <td className={ledgerTable.td}>
                     <StatusPill active={member.has_active_timer} />

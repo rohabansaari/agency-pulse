@@ -253,6 +253,8 @@ export interface EmployeeReportBreakdown {
   team_name?: string | null;
   hours_in_range_seconds: number;
   utilization_percent: number;
+  /** Keyboard/mouse activity across screenshots in the range; null without data. */
+  activity_percent?: number | null;
   has_active_timer: boolean;
 }
 
@@ -370,6 +372,7 @@ export interface TeamMemberBreakdown {
   hours_week_seconds: number;
   hours_in_range_seconds?: number;
   utilization_percent?: number;
+  activity_percent?: number | null;
   has_active_timer: boolean;
 }
 
@@ -733,6 +736,10 @@ export interface ScreenshotRecord {
   session_id: string;
   image_url: string | null;
   file_size_bytes: number;
+  /** Seconds with keyboard/mouse input in the capture window; null from older agents. */
+  active_seconds?: number | null;
+  activity_window_seconds?: number | null;
+  activity_percent?: number | null;
   captured_at: string;
   created_at?: string;
 }
