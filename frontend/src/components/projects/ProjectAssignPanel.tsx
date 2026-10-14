@@ -267,7 +267,7 @@ export function ProjectAssignPanel({
                       type="button"
                       onClick={() => void handleUnassign(assignee.id)}
                       aria-label={`Remove ${assignee.name} from ${project.name}`}
-                      className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--accent-coral)]/40 bg-[var(--card-elevated)] px-3 text-[13px] font-medium text-[var(--accent-coral)] transition hover:bg-[var(--accent-coral-soft)]"
+                      className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--accent-coral)]/40 bg-[var(--card-elevated)] px-3 text-[0.8125rem] font-medium text-[var(--accent-coral)] transition hover:bg-[var(--accent-coral-soft)]"
                     >
                       <UserMinus className="h-3.5 w-3.5" aria-hidden="true" />
                       Remove

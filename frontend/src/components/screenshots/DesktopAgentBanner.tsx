@@ -35,7 +35,7 @@ export function DesktopAgentBanner({ user }: { user: User }) {
       >
         <Monitor className="h-5 w-5" />
       </span>
-      <div className="min-w-0 flex-[1_1_260px]">
+      <div className="min-w-0 flex-[1_1_16.25rem]">
         <p className="flex flex-wrap items-center gap-2">
           <span id="desktop-agent-setup-heading" className="font-semibold">
             One-time setup: Desktop Agent
@@ -70,7 +70,7 @@ export function DesktopAgentBanner({ user }: { user: User }) {
             setRechecking(false);
           }}
           disabled={rechecking}
-          className="mt-3 inline-flex min-h-9 items-center rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--accent-sand)] disabled:opacity-60"
+          className="mt-3 inline-flex min-h-9 items-center rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 text-[0.8125rem] font-medium text-[var(--foreground)] hover:bg-[var(--accent-sand)] disabled:opacity-60"
         >
           {rechecking ? "Checking…" : "I've installed it — check again"}
         </button>

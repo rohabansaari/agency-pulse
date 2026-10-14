@@ -7,24 +7,24 @@ use App\Mail\AccountInvitationMail;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\Mail\EmailService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class EmailServiceTest extends TestCase
 {
-    public function test_send_invitation_email_retries_once_after_failure(): void
+    use RefreshDatabase;
+
+    public function test_send_invitation_email_sends_once_and_rethrows_failure(): void
     {
-        Mail::shouldReceive('mailer')->twice()->andReturnSelf();
-        Mail::shouldReceive('to')->twice()->andReturnSelf();
+        // Delivery is attempted once (no blocking retry); admins can resend from the UI.
+        Mail::shouldReceive('to')->once()->andReturnSelf();
         Mail::shouldReceive('send')
-            ->twice()
+            ->once()
             ->withArgs(fn ($mailable) => $mailable instanceof AccountInvitationMail)
-            ->andReturnUsing(function () use (&$calls) {
-                $calls = ($calls ?? 0) + 1;
-                if ($calls === 1) {
-                    throw new \RuntimeException('Temporary SMTP failure');
-                }
-            });
+            ->andThrow(new \RuntimeException('Temporary SMTP failure'));
+        Log::spy();
 
         $organization = Organization::factory()->make(['name' => 'Acme']);
         $user = User::factory()->make([
@@ -32,17 +32,25 @@ class EmailServiceTest extends TestCase
             'email' => 'john@example.com',
         ]);
 
-        app(EmailService::class)->sendInvitationEmail([
-            'to' => 'john@example.com',
-            'name' => 'John Doe',
-            'role' => UserRole::Manager,
-            'inviteLink' => 'https://app.example.com/set-password?token=abc',
-            'companyName' => 'Acme',
-            'user' => $user,
-            'organization' => $organization,
-        ]);
+        try {
+            app(EmailService::class)->sendInvitationEmail([
+                'to' => 'john@example.com',
+                'name' => 'John Doe',
+                'role' => UserRole::Manager,
+                'inviteLink' => 'https://app.example.com/set-password?token=abc',
+                'companyName' => 'Acme',
+                'user' => $user,
+                'organization' => $organization,
+            ]);
+            $this->fail('Expected the delivery failure to be rethrown.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Temporary SMTP failure', $exception->getMessage());
+        }
 
-        $this->assertSame(2, $calls ?? 0);
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->withArgs(fn ($message, $context) => $message === 'Invitation email send failed.'
+                && $context['to'] === 'john@example.com');
     }
 
     public function test_send_invitation_email_rejects_invalid_recipient(): void

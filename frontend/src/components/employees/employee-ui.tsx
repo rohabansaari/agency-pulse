@@ -186,13 +186,13 @@ export function RowMenu({ label, children }: { label: string; children: ReactNod
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "inline-flex h-10 w-10 items-center justify-center rounded-[10px] border text-[var(--muted)] transition hover:bg-[var(--accent-sand)] hover:text-[var(--foreground)]",
+          "inline-flex h-10 w-10 items-center justify-center rounded-[0.625rem] border text-[var(--muted)] transition hover:bg-[var(--accent-sand)] hover:text-[var(--foreground)]",
           open
             ? "border-[var(--primary)] bg-[var(--primary-muted)] text-[var(--primary)]"
             : "border-transparent",
         )}
       >
-        <MoreVertical className="h-[18px] w-[18px]" aria-hidden="true" />
+        <MoreVertical className="h-[1.125rem] w-[1.125rem]" aria-hidden="true" />
       </button>
       {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
     </>

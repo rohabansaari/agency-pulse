@@ -54,7 +54,7 @@ function SettingsContent() {
         <div className="flex flex-wrap items-start gap-6">
           <nav
             aria-label="Settings sections"
-            className="flex w-full min-w-0 gap-1 overflow-x-auto lg:w-[220px] lg:flex-none lg:flex-col"
+            className="flex w-full min-w-0 gap-1 overflow-x-auto lg:w-[13.75rem] lg:flex-none lg:flex-col"
           >
             {SECTIONS.map(({ id, label, icon: Icon }) => {
               const selected = activeSection === id;
@@ -78,7 +78,7 @@ function SettingsContent() {
             })}
           </nav>
 
-          <div className="flex min-w-0 flex-[999_1_520px] flex-col gap-6">
+          <div className="flex min-w-0 flex-[999_1_32.5rem] flex-col gap-6">
             {activeSection === "profile" ? (
               <SettingsSection
                 id="settings-profile"

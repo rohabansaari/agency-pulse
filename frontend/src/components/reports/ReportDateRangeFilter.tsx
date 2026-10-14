@@ -73,7 +73,7 @@ function matchingPreset(range: ReportDateRange): Preset | null {
 
 /* Restyles the shared compact DatePicker input to sit inside the Ledger field. */
 const datePickerSkin =
-  "[&_input]:min-h-9 [&_input]:w-[104px] [&_input]:rounded-lg [&_input]:border-0 [&_input]:bg-transparent [&_input]:px-2 [&_input]:text-[13px] [&_input]:text-[var(--foreground)] [&_input]:outline-none [&_input:focus-visible]:ring-2 [&_input:focus-visible]:ring-[var(--primary)]/25 [&_button[aria-label='Open calendar']]:text-[var(--muted)]";
+  "[&_input]:min-h-9 [&_input]:w-[6.5rem] [&_input]:rounded-lg [&_input]:border-0 [&_input]:bg-transparent [&_input]:px-2 [&_input]:text-[0.8125rem] [&_input]:text-[var(--foreground)] [&_input]:outline-none [&_input:focus-visible]:ring-2 [&_input:focus-visible]:ring-[var(--primary)]/25 [&_button[aria-label='Open calendar']]:text-[var(--muted)]";
 
 export function ReportDateRangeFilter({
   value,
@@ -137,7 +137,7 @@ export function ReportDateRangeFilter({
                 aria-pressed={selected}
                 onClick={() => applyPreset(preset)}
                 className={cn(
-                  "min-h-9 rounded-lg px-3 text-[13px] transition disabled:opacity-50",
+                  "min-h-9 rounded-lg px-3 text-[0.8125rem] transition disabled:opacity-50",
                   selected
                     ? "bg-[var(--card-elevated)] font-medium text-[var(--foreground)] shadow-[var(--shadow-sm)]"
                     : "text-[var(--muted)] hover:text-[var(--foreground)]",
@@ -186,7 +186,7 @@ export function ReportDateRangeFilter({
             type="button"
             disabled={disabled}
             onClick={applyCustom}
-            className="ml-1 min-h-9 rounded-lg bg-[var(--primary)] px-3 text-[13px] font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)] disabled:opacity-50"
+            className="ml-1 min-h-9 rounded-lg bg-[var(--primary)] px-3 text-[0.8125rem] font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)] disabled:opacity-50"
           >
             Apply
           </button>

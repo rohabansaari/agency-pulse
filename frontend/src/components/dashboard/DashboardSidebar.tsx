@@ -127,7 +127,7 @@ export function DashboardSidebar({
     <div className="app-sidebar-inner bg-[var(--night)] text-[var(--night-text)]">
       <div className="shrink-0 px-5 pb-4 pt-6">
         <Link href={homeHref} onClick={onNavigate} aria-label="AgencyPulse home">
-          <PulseLogo tone="dark" className="text-[15px]" markClassName="h-8 w-8" />
+          <PulseLogo tone="dark" className="text-[0.9375rem]" markClassName="h-8 w-8" />
         </Link>
       </div>
 
@@ -135,7 +135,7 @@ export function DashboardSidebar({
         {groups.map((group) => (
           <div key={group.id}>
             {groups.length > 1 ? (
-              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--night-muted)]">
+              <p className="mb-1.5 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--night-muted)]">
                 {group.label}
               </p>
             ) : null}
@@ -150,7 +150,7 @@ export function DashboardSidebar({
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group relative flex min-h-11 items-center gap-3 rounded-[10px] px-3 text-sm transition-colors duration-150",
+                      "group relative flex min-h-11 items-center gap-3 rounded-[0.625rem] px-3 text-sm transition-colors duration-150",
                       active
                         ? "bg-[var(--night-raised)] font-medium text-white"
                         : "text-[var(--night-text)] hover:bg-white/[0.06] hover:text-white",
@@ -159,14 +159,14 @@ export function DashboardSidebar({
                     {active ? (
                       <motion.span
                         layoutId="sidebar-active-indicator"
-                        className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--pulse-on-dark)]"
+                        className="absolute left-0 top-1/2 h-5 w-[0.1875rem] -translate-y-1/2 rounded-r-full bg-[var(--pulse-on-dark)]"
                         transition={{ type: "spring", stiffness: 380, damping: 30 }}
                       />
                     ) : null}
                     {Icon ? (
                       <Icon
                         className={cn(
-                          "h-[18px] w-[18px] shrink-0",
+                          "h-[1.125rem] w-[1.125rem] shrink-0",
                           active ? "text-[var(--pulse-on-dark)]" : "text-[var(--night-muted)] group-hover:text-white",
                         )}
                         strokeWidth={active ? 2.1 : 1.8}
@@ -195,7 +195,7 @@ export function DashboardSidebar({
           type="button"
           onClick={onLogout}
           disabled={loggingOut}
-          className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-[10px] px-3 text-sm text-[var(--night-text)] transition hover:bg-white/[0.06] hover:text-white disabled:opacity-60"
+          className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-[0.625rem] px-3 text-sm text-[var(--night-text)] transition hover:bg-white/[0.06] hover:text-white disabled:opacity-60"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
           {loggingOut ? "Signing out…" : "Sign out"}

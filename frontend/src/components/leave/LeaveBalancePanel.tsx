@@ -56,10 +56,10 @@ function CategoryProgress({
 }) {
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
-      <p className="text-[13px] text-[var(--muted)]">{label}</p>
-      <p className="mt-2 text-[28px] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+      <p className="text-[0.8125rem] text-[var(--muted)]">{label}</p>
+      <p className="mt-2 text-[1.75rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
         <span className="tnum">{remaining}</span>
-        <span className="text-[15px] font-normal text-[var(--muted)]"> days left</span>
+        <span className="text-[0.9375rem] font-normal text-[var(--muted)]"> days left</span>
       </p>
       <div className="mt-3">
         <UsageBar used={used} limit={limit} label={label} />
@@ -158,7 +158,7 @@ export function LeaveLimitsPanel() {
         </div>
       ) : (
         <div className={ledgerTable.wrap}>
-          <table className={cn(ledgerTable.table, "min-w-[900px]")}>
+          <table className={cn(ledgerTable.table, "min-w-[56.25rem]")}>
             <thead className={ledgerTable.thead}>
               <tr>
                 <th scope="col" className={ledgerTable.th}>Employee</th>
@@ -177,7 +177,7 @@ export function LeaveLimitsPanel() {
                       <Avatar name={entry.user.name} size="sm" />
                       <div className="min-w-0">
                         <p className="font-medium text-[var(--foreground)]">{entry.user.name}</p>
-                        <p className="truncate text-[13px] text-[var(--muted)]">{entry.user.email}</p>
+                        <p className="truncate text-[0.8125rem] text-[var(--muted)]">{entry.user.email}</p>
                       </div>
                     </div>
                   </td>
@@ -189,11 +189,11 @@ export function LeaveLimitsPanel() {
                     const subject = `${cat.label} for ${entry.user.name}`;
 
                     return (
-                      <td key={cat.key} className={cn(ledgerTable.td, "w-[230px] align-top")}>
+                      <td key={cat.key} className={cn(ledgerTable.td, "w-[14.375rem] align-top")}>
                         <p className="text-[var(--foreground)]">
                           <span className="tnum font-semibold">{remaining}</span>
-                          <span className="text-[13px] text-[var(--muted)]"> left · </span>
-                          <span className="tnum text-[13px] text-[var(--muted)]">
+                          <span className="text-[0.8125rem] text-[var(--muted)]"> left · </span>
+                          <span className="tnum text-[0.8125rem] text-[var(--muted)]">
                             {used}/{limit} used
                           </span>
                         </p>

@@ -71,7 +71,7 @@ export function Label({
   required?: boolean;
 }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-medium text-[var(--foreground)]">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-[0.8125rem] font-medium text-[var(--foreground)]">
       {children}
       {required ? <span className="ml-0.5 text-[var(--accent-coral)]">*</span> : null}
     </label>

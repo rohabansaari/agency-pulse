@@ -20,7 +20,7 @@ export default function Home() {
           <p className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card-elevated)] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
             Premium HR for agencies
           </p>
-          <h1 className="mx-auto mt-8 max-w-3xl text-[40px] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--foreground)] sm:text-[3.5rem]">
+          <h1 className="mx-auto mt-8 max-w-3xl text-[2.5rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--foreground)] sm:text-[3.5rem]">
             Run your workforce with clarity
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--muted)]">

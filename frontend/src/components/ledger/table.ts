@@ -15,4 +15,4 @@ export const ledgerTable = {
 
 /** Small bordered action button used inside table rows. */
 export const rowButton =
-  "inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-elevated)] px-3 text-[13px] font-medium text-[var(--foreground)] transition hover:bg-[var(--accent-sand)] disabled:opacity-50";
+  "inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--card-elevated)] px-3 text-[0.8125rem] font-medium text-[var(--foreground)] transition hover:bg-[var(--accent-sand)] disabled:opacity-50";

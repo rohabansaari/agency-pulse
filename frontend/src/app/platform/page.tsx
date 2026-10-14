@@ -118,8 +118,8 @@ export default function PlatformPage() {
       <div className="flex flex-col gap-6">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[13px] text-[var(--muted)]">Platform console</p>
-            <h1 className="mt-1 text-[28px] font-semibold tracking-[-0.02em]">Organizations</h1>
+            <p className="text-[0.8125rem] text-[var(--muted)]">Platform console</p>
+            <h1 className="mt-1 text-[1.75rem] font-semibold tracking-[-0.02em]">Organizations</h1>
             <p className="mt-1 max-w-xl text-sm text-[var(--muted)]">
               Create organizations, manage their admins and suspend inactive tenants. Organization HR
               data is never visible from this account.
@@ -151,7 +151,7 @@ export default function PlatformPage() {
         <section aria-label="Platform health" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {loading && !data ? (
             [0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-[118px] animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
+              <div key={i} className="h-[7.375rem] animate-pulse rounded-2xl bg-[var(--accent-sand)]" />
             ))
           ) : data ? (
             <>
@@ -313,18 +313,18 @@ function StatCard({
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
       <div className="flex items-center justify-between text-[var(--muted)]">
-        <p className="text-[13px]">{label}</p>
+        <p className="text-[0.8125rem]">{label}</p>
         <span aria-hidden="true">{icon}</span>
       </div>
       <p
         className={cn(
-          "mt-2 truncate text-[26px] font-semibold tracking-[-0.01em] text-[var(--foreground)]",
+          "mt-2 truncate text-[1.625rem] font-semibold tracking-[-0.01em] text-[var(--foreground)]",
           typeof value === "number" && "num",
         )}
       >
         {value}
       </p>
-      <p className="mt-1.5 flex items-center gap-2 text-[13px] text-[var(--muted)]" title={detail}>
+      <p className="mt-1.5 flex items-center gap-2 text-[0.8125rem] text-[var(--muted)]" title={detail}>
         <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot }} aria-hidden="true" />
         <span className="truncate">{detail}</span>
       </p>
@@ -375,7 +375,7 @@ const fieldClass =
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1.5 text-[13px] font-medium text-[var(--foreground)]">
+    <label className="flex flex-col gap-1.5 text-[0.8125rem] font-medium text-[var(--foreground)]">
       {label}
       {children}
       {hint ? <span className="text-xs font-normal text-[var(--muted)]">{hint}</span> : null}

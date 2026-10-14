@@ -143,7 +143,7 @@ export function SalaryManagementPanel() {
                 <div className="flex min-h-11 flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--accent-sand)]/60 px-4 py-2">
                   <Avatar name={selectedEmployee.name} size="sm" />
                   <span className="text-sm font-medium text-[var(--foreground)]">{selectedEmployee.name}</span>
-                  <span className="text-[13px] text-[var(--muted)]">Contract status</span>
+                  <span className="text-[0.8125rem] text-[var(--muted)]">Contract status</span>
                   {hasSalary ? (
                     <Badge variant="success" className="gap-1 normal-case">
                       <Lock className="h-3 w-3" aria-hidden="true" />

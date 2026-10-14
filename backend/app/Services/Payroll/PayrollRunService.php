@@ -402,9 +402,9 @@ class PayrollRunService
 
             $query->where(function ($builder) use ($rangeStart, $rangeEnd) {
 
-                $builder->where('period_start', '<=', $rangeEnd->toDateString())
+                $builder->whereDate('period_start', '<=', $rangeEnd->toDateString())
 
-                    ->where('period_end', '>=', $rangeStart->toDateString());
+                    ->whereDate('period_end', '>=', $rangeStart->toDateString());
 
             });
 

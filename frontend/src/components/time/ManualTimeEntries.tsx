@@ -18,7 +18,7 @@ const STATUS_STYLES: Record<TimeEntryStatus, string> = {
 function StatusBadge({ status }: { status: TimeEntryStatus }) {
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_STYLES[status]}`}
+      className={`inline-flex rounded-full px-2 py-0.5 text-[0.625rem] font-semibold uppercase ${STATUS_STYLES[status]}`}
     >
       {status}
     </span>

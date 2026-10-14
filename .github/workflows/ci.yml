@@ -60,7 +60,7 @@ jobs:
           php artisan migrate:status --no-ansi
       - name: Run backend tests
         working-directory: backend
-        run: php artisan test tests/Feature
+        run: php artisan test
 
   frontend:
     runs-on: ubuntu-latest

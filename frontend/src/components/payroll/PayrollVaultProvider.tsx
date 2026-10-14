@@ -174,7 +174,7 @@ function PayrollVaultGate() {
             {needsSetup ? <KeyRound className="h-5 w-5" /> : <LockKeyhole className="h-5 w-5" />}
           </span>
           <div className="min-w-0">
-            <p className="text-[13px] text-[var(--muted)]">Payroll vault</p>
+            <p className="text-[0.8125rem] text-[var(--muted)]">Payroll vault</p>
             <h1 id="payroll-vault-title" className="text-xl font-semibold tracking-[-0.01em] text-[var(--foreground)]">
               {needsSetup ? "Set organization payroll PIN" : "Enter payroll PIN"}
             </h1>

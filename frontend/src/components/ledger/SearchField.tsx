@@ -20,7 +20,7 @@ export function SearchField({
   return (
     <label
       className={cn(
-        "flex min-h-11 min-w-[220px] items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/15",
+        "flex min-h-11 min-w-[13.75rem] items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/15",
         className,
       )}
     >

@@ -26,12 +26,12 @@ function FormCard({
   return (
     <section
       aria-labelledby={id}
-      className="min-w-0 flex-[1_1_340px] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
+      className="min-w-0 flex-[1_1_21.25rem] rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 sm:p-6"
     >
       <h2 id={id} className="text-base font-semibold text-[var(--foreground)]">
         {title}
       </h2>
-      <p className="mt-0.5 text-[13px] text-[var(--muted)]">{description}</p>
+      <p className="mt-0.5 text-[0.8125rem] text-[var(--muted)]">{description}</p>
       <div className="mt-4">{children}</div>
     </section>
   );

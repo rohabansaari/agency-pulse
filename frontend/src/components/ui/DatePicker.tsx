@@ -132,7 +132,7 @@ export function DatePicker({
   }
 
   const inputClasses = compact
-    ? "w-[88px] rounded-md border border-[var(--border)] bg-[var(--card-elevated)] px-2 py-1 text-[11px] text-[var(--foreground)]"
+    ? "w-[5.5rem] rounded-md border border-[var(--border)] bg-[var(--card-elevated)] px-2 py-1 text-[0.6875rem] text-[var(--foreground)]"
     : "min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-muted)]";
 
   return (
@@ -212,7 +212,7 @@ export function DatePicker({
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-[var(--muted)]">
+          <div className="grid grid-cols-7 gap-1 text-center text-[0.6875rem] font-medium text-[var(--muted)]">
             {WEEKDAYS.map((day) => (
               <span key={day}>{day}</span>
             ))}

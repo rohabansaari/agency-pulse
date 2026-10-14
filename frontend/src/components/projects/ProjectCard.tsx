@@ -27,7 +27,7 @@ const SWATCHES = [
 
 /** Colour-free base so tone classes don't fight (cn() does not merge). */
 const actionBase =
-  "inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition disabled:opacity-50";
+  "inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-[0.8125rem] font-medium transition disabled:opacity-50";
 const neutral = "border-[var(--border)] bg-[var(--card-elevated)] text-[var(--foreground)] hover:bg-[var(--accent-sand)]";
 
 export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
@@ -94,7 +94,7 @@ export function ProjectCard({
             >
               {project.name}
             </h2>
-            <p className="truncate text-[13px] text-[var(--muted)]">{project.client_name}</p>
+            <p className="truncate text-[0.8125rem] text-[var(--muted)]">{project.client_name}</p>
           </div>
         </div>
         <ProjectStatusBadge status={project.status} />
@@ -105,7 +105,7 @@ export function ProjectCard({
       ) : null}
 
       {showHourlyRate || project.total_tracked_seconds !== undefined ? (
-        <dl className="grid grid-cols-2 gap-3 rounded-xl bg-[var(--accent-sand)]/60 px-4 py-3 text-[13px]">
+        <dl className="grid grid-cols-2 gap-3 rounded-xl bg-[var(--accent-sand)]/60 px-4 py-3 text-[0.8125rem]">
           {showHourlyRate ? (
             <div>
               <dt className="text-[var(--muted)]">Hourly rate</dt>
@@ -125,7 +125,7 @@ export function ProjectCard({
         </dl>
       ) : null}
 
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3.5 text-[13px] text-[var(--muted)]">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3.5 text-[0.8125rem] text-[var(--muted)]">
         <span className="inline-flex items-center gap-1.5">
           <Users className="h-4 w-4" aria-hidden="true" />
           <span className="tnum">{members}</span> {members === 1 ? "member" : "members"}

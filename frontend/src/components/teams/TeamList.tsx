@@ -29,19 +29,19 @@ export function TeamList({
               aria-pressed={selected}
               onClick={() => onSelect(team.id)}
               className={cn(
-                "flex min-h-11 w-full flex-col gap-1.5 rounded-2xl border bg-[var(--card)] px-[18px] py-4 text-left transition",
+                "flex min-h-11 w-full flex-col gap-1.5 rounded-2xl border bg-[var(--card)] px-[1.125rem] py-4 text-left transition",
                 selected
                   ? "border-[var(--primary)] ring-1 ring-[var(--primary)]"
                   : "border-[var(--border)] hover:bg-[var(--accent-sand)]/40",
               )}
             >
               <span className="flex items-center justify-between gap-3">
-                <span className="truncate text-[15px] font-semibold text-[var(--foreground)]">{team.name}</span>
-                <span className="tnum shrink-0 text-[13px] text-[var(--muted)]">
+                <span className="truncate text-[0.9375rem] font-semibold text-[var(--foreground)]">{team.name}</span>
+                <span className="tnum shrink-0 text-[0.8125rem] text-[var(--muted)]">
                   {count} {count === 1 ? "person" : "people"}
                 </span>
               </span>
-              <span className="truncate text-[13px] text-[var(--muted)]">Manager: {managerNameOf(team)}</span>
+              <span className="truncate text-[0.8125rem] text-[var(--muted)]">Manager: {managerNameOf(team)}</span>
             </button>
           </li>
         );
@@ -55,7 +55,7 @@ export function TeamStat({ label, value, mono = false }: { label: string; value:
   return (
     <div className="rounded-xl bg-[var(--accent-sand)] p-3.5">
       <p className="text-xs text-[var(--muted)]">{label}</p>
-      <p className={cn("mt-1.5 text-[22px] font-semibold text-[var(--foreground)]", mono ? "num" : "tnum")}>{value}</p>
+      <p className={cn("mt-1.5 text-[1.375rem] font-semibold text-[var(--foreground)]", mono ? "num" : "tnum")}>{value}</p>
     </div>
   );
 }

@@ -20,7 +20,8 @@ class PiisendTransportTest extends TestCase
             $this->assertSame('https://api.piisend.com/api/v1/emails', $url);
 
             $authHeader = $options['normalized_headers']['authorization'][0] ?? '';
-            $this->assertSame('Bearer pii_test_key', $authHeader);
+            // Symfony's normalized headers keep the "Name: value" form.
+            $this->assertSame('Authorization: Bearer pii_test_key', $authHeader);
 
             $requestBody = $options['body'] ?? null;
 
@@ -58,6 +59,7 @@ class PiisendTransportTest extends TestCase
         $transport = new PiisendTransport('bad_key', $client);
 
         $email = (new Email)
+            ->from('noreply@shared.piisend.com')
             ->to('invite@example.com')
             ->subject('Test')
             ->text('Hello');

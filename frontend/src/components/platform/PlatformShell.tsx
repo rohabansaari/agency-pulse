@@ -46,11 +46,11 @@ export function PlatformShell({
   return (
     <div className="theme-ledger min-h-screen">
       <header className="bg-[var(--night)] text-white">
-        <div className="mx-auto flex min-h-16 max-w-[1240px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
+        <div className="mx-auto flex min-h-16 max-w-[77.5rem] min-[100rem]:max-w-[120rem] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
           <Link href="/platform" aria-label="AgencyPulse platform home">
             <PulseLogo tone="dark" className="text-base" markClassName="h-7 w-7" />
           </Link>
-          <span className="rounded-full bg-[#2a1f05] px-2.5 py-1 text-[11px] font-semibold tracking-[0.06em] text-[#f5c46b]">
+          <span className="rounded-full bg-[#2a1f05] px-2.5 py-1 text-[0.6875rem] font-semibold tracking-[0.06em] text-[#f5c46b]">
             PLATFORM
           </span>
 
@@ -78,7 +78,7 @@ export function PlatformShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1240px] px-4 pb-16 pt-8 sm:px-6">{children}</main>
+      <main className="mx-auto max-w-[77.5rem] min-[100rem]:max-w-[120rem] px-4 pb-16 pt-8 sm:px-6">{children}</main>
     </div>
   );
 }

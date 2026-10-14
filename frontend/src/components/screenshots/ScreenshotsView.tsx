@@ -212,7 +212,7 @@ export function ScreenshotsView({ user }: { user: User }) {
           agentStatus ? (
             <span
               className={cn(
-                "inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-[13px] font-medium",
+                "inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-[0.8125rem] font-medium",
                 agentStatus.connected
                   ? "bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]"
                   : "bg-[var(--accent-coral-soft)] text-[var(--accent-coral)]",
@@ -234,7 +234,7 @@ export function ScreenshotsView({ user }: { user: User }) {
           <ReportDateRangeFilter value={range} onChange={setRange} />
         </div>
         {canFilterUsers ? (
-          <div className="min-w-[220px] flex-1 sm:max-w-xs">
+          <div className="min-w-[13.75rem] flex-1 sm:max-w-xs">
             <p className="mb-1.5 text-xs text-[var(--muted)]">Team member</p>
             <Dropdown
               value={selectedUserId}
@@ -290,7 +290,7 @@ export function ScreenshotsView({ user }: { user: User }) {
                 <h2 id="capture-summary-heading" className="text-base font-semibold text-[var(--foreground)]">
                   {daySummary.title}
                 </h2>
-                <p className="tnum text-[13px] text-[var(--muted)]">
+                <p className="tnum text-[0.8125rem] text-[var(--muted)]">
                   {screenshots.length} {screenshots.length === 1 ? "capture" : "captures"}
                   {daySummary.singleDay ? "" : ` across ${daySummary.dayCount} days`}
                   {lastPage > 1 ? ` · page ${page} of ${lastPage}` : ""} · {formatFileSize(stats.storageBytes)}
@@ -313,7 +313,7 @@ export function ScreenshotsView({ user }: { user: User }) {
                     />
                     <span
                       className={cn(
-                        "tnum truncate text-[11px] text-[var(--muted)]",
+                        "tnum truncate text-[0.6875rem] text-[var(--muted)]",
                         // Thin out labels on narrow screens when the strip is long.
                         daySummary.hours.length > 10 && i % 2 === 1 && "max-sm:invisible",
                       )}
@@ -364,7 +364,7 @@ export function ScreenshotsView({ user }: { user: User }) {
                           </span>
                         )}
                       </span>
-                      <span className="flex flex-col gap-0.5 px-3 py-2.5 text-[13px]">
+                      <span className="flex flex-col gap-0.5 px-3 py-2.5 text-[0.8125rem]">
                         <span className="flex items-baseline justify-between gap-2">
                           <span className="num font-semibold text-[var(--foreground)]">{formatTime(shot.captured_at)}</span>
                           <span className="tnum shrink-0 text-xs text-[var(--muted)]">{formatFileSize(shot.file_size_bytes)}</span>

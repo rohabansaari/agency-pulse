@@ -70,7 +70,7 @@ export function PayrollRunStepper({ run }: { run: PayrollRun }) {
             <span
               aria-hidden="true"
               className={cn(
-                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold",
+                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-semibold",
                 state === "done" && "bg-[var(--accent-emerald)] text-[var(--card)]",
                 state === "now" && "bg-[var(--primary)] text-[var(--primary-foreground)]",
                 state === "todo" && "bg-[var(--accent-sand)] text-[var(--muted)]",
@@ -85,7 +85,7 @@ export function PayrollRunStepper({ run }: { run: PayrollRun }) {
                   {state === "done" ? " (complete)" : state === "now" ? " (current)" : " (upcoming)"}
                 </span>
               </span>
-              <span className="block truncate text-[13px] text-[var(--muted)]">{step.sub}</span>
+              <span className="block truncate text-[0.8125rem] text-[var(--muted)]">{step.sub}</span>
             </span>
           </li>
         );

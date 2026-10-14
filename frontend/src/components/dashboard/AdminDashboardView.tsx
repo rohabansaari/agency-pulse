@@ -37,11 +37,11 @@ export function AdminDashboardView({ data, filter }: { data: AdminDashboard; fil
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[13px] text-[var(--muted)]">
+          <p className="text-[0.8125rem] text-[var(--muted)]">
             {now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
             {organizationName ? ` · ${organizationName}` : ""}
           </p>
-          <h1 className="mt-1 text-[28px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
+          <h1 className="mt-1 text-[1.75rem] font-semibold tracking-[-0.02em] text-[var(--foreground)]">
             {greeting(now)}, {firstName}
           </h1>
         </div>
@@ -114,7 +114,7 @@ export function AdminDashboardView({ data, filter }: { data: AdminDashboard; fil
       </section>
 
       <div className="flex flex-wrap items-start gap-6">
-        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-6">
+        <div className="flex min-w-0 flex-[999_1_35rem] flex-col gap-6">
           <Panel
             title="Team activity"
             description="Who is tracking now and hours in the selected range"
@@ -127,7 +127,7 @@ export function AdminDashboardView({ data, filter }: { data: AdminDashboard; fil
               </p>
             ) : (
               <div className="relative overflow-x-auto">
-                <table className="w-full min-w-[620px] text-left text-sm">
+                <table className="w-full min-w-[38.75rem] text-left text-sm">
                   <thead className="border-y border-[var(--border)] bg-[var(--accent-sand)]/60 text-xs uppercase tracking-[0.04em] text-[var(--muted)]">
                     <tr>
                       <th scope="col" className="px-5 py-2.5 font-medium">Employee</th>
@@ -159,7 +159,7 @@ export function AdminDashboardView({ data, filter }: { data: AdminDashboard; fil
                   <li key={team.team_id}>
                     <div className="flex items-baseline justify-between gap-3 text-sm">
                       <span className="font-medium text-[var(--foreground)]">{team.team_name}</span>
-                      <span className="tnum text-[13px] text-[var(--muted)]">
+                      <span className="tnum text-[0.8125rem] text-[var(--muted)]">
                         {hoursLabel(team.tracked_seconds)} · {percentLabel(team.utilization_percent)}
                       </span>
                     </div>
@@ -176,7 +176,7 @@ export function AdminDashboardView({ data, filter }: { data: AdminDashboard; fil
           </Panel>
         </div>
 
-        <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
+        <aside className="flex min-w-0 flex-[1_1_20rem] flex-col gap-4">
           <ManualApprovalQueue />
           <OvertimeApprovalQueue title="Overtime queue" />
         </aside>
@@ -189,7 +189,7 @@ function SeeAll({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-[var(--primary)] hover:bg-[var(--primary-muted)]"
+      className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[0.8125rem] font-medium text-[var(--primary)] hover:bg-[var(--primary-muted)]"
     >
       {label}
       <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -210,7 +210,7 @@ function MiniStat({
 }) {
   return (
     <Link href={href} className="group flex flex-col gap-1 px-5 py-4 transition hover:bg-[var(--accent-sand)]/60">
-      <span className={cn("text-[13px]", highlight ? "text-[var(--accent-copper)]" : "text-[var(--muted)]")}>
+      <span className={cn("text-[0.8125rem]", highlight ? "text-[var(--accent-copper)]" : "text-[var(--muted)]")}>
         {label}
       </span>
       <span className={cn("tnum text-xl font-semibold", highlight ? "text-[var(--accent-copper)]" : "text-[var(--foreground)]")}>
@@ -258,7 +258,7 @@ function RosterRow({ row }: { row: EmployeeReportBreakdown }) {
               style={{ width: `${Math.min(100, row.utilization_percent)}%` }}
             />
           </div>
-          <span className="tnum w-10 text-right text-[13px] text-[var(--muted)]">{percentLabel(row.utilization_percent)}</span>
+          <span className="tnum w-10 text-right text-[0.8125rem] text-[var(--muted)]">{percentLabel(row.utilization_percent)}</span>
         </div>
       </td>
     </tr>
