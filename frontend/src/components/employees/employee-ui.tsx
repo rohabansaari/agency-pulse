@@ -62,7 +62,7 @@ export function TimerBadge({ running }: { running: boolean }) {
     </span>
   ) : (
     <span className="inline-flex whitespace-nowrap rounded-full bg-[var(--accent-sand)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
-      Idle
+      Not tracking
     </span>
   );
 }

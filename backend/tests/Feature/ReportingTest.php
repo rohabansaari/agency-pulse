@@ -4,12 +4,14 @@ namespace Tests\Feature;
 
 use App\Enums\TimeEntryStatus;
 use App\Models\Project;
+use App\Models\Screenshot;
 use App\Models\Team;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -64,6 +66,34 @@ class ReportingTest extends TestCase
             ])
             ->assertJsonPath('hours_today_seconds', 3600)
             ->assertJsonCount(1, 'employee_breakdown');
+    }
+
+    public function test_employee_breakdown_includes_activity_percent(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $employee = User::factory()->create(['organization_id' => $admin->organization_id]);
+
+        Screenshot::query()->create([
+            'organization_id' => $admin->organization_id,
+            'user_id' => $employee->id,
+            'session_id' => (string) Str::uuid(),
+            'storage_disk' => 'public',
+            'image_path' => 'org/1/screenshots/test.jpg',
+            'file_size_bytes' => 100,
+            'active_seconds' => 225,
+            'activity_window_seconds' => 300,
+            'captured_at' => now(),
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $breakdown = $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/organization')
+            ->assertOk()
+            ->json('employee_breakdown');
+
+        $row = collect($breakdown)->firstWhere('user_id', $employee->id);
+        $this->assertSame(75, $row['activity_percent']);
     }
 
     public function test_admin_can_filter_organization_report_by_date_range(): void

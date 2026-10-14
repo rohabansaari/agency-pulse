@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Screenshots\ActivityService;
 use App\Services\Screenshots\ScreenshotStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -27,6 +28,9 @@ class ScreenshotResource extends JsonResource
             'session_id' => $this->session_id,
             'image_url' => $storage->url($this->resource),
             'file_size_bytes' => $this->file_size_bytes,
+            'active_seconds' => $this->active_seconds,
+            'activity_window_seconds' => $this->activity_window_seconds,
+            'activity_percent' => ActivityService::percent($this->active_seconds, $this->activity_window_seconds),
             'captured_at' => $this->captured_at,
             'created_at' => $this->created_at,
         ];

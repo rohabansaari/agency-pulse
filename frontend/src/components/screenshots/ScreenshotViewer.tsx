@@ -1,5 +1,6 @@
 "use client";
 
+import { ActivityBadge } from "@/components/ledger/Activity";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Download, ExternalLink, X, ZoomIn } from "lucide-react";
 import { useCallback, useEffect } from "react";
@@ -136,6 +137,23 @@ export function ScreenshotViewer({ shots, index, onClose, onNavigate }: Screensh
                   <dd className="mt-1 font-medium text-[var(--foreground)]">{shot.project_name}</dd>
                 </div>
               ) : null}
+              <div>
+                <dt className="text-xs text-[var(--muted)]">Activity</dt>
+                <dd className="mt-1">
+                  {shot.activity_percent === null || shot.activity_percent === undefined ? (
+                    <span className="text-[var(--muted)]">Not recorded</span>
+                  ) : (
+                    <span className="flex flex-wrap items-center gap-2">
+                      <ActivityBadge percent={shot.activity_percent} />
+                      {shot.active_seconds != null && shot.activity_window_seconds ? (
+                        <span className="tnum text-xs text-[var(--muted)]">
+                          {Math.round(shot.active_seconds / 60)} of {Math.round(shot.activity_window_seconds / 60)} min
+                        </span>
+                      ) : null}
+                    </span>
+                  )}
+                </dd>
+              </div>
               <div>
                 <dt className="text-xs text-[var(--muted)]">Session</dt>
                 <dd className="num mt-1 break-all text-xs text-[var(--muted)]">{shot.session_id}</dd>

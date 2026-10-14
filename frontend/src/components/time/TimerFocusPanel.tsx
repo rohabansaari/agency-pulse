@@ -153,7 +153,7 @@ function StatusPill({ state }: { state: "running" | "paused" | "idle" }) {
   }
   return (
     <span className="inline-flex rounded-full bg-[var(--accent-sand)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
-      Idle
+      Not tracking
     </span>
   );
 }

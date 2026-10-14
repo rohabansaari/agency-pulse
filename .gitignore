@@ -40,3 +40,4 @@ desktop-agent/*.spec
 # Docker volumes (local)
 postgres_data/
 redis_data/
+__pycache__/

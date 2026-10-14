@@ -16,6 +16,7 @@ use App\Models\TimeEntry;
 use App\Models\User;
 use App\Services\Payroll\PayrollSettingsService;
 use App\Services\Projects\ProjectAccessService;
+use App\Services\Screenshots\ActivityService;
 use App\Services\Tenant\TenantContext;
 use App\Support\WorkforceMembers;
 use Illuminate\Support\Carbon;
@@ -27,7 +28,8 @@ class ReportingService
     public function __construct(
         private readonly UtilizationCalculator $utilization,
         private readonly ProjectAccessService $projectAccess,
-        private readonly PayrollSettingsService $payrollSettings
+        private readonly PayrollSettingsService $payrollSettings,
+        private readonly ActivityService $activity,
     ) {}
 
     /**
@@ -503,13 +505,17 @@ class ReportingService
         Carbon $rangeEnd,
         Collection $trackingUserIds
     ): array {
-        return $team->participants()->map(function (User $user) use (
+        $participants = $team->participants();
+        $activity = $this->activity->percentByUser($orgId, $rangeStart, $rangeEnd, $participants->pluck('id')->all());
+
+        return $participants->map(function (User $user) use (
             $orgId,
             $todayStart,
             $todayEnd,
             $rangeStart,
             $rangeEnd,
-            $trackingUserIds
+            $trackingUserIds,
+            $activity
         ) {
             $hoursInRange = $this->sumTrackedSeconds(
                 $orgId,
@@ -531,6 +537,7 @@ class ReportingService
                 'hours_in_range_seconds' => $hoursInRange,
                 'hours_week_seconds' => $hoursInRange,
                 'utilization_percent' => $this->utilization->utilizationPercent($hoursInRange, $expectedInRange),
+                'activity_percent' => $activity[$user->id] ?? null,
                 'has_active_timer' => $trackingUserIds->contains($user->id),
             ];
         })->values()->all();
@@ -551,11 +558,14 @@ class ReportingService
             ->orderBy('name')
             ->get();
 
+        $activity = $this->activity->percentByUser($orgId, $rangeStart, $rangeEnd, $employees->pluck('id')->all());
+
         return $employees->map(function (User $user) use (
             $orgId,
             $rangeStart,
             $rangeEnd,
-            $trackingUserIds
+            $trackingUserIds,
+            $activity
         ) {
             $hoursInRange = $this->sumTrackedSeconds(
                 $orgId,
@@ -573,6 +583,7 @@ class ReportingService
                 'team_name' => $team?->name,
                 'hours_in_range_seconds' => $hoursInRange,
                 'utilization_percent' => $this->utilization->utilizationPercent($hoursInRange, $expectedInRange),
+                'activity_percent' => $activity[$user->id] ?? null,
                 'has_active_timer' => $trackingUserIds->contains($user->id),
             ];
         })->values()->all();

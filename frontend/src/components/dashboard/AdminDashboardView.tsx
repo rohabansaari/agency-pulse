@@ -2,6 +2,7 @@
 
 import { useAppSession } from "@/components/dashboard/AppShell";
 import { Metric } from "@/components/ledger/Metric";
+import { ActivityMeter } from "@/components/ledger/Activity";
 import { initialsOf } from "@/components/ledger/Avatar";
 import { greeting, hoursLabel, percentLabel } from "@/components/ledger/format";
 import { Panel } from "@/components/ledger/Panel";
@@ -127,13 +128,14 @@ export function AdminDashboardView({ data, filter }: { data: AdminDashboard; fil
               </p>
             ) : (
               <div className="relative overflow-x-auto">
-                <table className="w-full min-w-[38.75rem] text-left text-sm">
+                <table className="w-full min-w-[46rem] text-left text-sm">
                   <thead className="border-y border-[var(--border)] bg-[var(--accent-sand)]/60 text-xs uppercase tracking-[0.04em] text-[var(--muted)]">
                     <tr>
                       <th scope="col" className="px-5 py-2.5 font-medium">Employee</th>
                       <th scope="col" className="px-5 py-2.5 font-medium">Status</th>
                       <th scope="col" className="px-5 py-2.5 text-right font-medium">Hours</th>
                       <th scope="col" className="px-5 py-2.5 font-medium">Utilization</th>
+                      <th scope="col" className="px-5 py-2.5 font-medium">Activity</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border-subtle)]">
@@ -242,7 +244,7 @@ function RosterRow({ row }: { row: EmployeeReportBreakdown }) {
           </span>
         ) : (
           <span className="inline-flex rounded-full bg-[var(--accent-sand)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
-            Idle
+            Not tracking
           </span>
         )}
       </td>
@@ -260,6 +262,9 @@ function RosterRow({ row }: { row: EmployeeReportBreakdown }) {
           </div>
           <span className="tnum w-10 text-right text-[0.8125rem] text-[var(--muted)]">{percentLabel(row.utilization_percent)}</span>
         </div>
+      </td>
+      <td className="px-5 py-3">
+        <ActivityMeter percent={row.activity_percent} />
       </td>
     </tr>
   );
