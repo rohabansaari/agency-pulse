@@ -37,6 +37,8 @@ DEFAULT_API_BASE_URL = "https://agency-pulse-six.vercel.app/api/v1"
 # Saved configs pointing here are moved to DEFAULT_API_BASE_URL (API moved off Render).
 LEGACY_API_BASE_URLS = {"https://agencypulse-api.onrender.com/api/v1"}
 PROTOCOL = "agencypulse"
+# Shown in the log and tray menu so it's clear which build is running.
+AGENT_VERSION = "1.3.0"
 
 CONFIG_DIR = Path.home() / ".agencypulse"
 CONFIG_PATH = CONFIG_DIR / "agent-config.json"
@@ -183,16 +185,24 @@ class TrayIcon:
                 self._title(),
                 menu=pystray.Menu(
                     pystray.MenuItem(lambda _item: self._detail, None, enabled=False),
+                    pystray.MenuItem(f"Agent version {AGENT_VERSION}", None, enabled=False),
                     pystray.Menu.SEPARATOR,
                     pystray.MenuItem("Open AgencyPulse", self._open_web, default=True),
                     pystray.MenuItem("Quit agent", self._quit),
                 ),
             )
             # On Windows this runs the icon's message loop in its own thread.
-            self._icon.run_detached()
+            self._icon.run_detached(setup=self._show)
         except Exception as error:
             self._icon = None
             log(f"Tray icon unavailable: {error}")
+
+    def _show(self, icon) -> None:
+        try:
+            icon.visible = True
+            log("Tray icon shown.")
+        except Exception as error:
+            log(f"Tray icon could not be shown: {error}")
 
     def stop(self) -> None:
         if self._icon is None:
@@ -443,7 +453,7 @@ def run_first_run_setup(config: dict) -> dict:
         if config.get("desktop_installed") and not config.get("setup_complete"):
             config["setup_complete"] = True
             save_config(config)
-        return config
+        return refresh_registration(config)
 
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     log("First-run setup: registering protocol and startup entry...")
@@ -451,9 +461,36 @@ def run_first_run_setup(config: dict) -> dict:
     add_startup_shortcut()
 
     config["setup_complete"] = True
+    config["registered_exe"] = str(executable_path())
     config.setdefault("device_id", str(uuid.uuid4()))
     save_config(config)
     log("First-run setup complete.")
+    return config
+
+
+def refresh_registration(config: dict) -> dict:
+    """Point the browser wake link and Startup shortcut at this exe.
+
+    Both are written on first run. When an employee downloads a newer agent to a
+    different folder, they would otherwise keep launching the old exe.
+    """
+    if not getattr(sys, "frozen", False):
+        return config
+
+    current = str(executable_path())
+    if config.get("registered_exe") == current:
+        return config
+
+    log(f"Agent moved or updated; registering {current}.")
+    try:
+        register_protocol()
+        add_startup_shortcut()
+    except Exception as error:
+        log(f"Could not update registration: {error}")
+        return config
+
+    config["registered_exe"] = current
+    save_config(config)
     return config
 
 
@@ -484,6 +521,26 @@ def acquire_lock() -> bool:
             _lock_handle.close()
             _lock_handle = None
         return False
+
+
+def take_over_running_agent(timeout_seconds: float = 45) -> bool:
+    """Ask an agent that is already running to quit, then take its place.
+
+    Double-clicking the exe means "run this copy", which matters after an
+    employee downloads a newer agent while the old one is still running.
+    """
+    log("Another agent is running; asking it to quit so this copy takes over.")
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    QUIT_PATH.write_text("1", encoding="utf-8")
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        time.sleep(1)
+        if acquire_lock():
+            log("Previous agent stopped; this copy is now running.")
+            return True
+    QUIT_PATH.unlink(missing_ok=True)
+    log("Previous agent did not stop in time.")
+    return False
 
 
 def signal_wake() -> None:
@@ -1256,7 +1313,7 @@ def run_agent(*, interactive: bool = False) -> None:
     TRAY.start(web_base_url(config["api_base_url"]))
     TRAY.set_state("paused", "Paused: not tracking")
 
-    log("AgencyPulse agent running.")
+    log(f"AgencyPulse agent {AGENT_VERSION} running from {executable_path()}.")
     log(
         "Timer running: screenshots every 5m, activity tracking, check-in every 30s. "
         "Timer off: agent paused (no screenshots or activity), check-in every 60s."
@@ -1349,7 +1406,7 @@ def main() -> int:
     interactive = is_interactive_launch()
     protocol_wake = is_protocol_wake()
 
-    if not acquire_lock():
+    if not acquire_lock() and not (interactive and take_over_running_agent()):
         signal_wake()
         if interactive:
             SHOW_UI_PATH.write_text("1", encoding="utf-8")
@@ -1365,6 +1422,9 @@ def main() -> int:
                 "or run AgencyPulseAgent.exe --quit to stop it.",
             )
         return 0
+
+    # We hold the lock, so no other agent is running: any quit signal is stale.
+    QUIT_PATH.unlink(missing_ok=True)
 
     if protocol_wake:
         log("Launched from browser timer wake.")
