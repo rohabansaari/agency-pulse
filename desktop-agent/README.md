@@ -15,11 +15,25 @@ After setup, the agent runs in the background. No `--install`, no CLI, no manual
 
 ## Timing
 
-| Task | Interval |
-|------|----------|
-| Heartbeat | 30 seconds |
-| Timer sync | 15 seconds |
-| Screenshots | 5 minutes (only while timer is active) |
+| Task | Timer running | Timer off (agent paused) |
+|------|---------------|--------------------------|
+| Heartbeat | 30 seconds | 60 seconds |
+| Timer sync | 15 seconds | 30 seconds |
+| Screenshots and activity | Every 5 minutes | None |
+
+## Tray icon
+
+The agent shows the AgencyPulse icon in the Windows tray (next to the clock):
+
+| Dot | Meaning |
+|-----|---------|
+| Green | Tracking: the timer is running |
+| Grey | Paused: nothing is recorded |
+| Red | Offline: AgencyPulse can't be reached |
+
+Hover for details; right-click for **Open AgencyPulse** and **Quit agent**. A Windows
+notification appears when tracking starts and when it pauses. New tray icons are hidden
+under the **^** arrow by default; drag the icon next to the clock to keep it visible.
 
 First screenshot is taken immediately when the timer starts.
 

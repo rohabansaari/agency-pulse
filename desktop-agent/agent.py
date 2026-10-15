@@ -150,6 +150,112 @@ class ActivityMonitor:
 ACTIVITY = ActivityMonitor()
 
 
+class TrayIcon:
+    """Windows tray icon showing whether the agent is tracking.
+
+    Green while the timer runs, grey while paused, red when AgencyPulse can't be
+    reached. Optional: if pystray isn't available the agent runs without it.
+    """
+
+    COLORS = {
+        "tracking": (16, 163, 107),
+        "paused": (148, 148, 160),
+        "offline": (220, 72, 72),
+    }
+
+    def __init__(self) -> None:
+        self._icon = None
+        self._state = "paused"
+        self._detail = "Starting…"
+        self._web_url = ""
+        self._lock = threading.Lock()
+
+    def start(self, web_url: str) -> None:
+        self._web_url = web_url
+        if self._icon is not None:
+            return
+        try:
+            import pystray
+
+            self._icon = pystray.Icon(
+                "AgencyPulse",
+                self._image(self._state),
+                self._title(),
+                menu=pystray.Menu(
+                    pystray.MenuItem(lambda _item: self._detail, None, enabled=False),
+                    pystray.Menu.SEPARATOR,
+                    pystray.MenuItem("Open AgencyPulse", self._open_web, default=True),
+                    pystray.MenuItem("Quit agent", self._quit),
+                ),
+            )
+            # On Windows this runs the icon's message loop in its own thread.
+            self._icon.run_detached()
+        except Exception as error:
+            self._icon = None
+            log(f"Tray icon unavailable: {error}")
+
+    def stop(self) -> None:
+        if self._icon is None:
+            return
+        try:
+            self._icon.stop()
+        except Exception as error:
+            log(f"Unable to remove tray icon: {error}")
+        self._icon = None
+
+    def set_state(self, state: str, detail: str, *, notify: str | None = None) -> None:
+        with self._lock:
+            changed = (state, detail) != (self._state, self._detail)
+            self._state = state
+            self._detail = detail
+        if self._icon is None or not changed:
+            return
+        try:
+            self._icon.icon = self._image(state)
+            self._icon.title = self._title()
+            self._icon.update_menu()
+            if notify:
+                self._icon.notify(notify, "AgencyPulse")
+        except Exception as error:
+            log(f"Unable to update tray icon: {error}")
+
+    def _title(self) -> str:
+        # Windows truncates tray tooltips at 127 characters.
+        return f"AgencyPulse: {self._detail}"[:127]
+
+    def _image(self, state: str) -> Image.Image:
+        from PIL import ImageDraw
+
+        size = 64
+        image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        draw.rounded_rectangle((2, 2, size - 3, size - 3), radius=14, fill=(157, 42, 140))
+        pulse = [(9, 26), (19, 26), (25, 12), (32, 38), (38, 22), (42, 26), (55, 26)]
+        draw.line(pulse, fill=(255, 255, 255), width=5, joint="curve")
+        # Status dot in the corner: green tracking, grey paused, red offline.
+        draw.ellipse((38, 38, 63, 63), fill=(255, 255, 255))
+        draw.ellipse((42, 42, 59, 59), fill=self.COLORS.get(state, self.COLORS["paused"]))
+        return image
+
+    def _open_web(self, _icon=None, _item=None) -> None:
+        import webbrowser
+
+        webbrowser.open(f"{self._web_url}/time")
+
+    def _quit(self, _icon=None, _item=None) -> None:
+        log("Quit requested from the tray icon.")
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        QUIT_PATH.write_text("1", encoding="utf-8")
+
+
+TRAY = TrayIcon()
+
+
+def web_base_url(api_base_url: str) -> str:
+    url = api_base_url.rstrip("/")
+    return url[: -len("/api/v1")] if url.endswith("/api/v1") else url
+
+
 def log(message: str) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     line = f"{datetime.now().isoformat()} {message}"
@@ -1065,11 +1171,19 @@ class TimerSession:
         self.session_id: str | None = None
         self.project_id: int | None = None
         self.last_capture_at: float = 0.0
+        self.tray_detail = "Paused: not tracking"
 
     def clear(self) -> None:
-        if self.active_entry_id is not None:
+        was_tracking = self.active_entry_id is not None
+        if was_tracking:
             log("Timer stopped or paused. Agent paused: no screenshots or activity tracking until the timer runs again.")
         ACTIVITY.stop()
+        self.tray_detail = "Paused: not tracking"
+        TRAY.set_state(
+            "paused",
+            self.tray_detail,
+            notify="Tracking paused. Nothing is recorded until your timer runs again." if was_tracking else None,
+        )
         self.active_entry_id = None
         self.session_id = None
         self.project_id = None
@@ -1103,6 +1217,12 @@ def handle_timer_state(
         session.project_id = project_id
         session.last_capture_at = 0.0
         ACTIVITY.start()
+        session.tray_detail = f"Tracking since {datetime.now().strftime('%I:%M %p').lstrip('0')}"
+        TRAY.set_state(
+            "tracking",
+            session.tray_detail,
+            notify="Tracking started: screenshots every 5 minutes while your timer runs.",
+        )
         log(f"Timer active (entry {entry_id}). Agent tracking resumed; taking first screenshot now.")
         force_capture = True
 
@@ -1133,6 +1253,8 @@ def run_agent(*, interactive: bool = False) -> None:
     session = TimerSession()
     offline = False
     loop_index = 0
+    TRAY.start(web_base_url(config["api_base_url"]))
+    TRAY.set_state("paused", "Paused: not tracking")
 
     log("AgencyPulse agent running.")
     log(
@@ -1167,6 +1289,13 @@ def run_agent(*, interactive: bool = False) -> None:
         try:
             if loop_index % 2 == 1 or wake_received:
                 offline = not send_heartbeat(config, offline)
+                if offline:
+                    TRAY.set_state("offline", "Offline: check your internet connection")
+                else:
+                    TRAY.set_state(
+                        "tracking" if session.active_entry_id is not None else "paused",
+                        session.tray_detail,
+                    )
 
             timer = fetch_active_timer(config)
             handle_timer_state(
@@ -1250,6 +1379,7 @@ def main() -> int:
         notify_user("AgencyPulse Agent", str(error))
         return 1
     finally:
+        TRAY.stop()
         release_lock()
 
     return 0
