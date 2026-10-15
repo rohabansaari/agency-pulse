@@ -25,6 +25,9 @@ from PIL import Image
 
 HEARTBEAT_INTERVAL_SECONDS = 30
 TIMER_POLL_INTERVAL_SECONDS = 15
+# While the timer is off the agent is paused: it only checks (lightly) whether the
+# timer has started. Starting the timer in the web app also wakes it immediately.
+IDLE_POLL_INTERVAL_SECONDS = 30
 CAPTURE_INTERVAL_SECONDS = 300
 MAX_IMAGE_WIDTH = 1600
 JPEG_QUALITY = 60
@@ -73,6 +76,7 @@ class ActivityMonitor:
 
     A second is active when the last-input tick moved since the previous sample.
     `take()` returns (active_seconds, window_seconds) since the last reset.
+    Sampling only happens between `start()` and `stop()`, i.e. while the timer runs.
     """
 
     def __init__(self) -> None:
@@ -80,9 +84,26 @@ class ActivityMonitor:
         self._active = 0
         self._observed = 0
         self._last_tick: int | None = None
+        self._running = threading.Event()
         self._supported = last_input_tick() is not None
         if self._supported:
             threading.Thread(target=self._run, name="activity-monitor", daemon=True).start()
+
+    def start(self) -> None:
+        """Begin a fresh measurement (timer started or resumed)."""
+        with self._lock:
+            self._active = 0
+            self._observed = 0
+            self._last_tick = None
+        self._running.set()
+
+    def stop(self) -> None:
+        """Stop sampling entirely (timer paused or stopped)."""
+        self._running.clear()
+        with self._lock:
+            self._active = 0
+            self._observed = 0
+            self._last_tick = None
 
     @property
     def supported(self) -> bool:
@@ -90,7 +111,10 @@ class ActivityMonitor:
 
     def _run(self) -> None:
         while True:
+            self._running.wait()  # idle (no sampling at all) while the timer is off
             time.sleep(1)
+            if not self._running.is_set():
+                continue
             try:
                 tick = last_input_tick()
             except Exception:  # never let sampling take the agent down
@@ -1044,7 +1068,8 @@ class TimerSession:
 
     def clear(self) -> None:
         if self.active_entry_id is not None:
-            log("Timer stopped. Screenshot capture paused.")
+            log("Timer stopped or paused. Agent paused: no screenshots or activity tracking until the timer runs again.")
+        ACTIVITY.stop()
         self.active_entry_id = None
         self.session_id = None
         self.project_id = None
@@ -1077,8 +1102,8 @@ def handle_timer_state(
         session.session_id = str(uuid.uuid4())
         session.project_id = project_id
         session.last_capture_at = 0.0
-        ACTIVITY.reset()
-        log(f"Timer active (entry {entry_id}). Taking first screenshot now.")
+        ACTIVITY.start()
+        log(f"Timer active (entry {entry_id}). Agent tracking resumed; taking first screenshot now.")
         force_capture = True
 
     should_capture = session.session_id is not None and (
@@ -1111,7 +1136,8 @@ def run_agent(*, interactive: bool = False) -> None:
 
     log("AgencyPulse agent running.")
     log(
-        "Intervals: heartbeat 30s, timer poll 15s, screenshots 5m while timer is active."
+        "Timer running: screenshots every 5m, activity tracking, check-in every 30s. "
+        "Timer off: agent paused (no screenshots or activity), check-in every 60s."
     )
 
     while True:
@@ -1157,7 +1183,10 @@ def run_agent(*, interactive: bool = False) -> None:
             offline = False
             continue
 
-        sleep_until(TIMER_POLL_INTERVAL_SECONDS)
+        # Heartbeats go out every other loop: every 30s while tracking, every 60s while paused.
+        sleep_until(
+            TIMER_POLL_INTERVAL_SECONDS if session.active_entry_id is not None else IDLE_POLL_INTERVAL_SECONDS
+        )
 
 
 def admin_install() -> int:
