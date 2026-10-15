@@ -60,6 +60,7 @@ class TimeEntryTest extends TestCase
         $this->withHeaders($headers)->postJson('/api/v1/time/start')->assertCreated();
 
         $this->travelTo(now()->setTime(10, 20));
+        $this->connectDesktopAgent($user);
         $this->withHeaders($headers)->postJson('/api/v1/time/pause')
             ->assertOk()
             ->assertJsonPath('entry.paused', true)
@@ -79,6 +80,7 @@ class TimeEntryTest extends TestCase
             ->assertJsonPath('entry.status', TimeEntryStatus::Running->value);
 
         $this->travelTo(now()->setTime(10, 55));
+        $this->connectDesktopAgent($user);
         $this->withHeaders($headers)->getJson('/api/v1/time/today')
             ->assertJsonPath('meta.paused_timer', null)
             ->assertJsonPath('meta.session_elapsed', 1200);

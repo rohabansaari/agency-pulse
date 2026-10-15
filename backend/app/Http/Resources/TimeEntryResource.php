@@ -33,6 +33,7 @@ class TimeEntryResource extends JsonResource
             'source' => $this->source?->value,
             'status' => $this->status->value,
             'paused' => (bool) $this->paused,
+            'pause_reason' => $this->pause_reason,
             'approved_by' => $this->approved_by,
             'approved_by_name' => $this->whenLoaded('approver', fn () => $this->approver?->name),
             'approved_at' => $this->approved_at,

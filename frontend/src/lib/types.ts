@@ -226,6 +226,9 @@ export interface TimeEntry {
   approved_at?: string | null;
   created_at: string;
   updated_at: string;
+  paused?: boolean;
+  /** "agent_offline" when the timer was paused automatically because the desktop agent stopped. */
+  pause_reason?: string | null;
 }
 
 export interface LeaveBreakdownPeriod {

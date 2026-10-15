@@ -15,6 +15,7 @@ use App\Services\Projects\ProjectAccessService;
 use App\Services\Reporting\ReportingService;
 use App\Services\Screenshots\ScreenshotAgentService;
 use App\Services\Tenant\TenantContext;
+use App\Services\Time\AgentTimerGuard;
 use App\Support\WorkforceMembers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,7 +31,8 @@ class TimeEntryController extends TenantAppController
         private readonly ProjectAccessService $projectAccess,
         private readonly ReportingService $reporting,
         private readonly PayrollPeriodLockService $payrollLock,
-        private readonly ScreenshotAgentService $agent
+        private readonly ScreenshotAgentService $agent,
+        private readonly AgentTimerGuard $agentGuard,
     ) {}
 
     public function start(Request $request): JsonResponse
@@ -70,6 +72,8 @@ class TimeEntryController extends TenantAppController
                 }
             }
         }
+
+        $this->agentGuard->enforceForUser($user->id, TenantContext::id());
 
         $activeTimer = TimeEntry::query()
             ->trackedTimers()
@@ -148,7 +152,7 @@ class TimeEntryController extends TenantAppController
         $this->assertAgentConnected($user);
         $this->payrollLock->assertDateModifiable(Carbon::today()->startOfDay());
 
-        $paused->update(['paused' => false]);
+        $paused->update(['paused' => false, 'pause_reason' => null]);
 
         $entry = TimeEntry::create([
             'user_id' => $user->id,
@@ -184,7 +188,7 @@ class TimeEntryController extends TenantAppController
                 ]);
             }
 
-            $entry->update(['paused' => false]);
+            $entry->update(['paused' => false, 'pause_reason' => null]);
         }
 
         return response()->json([
@@ -213,6 +217,8 @@ class TimeEntryController extends TenantAppController
 
     private function runningEntry(int $userId): ?TimeEntry
     {
+        $this->agentGuard->enforceForUser($userId, TenantContext::id());
+
         return TimeEntry::query()
             ->trackedTimers()
             ->where('user_id', $userId)
@@ -242,6 +248,7 @@ class TimeEntryController extends TenantAppController
             'duration' => (int) $entry->start_time->diffInSeconds($endTime),
             'status' => TimeEntryStatus::Stopped,
             'paused' => $paused,
+            'pause_reason' => null,
         ]);
     }
 
@@ -269,6 +276,8 @@ class TimeEntryController extends TenantAppController
         if ($user->currentRole()?->isOperationalAdmin()) {
             abort(403, 'Administrators cannot track time.');
         }
+
+        $this->agentGuard->enforceForUser($user->id, TenantContext::id());
 
         $startOfDay = Carbon::today();
         $endOfDay = Carbon::today()->endOfDay();

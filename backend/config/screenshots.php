@@ -8,5 +8,7 @@ return [
     'agent_heartbeat_threshold_minutes' => (int) env('SCREENSHOT_AGENT_HEARTBEAT_THRESHOLD_MINUTES', 10),
     'agent_upload_threshold_minutes' => (int) env('SCREENSHOT_AGENT_UPLOAD_THRESHOLD_MINUTES', 60),
     // Timers can only start while the user's desktop agent is connected (recent heartbeat).
+    // A running timer pauses once the agent has not checked in for this long.
+    'timer_agent_offline_minutes' => (int) env('TIMER_AGENT_OFFLINE_MINUTES', 5),
     'timer_requires_agent' => (bool) env('TIMER_REQUIRES_DESKTOP_AGENT', true),
 ];

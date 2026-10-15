@@ -15,6 +15,7 @@ use App\Services\Screenshots\ScreenshotAccessService;
 use App\Services\Screenshots\ScreenshotAgentService;
 use App\Services\Screenshots\ScreenshotStorageService;
 use App\Services\Tenant\TenantContext;
+use App\Services\Time\AgentTimerGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -30,6 +31,7 @@ class ScreenshotController extends TenantAppController
         private readonly ProjectAccessService $projectAccess,
         private readonly ScreenshotAgentService $agent,
         private readonly ActivityService $activity,
+        private readonly AgentTimerGuard $agentGuard,
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -154,6 +156,9 @@ class ScreenshotController extends TenantAppController
         if (! $user->can('screenshots.upload')) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
+
+        // The web app polls this every 30s, so a vanished agent pauses the timer promptly.
+        $this->agentGuard->enforceForUser($user->id, TenantContext::id());
 
         return response()->json([
             ...$this->agent->status($user),

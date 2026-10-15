@@ -18,6 +18,7 @@ use App\Services\Tenant\TenantContext;
 
 use Illuminate\Http\JsonResponse;
 
+use App\Services\Time\AgentTimerGuard;
 use Illuminate\Http\Request;
 
 use App\Support\ReportDateRange;
@@ -31,7 +32,9 @@ class ReportController extends TenantAppController
 
     public function __construct(
 
-        private readonly ReportingService $reporting
+        private readonly ReportingService $reporting,
+
+        private readonly AgentTimerGuard $agentGuard,
 
     ) {}
 
@@ -40,6 +43,8 @@ class ReportController extends TenantAppController
     public function organization(Request $request): JsonResponse
 
     {
+        $this->agentGuard->enforceForOrganization(TenantContext::id());
+
 
         if (! $request->user()?->currentRole()?->isOperationalAdmin()) {
             abort(403);
@@ -58,6 +63,8 @@ class ReportController extends TenantAppController
     public function manager(Request $request): JsonResponse
 
     {
+        $this->agentGuard->enforceForOrganization(TenantContext::id());
+
 
         $user = $request->user();
 

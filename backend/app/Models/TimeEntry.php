@@ -31,6 +31,7 @@ class TimeEntry extends Model
         'status',
         'timer_session',
         'paused',
+        'pause_reason',
         'approved_by',
         'approved_at',
     ];

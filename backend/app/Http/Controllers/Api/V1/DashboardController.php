@@ -17,6 +17,7 @@ use App\Services\Projects\ProjectAccessService;
 use App\Services\Reporting\ReportingService;
 use App\Services\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
+use App\Services\Time\AgentTimerGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Support\ReportDateRange;
@@ -25,11 +26,15 @@ class DashboardController extends TenantAppController
 {
     public function __construct(
         private readonly ReportingService $reporting,
-        private readonly ProjectAccessService $projectAccess
+        private readonly ProjectAccessService $projectAccess,
+        private readonly AgentTimerGuard $agentGuard,
     ) {}
 
     public function show(Request $request): JsonResponse
     {
+        // "Tracking now" must not include timers whose desktop agent has gone away.
+        $this->agentGuard->enforceForOrganization(TenantContext::id());
+
         $role = $request->user()->currentRole();
         [$rangeStart, $rangeEnd] = ReportDateRange::fromRequest($request);
 

@@ -46,6 +46,18 @@ class ScreenshotAgentService
         ];
     }
 
+    /**
+     * Last time the agent itself checked in (heartbeat or screenshot upload), or null.
+     * Unlike status(), recent uploads alone don't count as "connected": this is
+     * what running timers are held to.
+     */
+    public function lastCheckInAt(int $userId, int $organizationId): ?Carbon
+    {
+        $lastHeartbeat = Cache::get($this->cacheKey($userId, $organizationId));
+
+        return is_string($lastHeartbeat) ? Carbon::parse($lastHeartbeat) : null;
+    }
+
     private function cacheKey(int $userId, int $organizationId): string
     {
         return "screenshot_agent_heartbeat:{$organizationId}:{$userId}";
