@@ -34,6 +34,7 @@ if exist "dist\AgencyPulseAgent.zip" del /f /q "dist\AgencyPulseAgent.zip"
   --hidden-import=mss ^
   --hidden-import=PIL.Image ^
   --hidden-import=requests ^
+  --hidden-import=pystray._win32 ^
   --clean ^
   agent.py
 if errorlevel 1 goto :error

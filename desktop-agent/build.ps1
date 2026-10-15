@@ -26,6 +26,7 @@ python -m PyInstaller `
   --hidden-import=mss `
   --hidden-import=PIL.Image `
   --hidden-import=requests `
+  --hidden-import=pystray._win32 `
   --clean `
   agent.py
 
