@@ -77,5 +77,11 @@ Artisan::command('idempotency:purge', function () {
     $this->info("Purged {$deleted} expired idempotency records.");
 })->purpose('Remove expired idempotency records');
 
+Artisan::command('timers:pause-offline-agents', function (\App\Services\Time\AgentTimerGuard $guard) {
+    $paused = $guard->enforceEverywhere();
+    $this->info("Paused {$paused} timers whose desktop agent went offline.");
+})->purpose('Pause running timers whose desktop agent stopped checking in');
+
+Schedule::command('timers:pause-offline-agents')->everyFiveMinutes();
 Schedule::command('idempotency:purge')->daily();
 Schedule::command('screenshots:purge-expired')->daily();

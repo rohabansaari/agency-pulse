@@ -16,6 +16,7 @@ class CronController extends Controller
 {
     /** @var list<string> */
     private const DAILY_COMMANDS = [
+        'timers:pause-offline-agents',
         'idempotency:purge',
         'screenshots:purge-expired',
     ];

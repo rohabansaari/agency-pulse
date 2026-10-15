@@ -214,6 +214,14 @@ export function TimeTracker({ user }: { user?: User }) {
     return () => window.clearInterval(interval);
   }, [activeTimer]);
 
+  // While a timer runs, re-check every 30s: the server pauses it if the desktop agent
+  // stops checking in, and this page should show that promptly.
+  useEffect(() => {
+    if (!activeTimer) return;
+    const interval = window.setInterval(() => void loadToday(), 30_000);
+    return () => window.clearInterval(interval);
+  }, [activeTimer, loadToday]);
+
   useEffect(() => {
     if (!successMessage) return;
     const t = window.setTimeout(() => setSuccessMessage(""), 3000);
@@ -452,6 +460,16 @@ export function TimeTracker({ user }: { user?: User }) {
 
       {showTimer ? (
         <>
+          {!activeTimer && pausedTimer?.pause_reason === "agent_offline" ? (
+            <p
+              role="status"
+              className="rounded-xl border border-[var(--accent-copper)]/30 bg-[var(--accent-copper-soft)] px-4 py-2.5 text-sm text-[var(--foreground)]"
+            >
+              Your timer was paused automatically
+              {pausedTimer.end_time ? ` at ${formatTime(pausedTimer.end_time)}` : ""} because the desktop agent stopped
+              running. Open AgencyPulseAgent, then press Resume to continue the same session.
+            </p>
+          ) : null}
           {successMessage ? (
             <p role="status" className="rounded-xl bg-[var(--accent-emerald-soft)] px-4 py-2.5 text-sm font-medium text-[var(--accent-emerald)]">
               {successMessage}
