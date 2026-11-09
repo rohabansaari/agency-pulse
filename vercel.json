@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]",
   "services": {
     "web": {
       "root": "frontend/"
@@ -10,10 +11,23 @@
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": { "service": "api" } },
-    { "source": "/(.*)", "destination": { "service": "web" } }
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "web"
+      }
+    }
   ],
   "crons": [
-    { "path": "/api/v1/cron/daily", "schedule": "0 3 * * *" }
+    {
+      "path": "/api/v1/cron/daily",
+      "schedule": "0 3 * * *"
+    }
   ]
 }

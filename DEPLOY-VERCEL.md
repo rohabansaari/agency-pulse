@@ -29,6 +29,8 @@ Frontend and API share one domain, so there is no CORS setup and the frontend ca
 2. Leave **Root Directory** at the repository root. `vercel.json` defines both services.
 3. Don't deploy yet. Add the database and env vars first.
 
+Only `main` builds. `ignoreCommand` in `vercel.json` skips every other branch, because each build pushes a new `api` container image and preview builds once filled the project's container registry (Sandboxes → Container Registry → `api`). Delete old images there now and then.
+
 ## 2. Add Neon Postgres
 
 1. Project → **Storage → Create Database → Neon** (or `vercel integration add neon`).
@@ -87,7 +89,7 @@ Set `RUN_MIGRATIONS_ON_BOOT=false` if you'd rather run `php artisan migrate --fo
 
 ## 6. Desktop agent
 
-The agent's default API URL (`DEFAULT_API_BASE_URL` in `desktop-agent/agent.py`) is `https://agency-pulse-six.vercel.app/api/v1`. Installs that saved the old Render URL are moved to it automatically on next start, and employees sign in once more (the database is new).
+The agent's default API URL (`DEFAULT_API_BASE_URL` in `desktop-agent/agent.py`) is `https://agencypulse-tau.vercel.app/api/v1`. Installs that saved an older URL (the Render API or `agency-pulse-six.vercel.app`, both listed in `LEGACY_API_BASE_URLS`) are moved to it automatically on next start.
 
 Pushing a branch that changes `desktop-agent/` runs the **Desktop agent** workflow, which builds the exe on a Windows runner and commits `frontend/public/downloads/AgencyPulseAgent.zip` to that branch. (Manual alternative: `desktop-agent\build.ps1` on Windows.) If you use a custom domain, update `DEFAULT_API_BASE_URL` and add the old URL to `LEGACY_API_BASE_URLS`.
 
