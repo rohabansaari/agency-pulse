@@ -18,6 +18,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   LogOut,
+  PiggyBank,
   Settings,
   Users,
   UsersRound,
@@ -48,6 +49,7 @@ const ICONS: Record<string, ComponentType<{ className?: string; strokeWidth?: nu
   Payroll: DollarSign,
   "Advance Salary": Wallet,
   Reports: BarChart3,
+  Profitability: PiggyBank,
   Settings: Settings,
   Platform: Building2,
   Screenshots: Camera,
@@ -62,7 +64,7 @@ const GROUPS: Record<UserRole, { id: string; label: string; labels: string[] }[]
     { id: "people", label: "People", labels: ["Employees", "Teams"] },
     { id: "work", label: "Work", labels: ["Projects", "Time Tracking", "Screenshots"] },
     { id: "ops", label: "Operations", labels: ["Leave Management", "Overtime Management", "Payroll", "Advance Salary"] },
-    { id: "insights", label: "Insights", labels: ["Reports", "Settings"] },
+    { id: "insights", label: "Insights", labels: ["Reports", "Profitability", "Settings"] },
   ],
   sub_admin: [
     { id: "overview", label: "Overview", labels: ["Dashboard"] },
@@ -105,12 +107,20 @@ export function DashboardSidebar({
   const items = navItemsForRole(user.role);
   const groups = useMemo(() => groupNavItems(items, user.role), [items, user.role]);
 
-  function isActive(item: NavItem): boolean {
+  function matches(item: NavItem): boolean {
     return (
       pathname === item.href ||
       (item.href !== "/dashboard" &&
         item.href !== "/leave" &&
         pathname.startsWith(item.href))
+    );
+  }
+
+  function isActive(item: NavItem): boolean {
+    // On /reports/profitability only "Profitability" is active, not "Reports" too.
+    return (
+      matches(item) &&
+      !items.some((other) => other.href.length > item.href.length && other.href.startsWith(item.href) && matches(other))
     );
   }
 

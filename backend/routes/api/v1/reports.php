@@ -12,5 +12,8 @@ Route::middleware('rbac:admin,sub_admin')->get('/organization', [ReportControlle
 
 Route::middleware('rbac:manager')->get('/manager', [ReportController::class, 'manager']);
 
+// Revenue, salary cost and margin. Salary data, so admin + payroll PIN only.
+Route::middleware(['rbac:admin', 'payroll.vault'])->get('/profitability', [ReportController::class, 'profitability']);
+
 Route::middleware('rbac:admin,sub_admin,manager')->get('/projects/{project}', [ReportController::class, 'project']);
 

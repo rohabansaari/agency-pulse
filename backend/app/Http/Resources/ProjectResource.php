@@ -47,6 +47,11 @@ class ProjectResource extends JsonResource
             'description' => $this->description,
 
             'hourly_rate' => $this->when($isAdmin, $this->hourly_rate),
+            'billing_type' => $this->billingType()->value,
+            'budget_hours' => $this->budget_hours,
+            'budget_amount' => $this->when($isAdmin, $this->budget_amount),
+            'starts_on' => $this->starts_on?->toDateString(),
+            'due_on' => $this->due_on?->toDateString(),
 
             'status' => $this->status->value,
 
