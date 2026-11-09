@@ -141,11 +141,11 @@ export function DashboardSidebar({
         </Link>
       </div>
 
-      <nav aria-label="Main" className="app-sidebar-nav space-y-5 px-3 pb-4">
+      <nav aria-label="Main" className="app-sidebar-nav space-y-5 px-3 pb-4 [@media(max-height:900px)]:space-y-3">
         {groups.map((group) => (
           <div key={group.id}>
             {groups.length > 1 ? (
-              <p className="mb-1.5 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--night-muted)]">
+              <p className="mb-1.5 px-3 text-[0.6875rem] [@media(max-height:900px)]:mb-1 font-semibold uppercase tracking-[0.08em] text-[var(--night-muted)]">
                 {group.label}
               </p>
             ) : null}
@@ -160,7 +160,7 @@ export function DashboardSidebar({
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group relative flex min-h-11 items-center gap-3 rounded-[0.625rem] px-3 text-sm transition-colors duration-150",
+                      "group relative flex min-h-11 items-center gap-3 [@media(max-height:900px)]:min-h-9 rounded-[0.625rem] px-3 text-sm transition-colors duration-150",
                       active
                         ? "bg-[var(--night-raised)] font-medium text-white"
                         : "text-[var(--night-text)] hover:bg-white/[0.06] hover:text-white",
