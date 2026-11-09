@@ -18,6 +18,9 @@ if [ "${RUN_MIGRATIONS_ON_BOOT:-true}" = "true" ]; then
     (
         php artisan migrate --force --no-interaction >&2 || echo "WARN: migrations failed" >&2
         php artisan super-admin:ensure --no-interaction >&2 || echo "WARN: super-admin:ensure failed" >&2
+        if [ "${DEMO_SEED:-false}" = "true" ]; then
+            php artisan demo:seed --if-missing --no-interaction >&2 || echo "WARN: demo:seed failed" >&2
+        fi
     ) &
 fi
 
