@@ -29,7 +29,7 @@ Frontend and API share one domain, so there is no CORS setup and the frontend ca
 2. Leave **Root Directory** at the repository root. `vercel.json` defines both services.
 3. Don't deploy yet. Add the database and env vars first.
 
-Only `main` builds. `ignoreCommand` in `vercel.json` skips every other branch, because each build pushes a new `api` container image and preview builds once filled the project's container registry (Sandboxes → Container Registry → `api`). Delete old images there now and then.
+Only `main` builds: preview deployments are turned off in the project settings (Settings → Git). Each build pushes a new `api` container image, and preview builds once filled the project's container registry (Sandboxes → Container Registry → `api`). Delete old images there now and then. (`ignoreCommand` in `vercel.json` can't be used at the top level with `services`.)
 
 ## 2. Add Neon Postgres
 
