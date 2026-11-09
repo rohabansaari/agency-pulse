@@ -1336,3 +1336,22 @@ export async function deleteEmployeePayrollAdjustment(id: number): Promise<{ mes
     payrollPin: true,
   });
 }
+
+export interface SampleDataStatus {
+  loaded: boolean;
+  counts: Record<string, number>;
+  employees: number;
+}
+
+/** Admin only: whether sample data is loaded in this organization. */
+export async function fetchSampleDataStatus(): Promise<SampleDataStatus> {
+  return apiFetch<SampleDataStatus>("/sample-data");
+}
+
+export async function loadSampleData(): Promise<SampleDataStatus> {
+  return apiFetch<SampleDataStatus>("/sample-data", { method: "POST" });
+}
+
+export async function removeSampleData(): Promise<SampleDataStatus> {
+  return apiFetch<SampleDataStatus>("/sample-data", { method: "DELETE" });
+}

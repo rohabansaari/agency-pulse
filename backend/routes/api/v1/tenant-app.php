@@ -1,11 +1,18 @@
 <?php
 
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\SampleDataController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/user', [UserController::class, 'show']);
 Route::get('/dashboard', [DashboardController::class, 'show']);
+
+Route::middleware('rbac:admin')->prefix('sample-data')->group(function () {
+    Route::get('/', [SampleDataController::class, 'show']);
+    Route::post('/', [SampleDataController::class, 'store']);
+    Route::delete('/', [SampleDataController::class, 'destroy']);
+});
 Route::prefix('reports')->group(base_path('routes/api/v1/reports.php'));
 Route::prefix('time')->group(base_path('routes/api/v1/time.php'));
 Route::prefix('projects')->group(base_path('routes/api/v1/projects.php'));

@@ -5,11 +5,12 @@ import { Avatar } from "@/components/ledger/Avatar";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { PasswordChangeForm } from "@/components/settings/PasswordChangeForm";
 import { PayrollPinChangeForm } from "@/components/settings/PayrollPinChangeForm";
+import { SampleDataPanel } from "@/components/settings/SampleDataPanel";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { cn } from "@/lib/cn";
 import { isAdmin, ROLE_LABELS } from "@/lib/navigation";
-import { KeyRound, Lock, User } from "lucide-react";
+import { Database, KeyRound, Lock, User } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, type ReactNode } from "react";
 
@@ -17,6 +18,7 @@ const SECTIONS = [
   { id: "profile", label: "Profile", icon: User },
   { id: "payroll-pin", label: "Payroll PIN", icon: Lock },
   { id: "password", label: "Password", icon: KeyRound },
+  { id: "sample-data", label: "Sample data", icon: Database },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -130,6 +132,16 @@ function SettingsContent() {
                 description="Update your account password. You will stay signed in after saving."
               >
                 <PasswordChangeForm />
+              </SettingsSection>
+            ) : null}
+
+            {activeSection === "sample-data" ? (
+              <SettingsSection
+                id="settings-sample-data"
+                title="Sample data"
+                description="Fill your company with realistic projects and hours to try every screen, then remove it in one click."
+              >
+                <SampleDataPanel />
               </SettingsSection>
             ) : null}
 
