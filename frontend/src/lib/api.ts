@@ -15,6 +15,8 @@ import type {
   ProjectAssignee,
   ProjectMember,
   ProjectStatus,
+  ProjectBillingType,
+  ProfitabilityReport,
   TeamMember,
   TimeActionResponse,
   TimeEntry,
@@ -238,6 +240,11 @@ export async function createProject(data: {
   client_name: string;
   description?: string | null;
   hourly_rate?: number | null;
+  billing_type?: ProjectBillingType;
+  budget_hours?: number | null;
+  budget_amount?: number | null;
+  starts_on?: string | null;
+  due_on?: string | null;
 }): Promise<Project> {
   const response = await apiFetch<{ project: Project }>("/projects", {
     method: "POST",
@@ -254,6 +261,11 @@ export async function updateProject(
     description: string | null;
     hourly_rate: number | null;
     status: ProjectStatus;
+    billing_type: ProjectBillingType;
+    budget_hours: number | null;
+    budget_amount: number | null;
+    starts_on: string | null;
+    due_on: string | null;
   }>,
 ): Promise<Project> {
   const response = await apiFetch<{ project: Project }>(`/projects/${id}`, {
@@ -575,6 +587,11 @@ export async function fetchDashboard(range?: ReportDateRange): Promise<Dashboard
 
 export async function fetchOrganizationReport(range?: ReportDateRange): Promise<OrganizationReport> {
   return apiFetch<OrganizationReport>(`/reports/organization${dateRangeQuery(range)}`);
+}
+
+/** Revenue, salary cost and margin. Admin only; needs the payroll PIN. */
+export async function fetchProfitabilityReport(range?: ReportDateRange): Promise<ProfitabilityReport> {
+  return apiFetch<ProfitabilityReport>(`/reports/profitability${dateRangeQuery(range)}`, { payrollPin: true });
 }
 
 export async function fetchManagerReport(range?: ReportDateRange): Promise<ManagerReport> {

@@ -12,6 +12,8 @@ use App\Http\Controllers\Controller;
 
 use App\Models\Project;
 
+use App\Services\Payroll\PayrollVaultService;
+use App\Services\Reporting\ProfitabilityService;
 use App\Services\Reporting\ReportingService;
 
 use App\Services\Tenant\TenantContext;
@@ -35,6 +37,8 @@ class ReportController extends TenantAppController
         private readonly ReportingService $reporting,
 
         private readonly AgentTimerGuard $agentGuard,
+        private readonly ProfitabilityService $profitability,
+        private readonly PayrollVaultService $payrollVault,
 
     ) {}
 
@@ -126,5 +130,19 @@ class ReportController extends TenantAppController
 
     }
 
-}
 
+    public function profitability(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user?->currentRole() !== UserRole::Admin) {
+            abort(403);
+        }
+
+        $this->payrollVault->assertUnlocked($user);
+
+        [$rangeStart, $rangeEnd] = ReportDateRange::fromRequest($request, 'month');
+
+        return response()->json($this->profitability->report($rangeStart, $rangeEnd));
+    }
+}

@@ -92,6 +92,12 @@ export interface Project {
   client_name: string;
   description?: string | null;
   hourly_rate?: string | null;
+  billing_type?: ProjectBillingType;
+  budget_hours?: string | null;
+  /** Fixed fee; only returned to admins. */
+  budget_amount?: string | null;
+  starts_on?: string | null;
+  due_on?: string | null;
   status: ProjectStatus;
   members_count?: number;
   total_tracked_seconds?: number;
@@ -814,4 +820,94 @@ export interface EmployeePayrollAdjustment {
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+}
+
+export type ProjectBillingType = "hourly" | "fixed" | "non_billable";
+
+export type BudgetStatus = "on_track" | "at_risk" | "over_budget" | "no_budget";
+
+export interface ProjectBudgetHealth {
+  budget_hours: number | null;
+  used_hours: number;
+  burn_percent: number | null;
+  elapsed_percent: number | null;
+  forecast_exhausted_on: string | null;
+  starts_on: string | null;
+  due_on: string | null;
+  status: BudgetStatus;
+}
+
+export interface ProfitabilityProjectRow {
+  id: number;
+  name: string;
+  client_name: string;
+  status: ProjectStatus;
+  billing_type: ProjectBillingType;
+  bill_rate: number | null;
+  fixed_fee: number | null;
+  missing_bill_rate: boolean;
+  hours: number;
+  unpriced_hours: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin_percent: number | null;
+  revenue_per_hour: number | null;
+  cost_per_hour: number | null;
+  budget: ProjectBudgetHealth;
+}
+
+export interface ProfitabilityClientRow {
+  client_name: string;
+  /** Only internal (non-billable) projects. */
+  internal: boolean;
+  projects_count: number;
+  hours: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin_percent: number | null;
+}
+
+export interface ProfitabilityEmployeeRow {
+  user_id: number;
+  name: string;
+  hours: number;
+  unpriced_hours: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin_percent: number | null;
+  cost_per_hour: number | null;
+  has_salary_contract: boolean;
+}
+
+export type ProfitabilityInsightSeverity = "critical" | "warning" | "info" | "positive";
+
+export interface ProfitabilityInsight {
+  severity: ProfitabilityInsightSeverity;
+  title: string;
+  detail: string;
+  project_id?: number;
+}
+
+export interface ProfitabilityReport {
+  range: { start_date: string; end_date: string };
+  currency: string;
+  totals: {
+    revenue: number;
+    cost: number;
+    profit: number;
+    margin_percent: number | null;
+    hours: number;
+    billable_hours: number;
+    billable_percent: number | null;
+    unpriced_hours: number;
+    projects_over_budget: number;
+    projects_at_risk: number;
+  };
+  insights: ProfitabilityInsight[];
+  projects: ProfitabilityProjectRow[];
+  clients: ProfitabilityClientRow[];
+  employees: ProfitabilityEmployeeRow[];
 }

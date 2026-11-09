@@ -26,7 +26,7 @@ import {
   canViewReports,
   isAdmin,
 } from "@/lib/navigation";
-import type { Project, ProjectStatus, User } from "@/lib/types";
+import type { Project, ProjectBillingType, ProjectStatus, User } from "@/lib/types";
 import { FolderKanban, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -40,6 +40,25 @@ const STATUS_FILTER_LABELS: Record<"all" | ProjectStatus, string> = {
 const textareaClass =
   "w-full rounded-xl border border-[var(--border)] bg-[var(--card-elevated)] px-3.5 py-2.5 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
 
+type ProjectFormData = {
+  name: string;
+  client_name: string;
+  description: string;
+  hourly_rate: string;
+  status: ProjectStatus;
+  billing_type: ProjectBillingType;
+  budget_hours: string;
+  budget_amount: string;
+  starts_on: string;
+  due_on: string;
+};
+
+const BILLING_OPTIONS: { value: ProjectBillingType; label: string }[] = [
+  { value: "hourly", label: "Hourly — bill each approved hour" },
+  { value: "fixed", label: "Fixed fee — one price for the project" },
+  { value: "non_billable", label: "Internal — not billed to a client" },
+];
+
 function ProjectFormFields({
   initial,
   showHourlyRate,
@@ -52,13 +71,7 @@ function ProjectFormFields({
   initial?: Partial<Project>;
   showHourlyRate: boolean;
   showArchiveStatus: boolean;
-  onSubmit: (data: {
-    name: string;
-    client_name: string;
-    description: string;
-    hourly_rate: string;
-    status: ProjectStatus;
-  }) => void;
+  onSubmit: (data: ProjectFormData) => void;
   onCancel: () => void;
   loading: boolean;
   submitLabel: string;
@@ -68,6 +81,11 @@ function ProjectFormFields({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [hourlyRate, setHourlyRate] = useState(initial?.hourly_rate ?? "");
   const [status, setStatus] = useState<ProjectStatus>(initial?.status ?? "active");
+  const [billingType, setBillingType] = useState<ProjectBillingType>(initial?.billing_type ?? "hourly");
+  const [budgetHours, setBudgetHours] = useState(initial?.budget_hours ?? "");
+  const [budgetAmount, setBudgetAmount] = useState(initial?.budget_amount ?? "");
+  const [startsOn, setStartsOn] = useState(initial?.starts_on ?? "");
+  const [dueOn, setDueOn] = useState(initial?.due_on ?? "");
 
   const statusOptions: ProjectStatus[] = showArchiveStatus
     ? ["active", "inactive", "archived"]
@@ -78,7 +96,18 @@ function ProjectFormFields({
       className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ name, client_name: clientName, description, hourly_rate: hourlyRate, status });
+        onSubmit({
+          name,
+          client_name: clientName,
+          description,
+          hourly_rate: hourlyRate,
+          status,
+          billing_type: billingType,
+          budget_hours: budgetHours,
+          budget_amount: budgetAmount,
+          starts_on: startsOn,
+          due_on: dueOn,
+        });
       }}
     >
       <FormField label="Project name" htmlFor="project-name" required>
@@ -109,12 +138,65 @@ function ProjectFormFields({
           placeholder="Scope, deliverables, or notes"
         />
       </FormField>
-      <div className={`grid gap-4 ${showHourlyRate ? "sm:grid-cols-2" : ""}`}>
-        {showHourlyRate ? (
+      <FormField label="Billing" htmlFor="project-billing">
+        <Select
+          id="project-billing"
+          value={billingType}
+          onChange={(e) => setBillingType(e.target.value as ProjectBillingType)}
+        >
+          {BILLING_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField label="Budget (hours)" htmlFor="project-budget-hours" hint="Used to track budget burn">
+          <Input
+            id="project-budget-hours"
+            type="number"
+            min="0"
+            step="0.5"
+            value={budgetHours}
+            onChange={(e) => setBudgetHours(e.target.value)}
+            className="num"
+            placeholder="120"
+          />
+        </FormField>
+        {showHourlyRate && billingType === "fixed" ? (
+          <FormField label="Fixed fee (Rs.)" htmlFor="project-fee" hint="Admin only — the price agreed with the client">
+            <Input
+              id="project-fee"
+              type="number"
+              min="0"
+              step="1"
+              value={budgetAmount}
+              onChange={(e) => setBudgetAmount(e.target.value)}
+              className="num"
+              placeholder="250000"
+            />
+          </FormField>
+        ) : null}
+        <FormField label="Start date" htmlFor="project-starts-on">
+          <Input id="project-starts-on" type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
+        </FormField>
+        <FormField label="Due date" htmlFor="project-due-on">
+          <Input
+            id="project-due-on"
+            type="date"
+            value={dueOn}
+            min={startsOn || undefined}
+            onChange={(e) => setDueOn(e.target.value)}
+          />
+        </FormField>
+      </div>
+      <div className={`grid gap-4 ${showHourlyRate && billingType === "hourly" ? "sm:grid-cols-2" : ""}`}>
+        {showHourlyRate && billingType === "hourly" ? (
           <FormField
-            label="Hourly rate"
+            label="Bill rate (Rs. per hour)"
             htmlFor="project-rate"
-            hint="Admin only — used for payroll calculations"
+            hint="Admin only — what the client pays per hour"
           >
             <Input
               id="project-rate"
@@ -224,32 +306,23 @@ export function ProjectsManager({ user }: { user: User }) {
     ? ["all", "active", "inactive", "archived"]
     : ["all", "active", "inactive"];
 
-  async function handleSave(
-    data: {
-      name: string;
-      client_name: string;
-      description: string;
-      hourly_rate: string;
-      status: ProjectStatus;
-    },
-    project?: Project | null,
-  ) {
+  async function handleSave(data: ProjectFormData, project?: Project | null) {
     setSaving(true);
     setError("");
 
-    const payload: {
-      name: string;
-      client_name: string;
-      description: string | null;
-      hourly_rate?: number | null;
-    } = {
+    const payload: Parameters<typeof createProject>[0] = {
       name: data.name,
       client_name: data.client_name,
       description: data.description || null,
+      billing_type: data.billing_type,
+      budget_hours: data.budget_hours ? Number(data.budget_hours) : null,
+      starts_on: data.starts_on || null,
+      due_on: data.due_on || null,
     };
 
     if (showHourlyRate) {
       payload.hourly_rate = data.hourly_rate ? Number(data.hourly_rate) : null;
+      payload.budget_amount = data.budget_amount ? Number(data.budget_amount) : null;
     }
 
     try {

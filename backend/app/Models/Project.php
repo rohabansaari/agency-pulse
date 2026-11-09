@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProjectBillingType;
 use App\Enums\ProjectStatus;
 use App\Models\Concerns\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,11 @@ class Project extends Model
         'client_name',
         'description',
         'hourly_rate',
+        'billing_type',
+        'budget_hours',
+        'budget_amount',
+        'starts_on',
+        'due_on',
         'status',
     ];
 
@@ -27,6 +33,11 @@ class Project extends Model
     {
         return [
             'hourly_rate' => 'decimal:2',
+            'billing_type' => ProjectBillingType::class,
+            'budget_hours' => 'decimal:2',
+            'budget_amount' => 'decimal:2',
+            'starts_on' => 'date',
+            'due_on' => 'date',
             'status' => ProjectStatus::class,
         ];
     }
@@ -46,6 +57,11 @@ class Project extends Model
     public function timeEntries(): HasMany
     {
         return $this->hasMany(TimeEntry::class);
+    }
+
+    public function billingType(): ProjectBillingType
+    {
+        return $this->billing_type ?? ProjectBillingType::Hourly;
     }
 
     public function isArchived(): bool

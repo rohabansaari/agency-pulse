@@ -23,6 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Overtime Management", href: "/admin/overtime", roles: ["admin", "sub_admin"] },
   { label: "Payroll", href: "/admin/payroll", roles: ["admin"] },
   { label: "Reports", href: "/reports", roles: ["admin", "sub_admin", "manager"] },
+  { label: "Profitability", href: "/reports/profitability", roles: ["admin"] },
   { label: "Employees", href: "/employees", roles: ["admin", "sub_admin"] },
   { label: "Settings", href: "/settings", roles: ["admin"] },
 ];
@@ -50,6 +51,7 @@ const ROLE_NAV: Record<UserRole, string[]> = {
     "Payroll",
     "Advance Salary",
     "Reports",
+    "Profitability",
     "Screenshots",
     "Employees",
     "Settings",

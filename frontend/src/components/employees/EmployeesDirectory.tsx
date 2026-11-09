@@ -138,8 +138,9 @@ export function EmployeesDirectory({ user }: { user: User }) {
     return <Spinner label="Loading employees…" />;
   }
 
-  const th = ledgerTable.th;
-  const td = ledgerTable.td;
+  // Tighter than the shared ledger cells so all 11 columns fit a laptop screen.
+  const th = "px-3 py-2.5 font-medium first:pl-5 last:pr-4";
+  const td = "px-3 py-3 align-middle first:pl-5 last:pr-4";
 
   return (
     <PageTransition>
@@ -224,7 +225,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
           </div>
 
           <div className={ledgerTable.wrap}>
-            <table className={cn(ledgerTable.table, "min-w-[67.5rem]")}>
+            <table className={ledgerTable.table}>
               <thead className={ledgerTable.thead}>
                 <tr>
                   <th scope="col" className={th}>Employee</th>
@@ -233,9 +234,9 @@ export function EmployeesDirectory({ user }: { user: User }) {
                   <th scope="col" className={th}>Status</th>
                   <th scope="col" className={th}>Timer</th>
                   <th scope="col" className={cn(th, "text-right")}>Month hrs</th>
-                  <th scope="col" className={cn(th, "text-right")}>Leave</th>
+                  <th scope="col" className={cn(th, "hidden text-right min-[1180px]:table-cell")}>Leave</th>
                   <th scope="col" className={cn(th, "text-right")}>Projects</th>
-                  <th scope="col" className={cn(th, "text-right")}>OT reqs</th>
+                  <th scope="col" className={cn(th, "hidden text-right min-[1180px]:table-cell")}>OT reqs</th>
                   <th scope="col" className={th}>Joined</th>
                   <th scope="col" className={cn(th, "text-right")}>
                     <span className="sr-only">Actions</span>
@@ -284,7 +285,7 @@ export function EmployeesDirectory({ user }: { user: User }) {
                         {canEditStatus && canEditMemberStatus(member.role) ? (
                           <Dropdown
                             size="sm"
-                            className="w-[8.25rem]"
+                            className="w-[7.5rem]"
                             value={member.status}
                             onChange={async (value) => {
                               try {
@@ -308,11 +309,11 @@ export function EmployeesDirectory({ user }: { user: User }) {
                       <td className={cn(td, "num text-right text-[0.8125rem]")}>
                         {formatDuration(member.time_tracked_month_seconds ?? 0)}
                       </td>
-                      <td className={cn(td, "num text-right text-[0.8125rem] text-[var(--muted)]")}>
+                      <td className={cn(td, "num hidden text-right text-[0.8125rem] text-[var(--muted)] min-[1180px]:table-cell")}>
                         {formatDuration(member.approved_leave_seconds ?? 0)}
                       </td>
                       <td className={cn(td, "tnum text-right")}>{member.assigned_projects_count ?? 0}</td>
-                      <td className={cn(td, "tnum text-right")}>{member.overtime_requests_count ?? 0}</td>
+                      <td className={cn(td, "tnum hidden text-right min-[1180px]:table-cell")}>{member.overtime_requests_count ?? 0}</td>
                       <td className={cn(td, "whitespace-nowrap")}>
                         <span className="block">{shortDate(member.joined_at)}</span>
                         <span className="block text-[0.8125rem] text-[var(--muted)]">

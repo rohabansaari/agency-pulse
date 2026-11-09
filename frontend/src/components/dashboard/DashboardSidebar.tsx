@@ -18,6 +18,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   LogOut,
+  PiggyBank,
   Settings,
   Users,
   UsersRound,
@@ -48,6 +49,7 @@ const ICONS: Record<string, ComponentType<{ className?: string; strokeWidth?: nu
   Payroll: DollarSign,
   "Advance Salary": Wallet,
   Reports: BarChart3,
+  Profitability: PiggyBank,
   Settings: Settings,
   Platform: Building2,
   Screenshots: Camera,
@@ -62,7 +64,7 @@ const GROUPS: Record<UserRole, { id: string; label: string; labels: string[] }[]
     { id: "people", label: "People", labels: ["Employees", "Teams"] },
     { id: "work", label: "Work", labels: ["Projects", "Time Tracking", "Screenshots"] },
     { id: "ops", label: "Operations", labels: ["Leave Management", "Overtime Management", "Payroll", "Advance Salary"] },
-    { id: "insights", label: "Insights", labels: ["Reports", "Settings"] },
+    { id: "insights", label: "Insights", labels: ["Reports", "Profitability", "Settings"] },
   ],
   sub_admin: [
     { id: "overview", label: "Overview", labels: ["Dashboard"] },
@@ -105,12 +107,20 @@ export function DashboardSidebar({
   const items = navItemsForRole(user.role);
   const groups = useMemo(() => groupNavItems(items, user.role), [items, user.role]);
 
-  function isActive(item: NavItem): boolean {
+  function matches(item: NavItem): boolean {
     return (
       pathname === item.href ||
       (item.href !== "/dashboard" &&
         item.href !== "/leave" &&
         pathname.startsWith(item.href))
+    );
+  }
+
+  function isActive(item: NavItem): boolean {
+    // On /reports/profitability only "Profitability" is active, not "Reports" too.
+    return (
+      matches(item) &&
+      !items.some((other) => other.href.length > item.href.length && other.href.startsWith(item.href) && matches(other))
     );
   }
 
@@ -131,11 +141,11 @@ export function DashboardSidebar({
         </Link>
       </div>
 
-      <nav aria-label="Main" className="app-sidebar-nav space-y-5 px-3 pb-4">
+      <nav aria-label="Main" className="app-sidebar-nav space-y-5 px-3 pb-4 [@media(max-height:900px)]:space-y-3">
         {groups.map((group) => (
           <div key={group.id}>
             {groups.length > 1 ? (
-              <p className="mb-1.5 px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[var(--night-muted)]">
+              <p className="mb-1.5 px-3 text-[0.6875rem] [@media(max-height:900px)]:mb-1 font-semibold uppercase tracking-[0.08em] text-[var(--night-muted)]">
                 {group.label}
               </p>
             ) : null}
@@ -150,7 +160,7 @@ export function DashboardSidebar({
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group relative flex min-h-11 items-center gap-3 rounded-[0.625rem] px-3 text-sm transition-colors duration-150",
+                      "group relative flex min-h-11 items-center gap-3 [@media(max-height:900px)]:min-h-9 rounded-[0.625rem] px-3 text-sm transition-colors duration-150",
                       active
                         ? "bg-[var(--night-raised)] font-medium text-white"
                         : "text-[var(--night-text)] hover:bg-white/[0.06] hover:text-white",

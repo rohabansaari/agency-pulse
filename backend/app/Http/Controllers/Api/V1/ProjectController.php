@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 
 
+use App\Enums\ProjectBillingType;
 use App\Enums\ProjectStatus;
 
 use App\Enums\UserRole;
@@ -237,6 +238,12 @@ class ProjectController extends TenantAppController
 
         }
 
+        if ($request->has('budget_amount') && ! $isAdmin) {
+            throw ValidationException::withMessages([
+                'budget_amount' => ['You are not allowed to set or modify project fees.'],
+            ]);
+        }
+
 
 
         $rules = [
@@ -249,6 +256,14 @@ class ProjectController extends TenantAppController
 
             'status' => ['nullable', Rule::enum(ProjectStatus::class)],
 
+            'billing_type' => ['sometimes', Rule::enum(ProjectBillingType::class)],
+            'budget_hours' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'starts_on' => ['nullable', 'date'],
+            'due_on' => array_merge(
+                ['nullable', 'date'],
+                $request->filled('starts_on') ? ['after_or_equal:starts_on'] : [],
+            ),
+
         ];
 
 
@@ -256,6 +271,7 @@ class ProjectController extends TenantAppController
         if ($isAdmin) {
 
             $rules['hourly_rate'] = ['nullable', 'numeric', 'min:0'];
+            $rules['budget_amount'] = ['nullable', 'numeric', 'min:0'];
 
         }
 
@@ -267,7 +283,7 @@ class ProjectController extends TenantAppController
 
         if (! $isAdmin) {
 
-            unset($validated['hourly_rate']);
+            unset($validated['hourly_rate'], $validated['budget_amount']);
 
         }
 

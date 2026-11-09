@@ -186,7 +186,12 @@ body {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
+  /* Still scrolls (wheel, touch, keyboard) on short screens, without a visible bar. */
+  scrollbar-width: none;
+}
+
+.app-sidebar-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .app-layout {
