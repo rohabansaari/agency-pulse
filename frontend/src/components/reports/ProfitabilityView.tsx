@@ -490,7 +490,7 @@ export function ProfitabilityView() {
               value={percent(totals.margin_percent)}
               icon={<TrendingUp className="h-4 w-4" />}
               progress={totals.margin_percent !== null ? Math.max(0, totals.margin_percent) : undefined}
-              detail={`${percent(totals.billable_percent)} of hours billable`}
+              detail={totals.billable_percent === null ? "No hours logged yet" : `${percent(totals.billable_percent)} of hours billable`}
             />
           </section>
 

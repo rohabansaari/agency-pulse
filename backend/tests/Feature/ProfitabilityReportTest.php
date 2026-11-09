@@ -322,4 +322,264 @@ class ProfitabilityReportTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['due_on']);
     }
+
+    /* ------------------------------------------------------------------ */
+    /* QA edge cases                                                       */
+    /* ------------------------------------------------------------------ */
+
+    private function adminWithVault(): User
+    {
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin))
+            ->postJson('/api/v1/payroll/vault/initialize', [
+                'payroll_pin' => '1234',
+                'payroll_pin_confirmation' => '1234',
+            ])
+            ->assertCreated();
+
+        return $admin;
+    }
+
+    public function test_empty_organization_returns_zeroes_without_errors(): void
+    {
+        $admin = $this->adminWithVault();
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability')
+            ->assertOk()
+            ->assertJsonPath('totals.revenue', 0)
+            ->assertJsonPath('totals.margin_percent', null)
+            ->assertJsonPath('totals.billable_percent', null)
+            ->assertJsonPath('projects', [])
+            ->assertJsonPath('clients', [])
+            ->assertJsonPath('employees', [])
+            ->assertJsonPath('insights', []);
+    }
+
+    public function test_wrong_pin_is_rejected(): void
+    {
+        ['admin' => $admin] = $this->fixture();
+
+        $this->withHeaders($this->headers($admin, '9999'))
+            ->getJson('/api/v1/reports/profitability')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['payroll_vault']);
+    }
+
+    public function test_invalid_date_ranges_are_rejected(): void
+    {
+        ['admin' => $admin] = $this->fixture();
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability?start_date=30/11/2026&end_date=01/11/2026')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['end_date']);
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability?start_date=01/11/2026')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['start_date']);
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability?start_date=2026-11-01&end_date=2026-11-30')
+            ->assertUnprocessable();
+    }
+
+    public function test_default_range_is_this_month(): void
+    {
+        ['admin' => $admin] = $this->fixture();
+
+        $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability')
+            ->assertOk()
+            ->assertJsonPath('range.start_date', '01/11/2026')
+            ->assertJsonPath('range.end_date', '20/11/2026');
+    }
+
+    public function test_range_with_no_work_keeps_lifetime_budget_burn(): void
+    {
+        ['admin' => $admin] = $this->fixture();
+
+        $response = $this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability?start_date=01/01/2026&end_date=31/01/2026')
+            ->assertOk();
+
+        $this->assertEqualsWithDelta(0, $response->json('totals.hours'), 0.001);
+        $this->assertSame([], $response->json('employees'));
+        $this->assertSame([], $response->json('clients'));
+        $beta = collect($response->json('projects'))->firstWhere('name', 'Beta Rebrand');
+        $this->assertSame('over_budget', $beta['budget']['status']);
+        $this->assertEqualsWithDelta(50, $beta['budget']['used_hours'], 0.001);
+    }
+
+    public function test_archived_projects_appear_only_when_they_have_work_in_range(): void
+    {
+        ['admin' => $admin, 'ali' => $ali] = $this->fixture();
+        $orgId = $admin->organization_id;
+
+        $archivedWithWork = Project::factory()->create([
+            'organization_id' => $orgId, 'name' => 'Old Campaign', 'status' => 'archived', 'hourly_rate' => 1000,
+        ]);
+        Project::factory()->create([
+            'organization_id' => $orgId, 'name' => 'Dead Project', 'status' => 'archived',
+        ]);
+        $this->work($ali, $archivedWithWork, 3, '2026-11-02 09:00');
+
+        $names = collect($this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability?start_date=01/11/2026&end_date=30/11/2026')
+            ->assertOk()
+            ->json('projects'))->pluck('name');
+
+        $this->assertContains('Old Campaign', $names);
+        $this->assertNotContains('Dead Project', $names);
+    }
+
+    public function test_fixed_fee_without_hour_budget_spreads_fee_over_all_hours(): void
+    {
+        ['admin' => $admin, 'ali' => $ali] = $this->fixture();
+
+        $delta = Project::factory()->create([
+            'organization_id' => $admin->organization_id,
+            'name' => 'Delta Video',
+            'client_name' => 'Wayne Media',
+            'billing_type' => ProjectBillingType::Fixed,
+            'hourly_rate' => null,
+            'budget_amount' => 100000,
+            'budget_hours' => null,
+        ]);
+        // 15h in October, 5h in November: November earns 5/20 of the fee.
+        $this->work($ali, $delta, 15, '2026-10-05 09:00');
+        $this->work($ali, $delta, 5, '2026-11-05 09:00');
+
+        $row = collect($this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability?start_date=01/11/2026&end_date=30/11/2026')
+            ->assertOk()
+            ->json('projects'))->firstWhere('name', 'Delta Video');
+
+        $this->assertEqualsWithDelta(25000, $row['revenue'], 0.01);
+        $this->assertSame('no_budget', $row['budget']['status']);
+    }
+
+    public function test_project_past_due_date_shows_full_elapsed_time(): void
+    {
+        ['admin' => $admin, 'ali' => $ali] = $this->fixture();
+
+        $late = Project::factory()->create([
+            'organization_id' => $admin->organization_id,
+            'name' => 'Late Launch',
+            'hourly_rate' => 1000,
+            'budget_hours' => 100,
+            'starts_on' => '2026-09-01',
+            'due_on' => '2026-10-31',
+        ]);
+        $this->work($ali, $late, 10, '2026-11-02 09:00');
+
+        $budget = collect($this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability?start_date=01/11/2026&end_date=30/11/2026')
+            ->assertOk()
+            ->json('projects'))->firstWhere('name', 'Late Launch')['budget'];
+
+        $this->assertEqualsWithDelta(100, $budget['elapsed_percent'], 0.01);
+        // 10% burn with 100% of time gone isn't "burning too fast".
+        $this->assertSame('on_track', $budget['status']);
+    }
+
+    public function test_salary_change_mid_period_costs_each_day_at_its_own_rate(): void
+    {
+        ['admin' => $admin, 'ali' => $ali, 'alpha' => $alpha] = $this->fixture();
+
+        EmployeeSalaryContract::query()->where('user_id', $ali->id)->update([
+            'effective_to' => '2026-11-14',
+            'is_active' => false,
+        ]);
+        EmployeeSalaryContract::create([
+            'organization_id' => $admin->organization_id,
+            'user_id' => $ali->id,
+            'salary_type' => SalaryType::Hourly,
+            'hourly_rate' => '800',
+            'effective_from' => '2026-11-15',
+            'is_active' => true,
+        ]);
+        // Existing 10h on 3 Nov at 500, plus 5h on 16 Nov at 800.
+        $this->work($ali, $alpha, 5, '2026-11-16 09:00');
+
+        $ali = collect($this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability?start_date=01/11/2026&end_date=30/11/2026')
+            ->assertOk()
+            ->json('employees'))->firstWhere('name', 'Ali');
+
+        // 10h × 500 + 5h × 800 on Alpha, plus 2h × 500 on Internal Tools.
+        $this->assertEqualsWithDelta(10000, $ali['cost'], 0.01);
+    }
+
+    public function test_other_organizations_data_never_leaks(): void
+    {
+        ['admin' => $admin] = $this->fixture();
+
+        $other = User::factory()->admin()->create();
+        $otherProject = Project::factory()->create([
+            'organization_id' => $other->organization_id, 'name' => 'Competitor Secret', 'hourly_rate' => 9999,
+        ]);
+        $this->work($other, $otherProject, 50, '2026-11-03 09:00');
+
+        $names = collect($this->withHeaders($this->headers($admin))
+            ->getJson('/api/v1/reports/profitability?start_date=01/11/2026&end_date=30/11/2026')
+            ->assertOk()
+            ->json('projects'))->pluck('name');
+
+        $this->assertNotContains('Competitor Secret', $names);
+    }
+
+    public function test_employees_see_budget_hours_but_not_fees(): void
+    {
+        ['admin' => $admin, 'ali' => $ali, 'beta' => $beta] = $this->fixture();
+        $beta->members()->attach($ali->id, ['role_in_project' => 'worker']);
+        Sanctum::actingAs($ali);
+
+        $this->withHeaders($this->headers($ali, null))
+            ->getJson("/api/v1/projects/{$beta->id}")
+            ->assertOk()
+            ->assertJsonPath('budget_hours', '40.00')
+            ->assertJsonMissingPath('budget_amount')
+            ->assertJsonMissingPath('hourly_rate');
+    }
+
+    public function test_manager_editing_a_project_without_new_fields_still_works(): void
+    {
+        ['admin' => $admin, 'alpha' => $alpha] = $this->fixture();
+        $manager = User::factory()->manager()->create(['organization_id' => $admin->organization_id]);
+        Sanctum::actingAs($manager);
+
+        // The payload the old form sent.
+        $this->withHeaders($this->headers($manager, null))
+            ->putJson("/api/v1/projects/{$alpha->id}", [
+                'name' => 'Alpha Website v2',
+                'client_name' => 'Acme',
+                'description' => null,
+            ])
+            ->assertOk()
+            ->assertJsonPath('project.name', 'Alpha Website v2')
+            ->assertJsonPath('project.billing_type', 'hourly');
+
+        $this->assertEquals('1500.00', $alpha->fresh()->hourly_rate);
+    }
+
+    public function test_invalid_billing_type_and_negative_budget_are_rejected(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        $this->withHeaders($this->headers($admin, null))
+            ->postJson('/api/v1/projects', [
+                'name' => 'Bad',
+                'client_name' => 'Hooli',
+                'billing_type' => 'barter',
+                'budget_hours' => -5,
+                'budget_amount' => -1,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['billing_type', 'budget_hours', 'budget_amount']);
+    }
 }
