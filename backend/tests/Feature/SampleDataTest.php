@@ -208,4 +208,21 @@ class SampleDataTest extends TestCase
 
         $this->artisan('sample-data:load', ['organization' => 'No Such Company'])->assertExitCode(1);
     }
+
+    public function test_sample_data_includes_a_paid_and_an_overdue_invoice_and_removes_them(): void
+    {
+        $this->withHeaders($this->headers())->postJson('/api/v1/sample-data')->assertCreated();
+
+        $response = $this->withHeaders($this->headers())->getJson('/api/v1/invoices')->assertOk();
+        $statuses = collect($response->json('invoices'))->map(fn ($invoice) => $invoice['status'].($invoice['overdue'] ? '+overdue' : ''))->sort()->values()->all();
+        $this->assertSame(['paid', 'sent+overdue'], $statuses);
+        $this->assertGreaterThan(0, $response->json('summary.unbilled'), 'Recent work is left to invoice.');
+
+        // An invoice made by hand from sample work is removed with the sample data.
+        $client = $this->withHeaders($this->headers())->getJson('/api/v1/invoices/unbilled')->json('clients.0.client_name');
+        $this->withHeaders($this->headers())->postJson('/api/v1/invoices', ['client_name' => $client])->assertCreated();
+
+        $this->withHeaders($this->headers())->deleteJson('/api/v1/sample-data')->assertOk();
+        $this->assertSame([], $this->withHeaders($this->headers())->getJson('/api/v1/invoices')->json('invoices'));
+    }
 }

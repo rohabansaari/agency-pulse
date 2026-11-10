@@ -20,6 +20,7 @@ class Organization extends Model
         'onboarding_completed',
         'onboarding_step',
         'onboarding_skipped_steps',
+        'invoice_settings',
         'timezone',
         'logo_url',
         'website',
@@ -34,6 +35,7 @@ class Organization extends Model
             'onboarding_completed' => 'boolean',
             'onboarding_step' => 'integer',
             'onboarding_skipped_steps' => 'array',
+            'invoice_settings' => 'array',
             'payroll_pin' => 'encrypted',
             'payroll_pin_created_at' => 'datetime',
         ];

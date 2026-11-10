@@ -19,6 +19,7 @@ class TimeEntry extends Model
         'organization_id',
         'type',
         'project_id',
+        'invoice_id',
         'team_id',
         'manager_id',
         'start_time',

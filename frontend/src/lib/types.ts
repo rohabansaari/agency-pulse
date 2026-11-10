@@ -915,3 +915,108 @@ export interface ProfitabilityReport {
   clients: ProfitabilityClientRow[];
   employees: ProfitabilityEmployeeRow[];
 }
+
+/* ------------------------------------------------------------------ */
+/* Invoicing                                                           */
+/* ------------------------------------------------------------------ */
+
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+export type InvoiceLineKind = "hourly" | "fixed" | "custom";
+
+export interface InvoiceSettings {
+  business_name: string;
+  address: string;
+  tax_id: string;
+  payment_details: string;
+  default_due_days: number;
+  default_tax_percent: number;
+  number_prefix: string;
+  next_number: number;
+}
+
+export interface InvoiceLine {
+  id: number;
+  project_id: number | null;
+  kind: InvoiceLineKind;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+}
+
+export interface Invoice {
+  id: number;
+  number: string;
+  client_name: string;
+  bill_to: string | null;
+  status: InvoiceStatus;
+  overdue: boolean;
+  /** ISO dates (YYYY-MM-DD). */
+  issue_date: string;
+  due_date: string;
+  period_start: string | null;
+  period_end: string | null;
+  currency: string;
+  subtotal: number;
+  tax_percent: number;
+  tax_amount: number;
+  discount: number;
+  total: number;
+  amount_paid: number;
+  balance: number;
+  notes: string | null;
+  sent_at: string | null;
+  paid_at: string | null;
+  voided_at: string | null;
+  created_at: string | null;
+}
+
+export interface InvoiceDetail extends Invoice {
+  lines: InvoiceLine[];
+  hours_billed: number;
+  settings: InvoiceSettings;
+}
+
+export interface InvoiceSummary {
+  outstanding: number;
+  outstanding_count: number;
+  overdue: number;
+  overdue_count: number;
+  paid_this_month: number;
+  drafts: number;
+  unbilled: number;
+}
+
+export interface InvoiceList {
+  summary: InvoiceSummary;
+  invoices: Invoice[];
+  clients: string[];
+}
+
+export interface UnbilledClient {
+  client_name: string;
+  hours: number;
+  amount: number;
+  first_date: string | null;
+  last_date: string | null;
+  projects: { id: number; name: string; billing_type: ProjectBillingType; hours: number; amount: number }[];
+}
+
+export interface InvoiceLineInput {
+  id?: number;
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface InvoiceUpdate {
+  client_name?: string;
+  bill_to?: string | null;
+  /** dd/mm/yyyy */
+  issue_date?: string;
+  due_date?: string;
+  notes?: string | null;
+  tax_percent?: number;
+  discount?: number;
+  lines?: InvoiceLineInput[];
+}
