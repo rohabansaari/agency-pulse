@@ -24,11 +24,13 @@ use App\Models\Team;
 use App\Models\TeamMember;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Services\Auth\MembershipRoleSync;
 use App\Services\Invoicing\InvoiceService;
 use App\Services\Tenant\TenantContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -60,7 +62,27 @@ class SampleDataService
         'team_member' => TeamMember::class,
         'team' => Team::class,
         'salary_contract' => EmployeeSalaryContract::class,
+        // Sample people last: everything above may point at them.
+        'organization_member' => OrganizationMember::class,
+        'user' => User::class,
     ];
+
+    /**
+     * People created by "Use a sample team" for a company with nobody to log
+     * sample work against: [name, role]. Their addresses are on a domain with
+     * no mailboxes and they get random passwords, so they never sign in.
+     */
+    private const SAMPLE_PEOPLE = [
+        ['Ayesha Khan', UserRole::Employee],
+        ['Bilal Ahmed', UserRole::Employee],
+        ['Sana Malik', UserRole::Employee],
+        ['Usman Tariq', UserRole::Employee],
+        ['Hira Shah', UserRole::Employee],
+        ['Jane Smith', UserRole::Employee],
+        ['Mark Wilson', UserRole::Manager],
+    ];
+
+    public const SAMPLE_EMAIL_DOMAIN = 'sample.agencypulse.in';
 
     /**
      * [name, client, billing type, bill rate, fixed fee, budget as a multiple of hours used, starts (days ago), due (days ahead)]
@@ -103,12 +125,19 @@ class SampleDataService
     /**
      * @return array<string, int> rows created per type
      */
-    public function load(User $admin): array
+    public function load(User $admin, bool $withSampleTeam = false): array
     {
         if ($this->status()['loaded']) {
             throw ValidationException::withMessages([
                 'sample_data' => ['Sample data is already loaded. Remove it before loading it again.'],
             ]);
+        }
+
+        $this->created = [];
+        $people = [];
+
+        if ($withSampleTeam) {
+            $people = DB::transaction(fn () => $this->samplePeople());
         }
 
         $employees = $this->employees();
@@ -121,7 +150,6 @@ class SampleDataService
 
         // Same sample every time for the same people.
         mt_srand(20261109 + $employees->count());
-        $this->created = [];
 
         DB::transaction(function () use ($admin, $employees) {
             $this->contracts($employees);
@@ -137,7 +165,7 @@ class SampleDataService
             $this->record();
         });
 
-        return array_map('count', $this->created);
+        return [...$people, ...array_map('count', $this->created)];
     }
 
     /**
@@ -149,6 +177,15 @@ class SampleDataService
         $removed = 0;
 
         DB::transaction(function () use ($organizationId, &$removed) {
+            // Role assignments of sample people (a polymorphic pivot with no foreign key).
+            DB::table('model_has_roles')
+                ->where('model_type', User::class)
+                ->whereIn('model_id', DB::table('sample_data_records')
+                    ->where('organization_id', $organizationId)
+                    ->where('record_type', 'user')
+                    ->pluck('record_id'))
+                ->delete();
+
             // Invoices someone made from sample work go too, so none point at deleted projects.
             $sampleProjects = DB::table('sample_data_records')
                 ->where('organization_id', $organizationId)
@@ -623,6 +660,62 @@ class SampleDataService
 
             $this->track('invoice', $invoice);
         }
+    }
+
+    /**
+     * Six sample employees and, if the company has no manager, a sample one,
+     * so a brand-new workspace can be explored before anyone is invited.
+     */
+    /**
+     * @return array<string, int> people created per type
+     */
+    private function samplePeople(): array
+    {
+        $organizationId = TenantContext::id();
+        $hasManager = OrganizationMember::query()
+            ->where('organization_id', $organizationId)
+            ->where('status', OrganizationMemberStatus::Active)
+            ->where('role', UserRole::Manager)
+            ->exists();
+        $sync = app(MembershipRoleSync::class);
+
+        foreach (self::SAMPLE_PEOPLE as [$name, $role]) {
+            if ($role === UserRole::Manager && $hasManager) {
+                continue;
+            }
+
+            $email = Str::slug($name, '.').'.'.$organizationId.'@'.self::SAMPLE_EMAIL_DOMAIN;
+
+            if (User::query()->where('email', $email)->exists()) {
+                continue;
+            }
+
+            $user = User::query()->create([
+                'organization_id' => $organizationId,
+                'name' => $name,
+                'email' => $email,
+                'password' => Str::random(40),
+                'role' => $role,
+            ]);
+            $membership = OrganizationMember::query()->create([
+                'organization_id' => $organizationId,
+                'user_id' => $user->id,
+                'role' => $role,
+                'status' => OrganizationMemberStatus::Active,
+                'joined_at' => Carbon::now(),
+            ]);
+            $sync->syncFromMembership($membership);
+
+            $this->track('user', $user);
+            $this->track('organization_member', $membership);
+        }
+
+        // Record them now, so a failed load can still be cleaned up by "Remove".
+        $this->record();
+        $counts = array_map('count', $this->created);
+        $this->created = [];
+
+        return $counts;
     }
 
     private function track(string $type, \Illuminate\Database\Eloquent\Model $model): void

@@ -1374,8 +1374,12 @@ export async function fetchSampleDataStatus(): Promise<SampleDataStatus> {
   return apiFetch<SampleDataStatus>("/sample-data");
 }
 
-export async function loadSampleData(): Promise<SampleDataStatus> {
-  return apiFetch<SampleDataStatus>("/sample-data", { method: "POST" });
+/** `sampleTeam` also creates sample employees (and a manager) for a company that has none yet. */
+export async function loadSampleData(options: { sampleTeam?: boolean } = {}): Promise<SampleDataStatus> {
+  return apiFetch<SampleDataStatus>("/sample-data", {
+    method: "POST",
+    body: JSON.stringify(options.sampleTeam ? { sample_team: true } : {}),
+  });
 }
 
 export async function removeSampleData(): Promise<SampleDataStatus> {

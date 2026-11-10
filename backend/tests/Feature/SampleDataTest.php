@@ -225,4 +225,44 @@ class SampleDataTest extends TestCase
         $this->withHeaders($this->headers())->deleteJson('/api/v1/sample-data')->assertOk();
         $this->assertSame([], $this->withHeaders($this->headers())->getJson('/api/v1/invoices')->json('invoices'));
     }
+
+    public function test_a_new_workspace_can_explore_with_a_sample_team_and_remove_it(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $orgId = $admin->organization_id;
+        Sanctum::actingAs($admin);
+        $headers = ['X-Organization-Id' => (string) $orgId];
+
+        // Nobody to log sample work against, so the plain load is refused…
+        $this->withHeaders($headers)->postJson('/api/v1/sample-data')->assertStatus(422);
+
+        // …and "use a sample team" creates the people first.
+        $this->withHeaders($headers)->postJson('/api/v1/sample-data', ['sample_team' => true])
+            ->assertCreated()
+            ->assertJsonPath('loaded', true)
+            ->assertJsonPath('created.user', 7)
+            ->assertJsonPath('employees', 6);
+
+        $sample = User::query()->where('email', 'like', '%@'.\App\Services\SampleData\SampleDataService::SAMPLE_EMAIL_DOMAIN)->get();
+        $this->assertCount(7, $sample);
+        $this->assertSame(1, $sample->where('role', \App\Enums\UserRole::Manager)->count());
+        $this->assertTrue($sample->every(fn (User $user) => $user->organization_id === $orgId));
+        $this->assertGreaterThan(100, TimeEntry::query()->where('organization_id', $orgId)->count());
+        $this->withHeaders($headers)->getJson('/api/v1/invoices')->assertOk()->assertJsonCount(2, 'invoices');
+
+        $this->withHeaders($headers)->deleteJson('/api/v1/sample-data')->assertOk()->assertJsonPath('loaded', false);
+
+        $this->assertSame(0, User::query()->where('email', 'like', '%@'.\App\Services\SampleData\SampleDataService::SAMPLE_EMAIL_DOMAIN)->count());
+        $this->assertSame(0, TimeEntry::query()->where('organization_id', $orgId)->count());
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('model_has_roles')->whereNotIn('model_id', User::query()->pluck('id'))->count());
+        $this->assertNotNull(User::query()->find($admin->id), 'The admin stays.');
+    }
+
+    public function test_sample_team_adds_no_second_manager_when_one_exists(): void
+    {
+        $this->withHeaders($this->headers())->postJson('/api/v1/sample-data', ['sample_team' => true])
+            ->assertCreated()
+            ->assertJsonPath('created.user', 6)
+            ->assertJsonPath('employees', 9);
+    }
 }
