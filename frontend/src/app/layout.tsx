@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { themeBootScript } from "@/lib/theme";
 import "./globals.css";
 
-// Ledger typefaces: Geist for text, Geist Mono for timers and figures.
+// Ledger typefaces: Geist for text and figures (tabular digits); Geist Mono only for code.
 const geist = Geist({
   variable: "--font-geist",
   subsets: ["latin"],
@@ -29,7 +30,17 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geist.variable} ${geistMono.variable} h-full antialiased`}
+      data-theme="light"
+      suppressHydrationWarning
     >
+      <head>
+        {/* Sets light or dark before first paint so the theme never flashes. */}
+        <script
+          type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: themeBootScript }}
+        />
+      </head>
       <body className="theme-ledger min-h-full">{children}</body>
     </html>
   );

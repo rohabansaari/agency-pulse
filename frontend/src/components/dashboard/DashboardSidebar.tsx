@@ -1,5 +1,6 @@
 "use client";
 
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { PulseLogo } from "@/components/brand/PulseLogo";
 import { ROLE_LABELS } from "@/lib/navigation";
 import { navItemsForRole } from "@/lib/navigation";
@@ -201,6 +202,7 @@ export function DashboardSidebar({
             <p className="truncate text-xs text-[var(--night-muted)]">{ROLE_LABELS[user.role]}</p>
           </div>
         </div>
+        <ThemeToggle tone="night" showLabel className="mt-1 w-full" />
         <button
           type="button"
           onClick={onLogout}

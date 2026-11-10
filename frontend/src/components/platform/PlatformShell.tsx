@@ -1,5 +1,6 @@
 "use client";
 
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { PulseLogo } from "@/components/brand/PulseLogo";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { KeyRound, LogOut } from "lucide-react";
@@ -56,6 +57,7 @@ export function PlatformShell({
 
           <div className="ml-auto flex flex-wrap items-center gap-1 sm:gap-2">
             <span className="hidden px-2 text-sm text-[var(--night-text)] sm:inline">{user.email}</span>
+            <ThemeToggle tone="night" />
             <button
               type="button"
               onClick={onChangePassword}

@@ -1,4 +1,5 @@
 import { PulseLogo } from "@/components/brand/PulseLogo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -37,7 +38,8 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
         <p className="text-[0.8125rem] text-[var(--night-muted)]">© {new Date().getFullYear()} AgencyPulse</p>
       </aside>
 
-      <main className="flex flex-col px-5 py-8 sm:px-10 lg:justify-center lg:px-16">
+      <main className="relative flex flex-col px-5 py-8 sm:px-10 lg:justify-center lg:px-16">
+        <ThemeToggle className="absolute right-5 top-6 sm:right-10" />
         <Link href="/" aria-label="AgencyPulse home" className="self-start lg:hidden">
           <PulseLogo className="text-lg" markClassName="h-8 w-8" />
         </Link>
