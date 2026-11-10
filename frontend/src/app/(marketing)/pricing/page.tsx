@@ -10,12 +10,16 @@ export const metadata: Metadata = {
 const PLANS = [
   {
     name: "Starter",
+    price: "Rs. 1,200",
+    unit: "per person / month",
     blurb: "For studios up to 15 people that want time and approvals in order.",
     features: ["Desktop agent and screenshots", "Manual time with approvals", "Leave and overtime", "Reports and CSV export"],
     featured: false,
   },
   {
     name: "Agency",
+    price: "Rs. 2,000",
+    unit: "per person / month",
     blurb: "Everything you need to pay people and price your work.",
     features: [
       "Everything in Starter",
@@ -28,6 +32,8 @@ const PLANS = [
   },
   {
     name: "Group",
+    price: "Custom",
+    unit: "volume pricing",
     blurb: "Several companies, or more than 100 people.",
     features: ["Everything in Agency", "Several organisations", "Onboarding for your team", "Priority support"],
     featured: false,
@@ -74,9 +80,15 @@ function Plan({ plan, index }: { plan: (typeof PLANS)[number]; index: number }) 
           </span>
         ) : null}
       </div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+        <span className="mk-tnum" style={{ fontSize: 44, fontWeight: 600, letterSpacing: -1.6, color: dark ? "#fff" : "var(--foreground)" }}>
+          {plan.price}
+        </span>
+        <span style={{ fontSize: 15, color: dark ? "var(--night-muted)" : "var(--muted)" }}>{plan.unit}</span>
+      </div>
       <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: dark ? "var(--night-text)" : "var(--muted)" }}>{plan.blurb}</p>
       <Link href="/demo" className={dark ? "mk-btn mk-btn-primary" : "mk-btn mk-btn-ghost"}>
-        {plan.name === "Group" ? "Talk to us" : "Get a quote"} <Arrow />
+        {plan.name === "Group" ? "Talk to us" : "Book a demo"} <Arrow />
       </Link>
       <ul
         style={{
@@ -116,7 +128,7 @@ export default function PricingPage() {
       <PageIntro
         eyebrow="Pricing"
         title="One price per person. Payroll included."
-        lead="No setup fee and no screenshot add-on. Pay for the people who track time; managers and admins who don't track are free. Tell us your team size and we'll send a quote."
+        lead="No setup fee and no screenshot add-on. Pay for the people who track time; managers and admins who don't track are free. Billed monthly in rupees."
         actions={false}
       />
 
