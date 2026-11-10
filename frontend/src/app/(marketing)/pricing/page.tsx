@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const PLANS = [
   {
     name: "Starter",
-    price: "Rs. 1,200",
+    price: "$5",
     unit: "per person / month",
     blurb: "For studios up to 15 people that want time and approvals in order.",
     features: ["Desktop agent and screenshots", "Manual time with approvals", "Leave and overtime", "Reports and CSV export"],
@@ -18,7 +18,7 @@ const PLANS = [
   },
   {
     name: "Agency",
-    price: "Rs. 2,000",
+    price: "$8",
     unit: "per person / month",
     blurb: "Everything you need to pay people and price your work.",
     features: [
@@ -128,7 +128,7 @@ export default function PricingPage() {
       <PageIntro
         eyebrow="Pricing"
         title="One price per person. Payroll included."
-        lead="No setup fee and no screenshot add-on. Pay for the people who track time; managers and admins who don't track are free. Billed monthly in rupees."
+        lead="No setup fee and no screenshot add-on. Pay for the people who track time; managers and admins who don't track are free. Billed monthly in US dollars."
         actions={false}
       />
 
