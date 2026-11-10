@@ -128,6 +128,9 @@ export default function ProductPage() {
             <div className="mk-rv">
               <MoreLink href="/product/profitability">How budgets turn into margin</MoreLink>
             </div>
+            <div className="mk-rv">
+              <MoreLink href="/product/invoicing">How hours turn into invoices</MoreLink>
+            </div>
           </div>
           <Shot
             src={projects}

@@ -3,5 +3,6 @@ export const MARKETING_NAV = [
   { href: "/product", label: "Product" },
   { href: "/product/profitability", label: "Profitability" },
   { href: "/product/payroll", label: "Payroll" },
+  { href: "/product/invoicing", label: "Invoicing" },
   { href: "/pricing", label: "Pricing" },
 ] as const;

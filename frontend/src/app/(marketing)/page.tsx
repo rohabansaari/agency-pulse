@@ -2,6 +2,7 @@ import { Arrow, Crop, CtaBand, Heading, Heartbeat, MoreLink, Notes, Section, Sho
 import attention from "@/components/marketing/img/crop-attention.webp";
 import queue from "@/components/marketing/img/crop-queue.webp";
 import dashboard from "@/components/marketing/img/dashboard.webp";
+import invoiceDetail from "@/components/marketing/img/invoice-detail.webp";
 import employeeDashboard from "@/components/marketing/img/employee-dashboard.webp";
 import managerDashboard from "@/components/marketing/img/manager-dashboard.webp";
 import payroll from "@/components/marketing/img/payroll.webp";
@@ -9,9 +10,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "AgencyPulse — Time, payroll and profit for agencies",
+  title: "AgencyPulse — Time, payroll, profit and invoicing for agencies",
   description:
-    "AgencyPulse tracks time, routes approvals and runs payroll in rupees, then costs every hour so you see margin by client and project.",
+    "AgencyPulse tracks time, routes approvals and runs payroll in rupees, then costs every hour so you see margin by client and project, and bills clients from approved hours.",
 };
 
 const TICKER = [
@@ -25,6 +26,7 @@ const TICKER = [
   "Salary advances",
   "Budget burn",
   "Margin by client",
+  "Client invoices",
 ];
 
 function TickerRow({ hidden = false }: { hidden?: boolean }) {
@@ -76,6 +78,20 @@ const CHAPTERS = [
       <Crop
         src={attention}
         alt="Alerts: Brand Refresh is over budget, Globex Telecom is losing money, SEO Audit is burning budget fast, Website Redesign is the most profitable project"
+      />
+    ),
+  },
+  {
+    eyebrow: "04 · Bill",
+    title: "Turn approved hours into an invoice, and bill each hour once.",
+    text: "Hourly work and fixed fees that haven't been billed wait in one list. Create the invoice, adjust the draft, send it, and record payments as they arrive.",
+    href: "/product/invoicing",
+    link: "See invoicing",
+    media: (
+      <Shot
+        src={invoiceDetail}
+        alt="Invoice INV-0003 to Hooli Pay for Rs. 1,212,000, part paid with Rs. 1,162,000 still due"
+        path="/invoices/3"
       />
     ),
   },
