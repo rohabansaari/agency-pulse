@@ -33,15 +33,16 @@ MAX_IMAGE_WIDTH = 1600
 JPEG_QUALITY = 60
 MAX_RETRIES = 3
 RETRY_DELAYS_SECONDS = (2, 4, 8)
-DEFAULT_API_BASE_URL = "https://agencypulse-tau.vercel.app/api/v1"
+DEFAULT_API_BASE_URL = "https://agencypulse.in/api/v1"
 # Saved configs pointing here are moved to DEFAULT_API_BASE_URL (old hosts the API has moved off).
 LEGACY_API_BASE_URLS = {
     "https://agencypulse-api.onrender.com/api/v1",
     "https://agency-pulse-six.vercel.app/api/v1",
+    "https://agencypulse-tau.vercel.app/api/v1",
 }
 PROTOCOL = "agencypulse"
 # Shown in the log and tray menu so it's clear which build is running.
-AGENT_VERSION = "1.3.1"
+AGENT_VERSION = "1.3.2"
 
 CONFIG_DIR = Path.home() / ".agencypulse"
 CONFIG_PATH = CONFIG_DIR / "agent-config.json"
@@ -623,7 +624,7 @@ def verify_api_reachable(api_base_url: str) -> str | None:
     if response.status_code == 404:
         return (
             "API health check returned 404. The API URL is probably wrong — use the same URL "
-            "as the website (for example https://agencypulse-tau.vercel.app/api/v1)."
+            "as the website (for example https://agencypulse.in/api/v1)."
         )
 
     if response.status_code >= 400:
