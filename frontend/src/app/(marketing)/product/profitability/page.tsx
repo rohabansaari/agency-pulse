@@ -1,7 +1,7 @@
 import { Crop, CtaBand, Heading, Heartbeat, MoreLink, Notes, Section, Shot, Split, vars, Words } from "@/components/marketing/parts";
-import attention from "@/components/marketing/img/crop-attention.jpg";
-import projectTable from "@/components/marketing/img/crop-projects.jpg";
-import profitability from "@/components/marketing/img/profitability.jpg";
+import attention from "@/components/marketing/img/crop-attention.webp";
+import projectTable from "@/components/marketing/img/crop-projects.webp";
+import profitability from "@/components/marketing/img/profitability.webp";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

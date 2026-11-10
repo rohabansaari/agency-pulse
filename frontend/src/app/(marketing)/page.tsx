@@ -1,10 +1,10 @@
 import { Arrow, Crop, CtaBand, Heading, Heartbeat, MoreLink, Notes, Section, Shot, Split, vars, Words } from "@/components/marketing/parts";
-import attention from "@/components/marketing/img/crop-attention.jpg";
-import queue from "@/components/marketing/img/crop-queue.jpg";
-import dashboard from "@/components/marketing/img/dashboard.jpg";
-import employeeDashboard from "@/components/marketing/img/employee-dashboard.jpg";
-import managerDashboard from "@/components/marketing/img/manager-dashboard.jpg";
-import payroll from "@/components/marketing/img/payroll.jpg";
+import attention from "@/components/marketing/img/crop-attention.webp";
+import queue from "@/components/marketing/img/crop-queue.webp";
+import dashboard from "@/components/marketing/img/dashboard.webp";
+import employeeDashboard from "@/components/marketing/img/employee-dashboard.webp";
+import managerDashboard from "@/components/marketing/img/manager-dashboard.webp";
+import payroll from "@/components/marketing/img/payroll.webp";
 import type { Metadata } from "next";
 import Link from "next/link";
 

@@ -1,6 +1,6 @@
 import { CtaBand, Heading, Notes, PageIntro, Section, Shot, Split, vars } from "@/components/marketing/parts";
-import advances from "@/components/marketing/img/advances.jpg";
-import payroll from "@/components/marketing/img/payroll.jpg";
+import advances from "@/components/marketing/img/advances.webp";
+import payroll from "@/components/marketing/img/payroll.webp";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
