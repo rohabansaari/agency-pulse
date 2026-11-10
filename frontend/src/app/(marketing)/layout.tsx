@@ -16,7 +16,7 @@ function Footer() {
             Agency<span style={{ color: "var(--pulse-on-dark)" }}>Pulse</span>
           </span>
           <p style={{ margin: 0, maxWidth: 340, fontSize: 15, lineHeight: 1.6, color: "var(--night-muted)" }}>
-            Time tracking, approvals, payroll and profitability for agencies that bill by the hour and pay by the
+            Time tracking, approvals, payroll, profitability and client invoicing for agencies that bill by the hour and pay by the
             month.
           </p>
         </div>
