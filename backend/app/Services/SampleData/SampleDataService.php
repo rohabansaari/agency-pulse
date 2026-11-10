@@ -14,6 +14,7 @@ use App\Enums\TimeEntryStatus;
 use App\Enums\TimeEntryType;
 use App\Enums\UserRole;
 use App\Models\EmployeeSalaryContract;
+use App\Models\Invoice;
 use App\Models\OrganizationMember;
 use App\Models\OvertimeRequest;
 use App\Models\Project;
@@ -23,6 +24,7 @@ use App\Models\Team;
 use App\Models\TeamMember;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Services\Invoicing\InvoiceService;
 use App\Services\Tenant\TenantContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -49,6 +51,7 @@ class SampleDataService
      * @var array<string, class-string<\Illuminate\Database\Eloquent\Model>>
      */
     private const TYPES = [
+        'invoice' => Invoice::class,
         'time_entry' => TimeEntry::class,
         'overtime_request' => OvertimeRequest::class,
         'salary_advance' => SalaryAdvanceRequest::class,
@@ -130,6 +133,7 @@ class SampleDataService
             $this->leave($admin, $employees, $managerFor);
             $this->overtime($admin, $employees, $projects, $managerFor);
             $this->advances($admin, $employees);
+            $this->invoices($admin, $projects);
             $this->record();
         });
 
@@ -145,6 +149,17 @@ class SampleDataService
         $removed = 0;
 
         DB::transaction(function () use ($organizationId, &$removed) {
+            // Invoices someone made from sample work go too, so none point at deleted projects.
+            $sampleProjects = DB::table('sample_data_records')
+                ->where('organization_id', $organizationId)
+                ->where('record_type', 'project')
+                ->pluck('record_id');
+            $removed += Invoice::query()
+                ->withoutGlobalScopes()
+                ->where('organization_id', $organizationId)
+                ->whereHas('lines', fn ($query) => $query->whereIn('project_id', $sampleProjects))
+                ->delete();
+
             foreach (self::TYPES as $type => $model) {
                 $ids = DB::table('sample_data_records')
                     ->where('organization_id', $organizationId)
@@ -556,6 +571,58 @@ class SampleDataService
             'status' => AdvanceRequestStatus::Approved,
             'reviewed_at' => now()->subDays(6),
         ]));
+    }
+
+    /**
+     * Two invoices from older hourly work: one paid, one sent and overdue, so
+     * the Invoices page has something to show. Newer work stays unbilled.
+     *
+     * @param  list<array{project: Project, members: Collection<int, User>, budget_factor: float|null}>  $projects
+     */
+    private function invoices(User $admin, array $projects): void
+    {
+        $clients = collect($projects)
+            ->pluck('project')
+            ->filter(fn (Project $project) => $project->billingType() === ProjectBillingType::Hourly)
+            ->pluck('client_name')
+            ->unique()
+            ->values();
+
+        $service = app(InvoiceService::class);
+        $today = Carbon::today();
+        $plans = [
+            // [client index, billed up to (days ago), issued (days ago), due (days ago), paid (days ago) or null]
+            [0, 30, 28, 14, 3],
+            [1, 20, 19, 5, null],
+        ];
+
+        foreach ($plans as [$index, $billedTo, $issuedAgo, $dueAgo, $paidAgo]) {
+            $client = $clients->get($index);
+
+            if ($client === null) {
+                continue;
+            }
+
+            try {
+                $invoice = $service->createFromWork($client, null, $today->copy()->subDays($billedTo)->endOfDay(), $admin);
+            } catch (ValidationException) {
+                continue;
+            }
+
+            $invoice->update([
+                'issue_date' => $today->copy()->subDays($issuedAgo),
+                'due_date' => $today->copy()->subDays($dueAgo),
+                'notes' => 'Thank you for your business.',
+            ]);
+            $invoice = $service->markSent($invoice);
+            $invoice->update(['sent_at' => $today->copy()->subDays($issuedAgo)->setTime(10, 0)]);
+
+            if ($paidAgo !== null) {
+                $service->recordPayment($invoice, (float) $invoice->total, $today->copy()->subDays($paidAgo));
+            }
+
+            $this->track('invoice', $invoice);
+        }
     }
 
     private function track(string $type, \Illuminate\Database\Eloquent\Model $model): void

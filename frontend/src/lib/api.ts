@@ -49,6 +49,11 @@ import type {
   LeaveBalanceEntry,
   LeaveCategory,
   EmployeePayrollAdjustment,
+  InvoiceDetail,
+  InvoiceList,
+  InvoiceSettings,
+  InvoiceUpdate,
+  UnbilledClient,
 } from "./types";
 
 // Production defaults to same-origin (Vercel routes /api/* to the Laravel service).
@@ -1354,4 +1359,61 @@ export async function loadSampleData(): Promise<SampleDataStatus> {
 
 export async function removeSampleData(): Promise<SampleDataStatus> {
   return apiFetch<SampleDataStatus>("/sample-data", { method: "DELETE" });
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Invoicing (admin)                                                   */
+/* ------------------------------------------------------------------ */
+
+export async function fetchInvoices(filters: { status?: string; client?: string } = {}): Promise<InvoiceList> {
+  const params = new URLSearchParams();
+  if (filters.status) params.set("status", filters.status);
+  if (filters.client) params.set("client", filters.client);
+  const query = params.toString();
+  return apiFetch<InvoiceList>(`/invoices${query ? `?${query}` : ""}`);
+}
+
+export async function fetchUnbilledWork(): Promise<{ clients: UnbilledClient[] }> {
+  return apiFetch<{ clients: UnbilledClient[] }>("/invoices/unbilled");
+}
+
+export async function createInvoice(body: {
+  client_name: string;
+  start_date?: string;
+  end_date?: string;
+}): Promise<InvoiceDetail> {
+  return apiFetch<InvoiceDetail>("/invoices", { method: "POST", body: JSON.stringify(body) });
+}
+
+export async function fetchInvoice(id: number): Promise<InvoiceDetail> {
+  return apiFetch<InvoiceDetail>(`/invoices/${id}`);
+}
+
+export async function updateInvoice(id: number, body: InvoiceUpdate): Promise<InvoiceDetail> {
+  return apiFetch<InvoiceDetail>(`/invoices/${id}`, { method: "PUT", body: JSON.stringify(body) });
+}
+
+export async function sendInvoice(id: number): Promise<InvoiceDetail> {
+  return apiFetch<InvoiceDetail>(`/invoices/${id}/send`, { method: "POST" });
+}
+
+export async function recordInvoicePayment(id: number, body: { amount: number; paid_on?: string }): Promise<InvoiceDetail> {
+  return apiFetch<InvoiceDetail>(`/invoices/${id}/payments`, { method: "POST", body: JSON.stringify(body) });
+}
+
+export async function voidInvoice(id: number): Promise<InvoiceDetail> {
+  return apiFetch<InvoiceDetail>(`/invoices/${id}/void`, { method: "POST" });
+}
+
+export async function deleteInvoice(id: number): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/invoices/${id}`, { method: "DELETE" });
+}
+
+export async function fetchInvoiceSettings(): Promise<InvoiceSettings> {
+  return apiFetch<InvoiceSettings>("/invoices/settings");
+}
+
+export async function updateInvoiceSettings(body: Partial<InvoiceSettings>): Promise<InvoiceSettings> {
+  return apiFetch<InvoiceSettings>("/invoices/settings", { method: "PUT", body: JSON.stringify(body) });
 }

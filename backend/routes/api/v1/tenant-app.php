@@ -14,6 +14,7 @@ Route::middleware('rbac:admin')->prefix('sample-data')->group(function () {
     Route::delete('/', [SampleDataController::class, 'destroy']);
 });
 Route::prefix('reports')->group(base_path('routes/api/v1/reports.php'));
+Route::prefix('invoices')->group(base_path('routes/api/v1/invoices.php'));
 Route::prefix('time')->group(base_path('routes/api/v1/time.php'));
 Route::prefix('projects')->group(base_path('routes/api/v1/projects.php'));
 Route::prefix('team')->group(base_path('routes/api/v1/team.php'));

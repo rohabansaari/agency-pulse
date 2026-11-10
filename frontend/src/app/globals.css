@@ -527,3 +527,37 @@ html.theme-switching *::after {
     animation: none;
   }
 }
+
+/*
+ * Printing an invoice: only the invoice paper prints, edge to edge, with
+ * the app chrome (sidebar, toolbars, status panel) hidden.
+ */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+  }
+  .invoice-paper {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
