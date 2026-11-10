@@ -476,7 +476,10 @@ class ProfitabilityService
      * @param  list<array<string, mixed>>  $projectRows
      * @param  list<array<string, mixed>>  $clientRows
      * @param  array<string, mixed>  $totals
-     * @return list<array{severity: string, title: string, detail: string, project_id?: int}>
+     * Each insight carries an `impact` (what is at stake, so the page can rank
+     * and label it): money in rupees, or hours over / left on a budget.
+     *
+     * @return list<array{severity: string, title: string, detail: string, project_id?: int, impact?: array{type: string, value: float}}>
      */
     private function insights(array $projectRows, array $clientRows, array $totals): array
     {
@@ -494,6 +497,10 @@ class ProfitabilityService
                     $row['budget']['burn_percent'],
                 ),
                 'project_id' => $row['id'],
+                'impact' => [
+                    'type' => 'hours_over',
+                    'value' => round((float) $row['budget']['used_hours'] - (float) $row['budget']['budget_hours'], 1),
+                ],
             ];
         }
 
@@ -506,6 +513,7 @@ class ProfitabilityService
                         'It cost %s more than it earned in this period.',
                         $this->money(abs($client['profit'])),
                     ),
+                    'impact' => ['type' => 'money', 'value' => round((float) $client['profit'], 2)],
                 ];
             }
         }
@@ -531,6 +539,10 @@ class ProfitabilityService
                 'title' => "{$row['name']} is burning budget fast",
                 'detail' => $detail.'.',
                 'project_id' => $row['id'],
+                'impact' => [
+                    'type' => 'hours_left',
+                    'value' => round(max(0, (float) $budget['budget_hours'] - (float) $budget['used_hours']), 1),
+                ],
             ];
         }
 
@@ -553,6 +565,7 @@ class ProfitabilityService
                     $this->money($lowMargin['cost_per_hour'] ?? 0),
                 ),
                 'project_id' => $lowMargin['id'],
+                'impact' => ['type' => 'money', 'value' => round((float) $lowMargin['profit'], 2)],
             ];
         }
 
@@ -592,6 +605,7 @@ class ProfitabilityService
                     $best['margin_percent'],
                 ),
                 'project_id' => $best['id'],
+                'impact' => ['type' => 'money', 'value' => round((float) $best['profit'], 2)],
             ];
         }
 

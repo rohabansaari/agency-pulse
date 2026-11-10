@@ -884,11 +884,15 @@ export interface ProfitabilityEmployeeRow {
 
 export type ProfitabilityInsightSeverity = "critical" | "warning" | "info" | "positive";
 
+export type ProfitabilityImpactType = "money" | "hours_over" | "hours_left";
+
 export interface ProfitabilityInsight {
   severity: ProfitabilityInsightSeverity;
   title: string;
   detail: string;
   project_id?: number;
+  /** What is at stake: rupees (signed), or hours over / left on a budget. */
+  impact?: { type: ProfitabilityImpactType; value: number };
 }
 
 export interface ProfitabilityReport {

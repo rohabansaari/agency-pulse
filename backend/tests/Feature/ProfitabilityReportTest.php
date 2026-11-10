@@ -198,6 +198,17 @@ class ProfitabilityReportTest extends TestCase
         $this->assertNotContains('In-house is losing money', $titles);
         $this->assertTrue($clients['In-house']['internal']);
         $this->assertContains('Alpha Website is your most profitable project', $titles);
+
+        // Each insight says what is at stake, so the page can rank and label it.
+        $insights = collect($response->json('insights'))->keyBy('title');
+        $this->assertSame('money', $insights['Globex is losing money']['impact']['type']);
+        $this->assertEqualsWithDelta(-20000, $insights['Globex is losing money']['impact']['value'], 0.01);
+        $this->assertSame('hours_over', $insights['Beta Rebrand is over budget']['impact']['type']);
+        $this->assertEqualsWithDelta(
+            $beta['budget']['used_hours'] - $beta['budget']['budget_hours'],
+            $insights['Beta Rebrand is over budget']['impact']['value'],
+            0.05,
+        );
     }
 
     public function test_hours_without_a_salary_contract_are_flagged(): void

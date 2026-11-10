@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* `dark:` utilities follow the theme switch (html[data-theme]), not just the OS. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   /* Deep graphite + warm ivory surfaces */
   --background: #f3f1ec;
@@ -67,8 +70,9 @@
   --breakpoint-2xl: 72rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+/* Dark theme: set on <html data-theme="dark"> by the theme switch (or the OS default on first visit). */
+:root[data-theme="dark"] {
+  & {
     --background: #131211;
     --foreground: #f5f3ef;
     --card: #1a1917;
@@ -156,9 +160,12 @@ body {
   line-height: 1.5;
 }
 
-/* Premium numeric typography — fintech-grade clarity */
+/*
+ * Figures: Geist (the text face) with tabular, lining digits, so columns and
+ * timers line up without the typewriter look of a monospace font.
+ */
 .text-numeric {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-geist), system-ui, sans-serif;
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
 }
@@ -402,7 +409,7 @@ body {
   background: var(--background);
 }
 
-@media (prefers-color-scheme: dark) {
+:root[data-theme="dark"] {
   .theme-ledger {
     --background: #0b0f17;
     --foreground: #e8ebf0;
@@ -438,8 +445,21 @@ body {
 }
 
 .theme-ledger .num {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-geist), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Smooth hand-off when the theme switch flips every colour token at once. */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition:
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    color 0.35s ease,
+    fill 0.35s ease !important;
 }
 
 /* Sans figures that still line up: dashboard totals, percentages. */
@@ -455,4 +475,55 @@ body {
 
 .theme-ledger .ui-card-elevated {
   box-shadow: var(--shadow-sm);
+}
+
+/* Chart and list entrances (profitability and marketing pages). */
+@keyframes ap-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes ap-pop {
+  from {
+    opacity: 0;
+    /* Tailwind's translate-* use the separate `translate` property, so only scale here. */
+    transform: scale(0.2);
+  }
+}
+@keyframes ap-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes ap-fade {
+  from {
+    opacity: 0;
+  }
+}
+.ap-grow-x {
+  transform-origin: left center;
+  animation: ap-grow-x 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.ap-grow-x-rev {
+  transform-origin: right center;
+  animation: ap-grow-x 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.ap-pop {
+  animation: ap-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.ap-rise {
+  animation: ap-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.ap-fade {
+  animation: ap-fade 0.3s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-grow-x,
+  .ap-grow-x-rev,
+  .ap-pop,
+  .ap-rise,
+  .ap-fade {
+    animation: none;
+  }
 }
