@@ -27,7 +27,8 @@ class SampleDataController extends TenantAppController
     {
         $this->authorizeAdmin($request);
 
-        $created = $this->sampleData->load($request->user());
+        $data = $request->validate(['sample_team' => ['sometimes', 'boolean']]);
+        $created = $this->sampleData->load($request->user(), (bool) ($data['sample_team'] ?? false));
 
         return response()->json([
             'message' => 'Sample data loaded.',

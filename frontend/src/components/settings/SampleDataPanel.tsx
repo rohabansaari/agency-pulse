@@ -21,6 +21,8 @@ const LABELS: Record<string, string> = {
   salary_advance: "salary advances",
   team: "team",
   team_member: "team memberships",
+  user: "sample people",
+  invoice: "invoices",
 };
 
 function errorText(err: unknown, fallback: string): string {
@@ -48,12 +50,12 @@ export function SampleDataPanel() {
     };
   }, []);
 
-  async function handleLoad() {
+  async function handleLoad(sampleTeam = false) {
     setBusy("load");
     setError("");
     setSuccess("");
     try {
-      setStatus(await loadSampleData());
+      setStatus(await loadSampleData({ sampleTeam }));
       setSuccess("Sample data loaded. Open the dashboard, Reports or Profitability to see it.");
     } catch (err) {
       setError(errorText(err, "Loading sample data failed."));
@@ -126,18 +128,31 @@ export function SampleDataPanel() {
             <li>Salary contracts for employees who don&apos;t have one yet</li>
             <li>Leave, overtime and salary advance requests</li>
           </ul>
-          <p className="text-sm text-[var(--muted)]">
-            It uses your {status.employees} active {status.employees === 1 ? "employee" : "employees"}. Every row is
-            tracked, so you can remove it all in one click later.
-          </p>
-          <div>
-            <Button onClick={handleLoad} disabled={busy !== null || status.employees === 0}>
-              {busy === "load" ? "Loading… (up to a minute)" : "Load sample data"}
-            </Button>
-            {status.employees === 0 ? (
-              <p className="mt-2 text-sm text-[var(--accent-copper)]">Add at least one employee first.</p>
-            ) : null}
-          </div>
+          {status.employees > 0 ? (
+            <>
+              <p className="text-sm text-[var(--muted)]">
+                It uses your {status.employees} active {status.employees === 1 ? "employee" : "employees"}. Every row is
+                tracked, so you can remove it all in one click later.
+              </p>
+              <div>
+                <Button onClick={() => void handleLoad()} disabled={busy !== null}>
+                  {busy === "load" ? "Loading… (up to a minute)" : "Load sample data"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-[var(--muted)]">
+                You don&apos;t have employees yet, so this also adds a sample team of six people and a manager. They
+                can&apos;t sign in and are removed with the rest of the sample data.
+              </p>
+              <div>
+                <Button onClick={() => void handleLoad(true)} disabled={busy !== null}>
+                  {busy === "load" ? "Loading… (up to a minute)" : "Load sample data with a sample team"}
+                </Button>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

@@ -10,6 +10,7 @@ import {
   createWorkTeam,
   fetchOnboardingStatus,
   formatApiErrors,
+  loadSampleData,
   initializePayrollPin,
   skipOnboardingStep,
   updateOnboardingOrganization,
@@ -22,7 +23,7 @@ import { PulseLogo } from "@/components/brand/PulseLogo";
 import { Segmented } from "@/components/ledger/Segmented";
 import { Select } from "@/components/ui/Input";
 import { cn } from "@/lib/cn";
-import { Check, KeyRound, Plus, UserPlus } from "lucide-react";
+import { Check, KeyRound, Plus, Sparkles, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
@@ -64,6 +65,7 @@ export function OnboardingWizard() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [exploring, setExploring] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -268,6 +270,23 @@ export function OnboardingWizard() {
     }
   }
 
+  /** Skip straight to a populated workspace: sample team + sample data, then the dashboard. */
+  async function handleExploreWithSampleTeam() {
+    setExploring(true);
+    setError("");
+    try {
+      await loadSampleData({ sampleTeam: true });
+      await finishOnboarding();
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? formatApiErrors(err.errors) || err.message
+          : "Couldn't load the sample team. Try again, or add your own people below.",
+      );
+      setExploring(false);
+    }
+  }
+
   async function handleFinish() {
     setSubmitting(true);
     setError("");
@@ -452,6 +471,28 @@ export function OnboardingWizard() {
 
                 {step === 3 ? (
                   <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--primary)]/25 bg-[var(--primary-muted)] p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)]" aria-hidden="true">
+                          <Sparkles className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[var(--foreground)]">Just exploring? Use a sample team</p>
+                          <p className="mt-0.5 text-[0.8125rem] text-[var(--muted)]">
+                            Adds six sample people, two months of hours, payroll, profitability and invoices, then opens your
+                            dashboard. Remove it all later from Settings → Sample data.
+                          </p>
+                        </div>
+                      </div>
+                      <PrimaryButton
+                        type="button"
+                        onClick={() => void handleExploreWithSampleTeam()}
+                        disabled={exploring || submitting}
+                        className="shrink-0"
+                      >
+                        {exploring ? "Setting it up…" : "Explore with a sample team"}
+                      </PrimaryButton>
+                    </div>
                     <Segmented
                       label="How to add employees"
                       options={[
