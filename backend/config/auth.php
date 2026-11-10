@@ -1,6 +1,14 @@
 <?php
 
 return [
+
+    /*
+    | Public sign-up: anyone can create an agency workspace (as its admin) from
+    | /register. Set SELF_SIGNUP_ENABLED=false to switch it off; the endpoint
+    | then answers 404 as before.
+    */
+    'self_signup' => (bool) env('SELF_SIGNUP_ENABLED', true),
+
     'defaults' => [
         'guard' => env('AUTH_GUARD', 'web'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),

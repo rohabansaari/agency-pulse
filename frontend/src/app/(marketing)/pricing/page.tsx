@@ -87,8 +87,8 @@ function Plan({ plan, index }: { plan: (typeof PLANS)[number]; index: number }) 
         <span style={{ fontSize: 15, color: dark ? "var(--night-muted)" : "var(--muted)" }}>{plan.unit}</span>
       </div>
       <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: dark ? "var(--night-text)" : "var(--muted)" }}>{plan.blurb}</p>
-      <Link href="/demo" className={dark ? "mk-btn mk-btn-primary" : "mk-btn mk-btn-ghost"}>
-        {plan.name === "Group" ? "Talk to us" : "Book a demo"} <Arrow />
+      <Link href={plan.name === "Group" ? "/demo" : "/register"} className={dark ? "mk-btn mk-btn-primary" : "mk-btn mk-btn-ghost"}>
+        {plan.name === "Group" ? "Talk to us" : "Start free trial"} <Arrow />
       </Link>
       <ul
         style={{

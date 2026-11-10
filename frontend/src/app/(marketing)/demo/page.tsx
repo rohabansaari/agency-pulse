@@ -37,13 +37,16 @@ export default function DemoPage() {
             <DemoForm contactEmail={contactEmail} />
           ) : (
             <div className="mk-card mk-rv mk-rv-r" style={{ padding: 36, display: "flex", flexDirection: "column", gap: 16 }}>
-              <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Already have a workspace?</h2>
+              <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Try it on your own</h2>
               <p style={{ margin: 0, color: "var(--muted)", fontSize: 16, lineHeight: 1.6 }}>
-                Sign in and load the sample company from Settings → Sample data to explore every screen with realistic
-                numbers.
+                Create a free workspace in a minute, add your team, then load the sample company from Settings →
+                Sample data to see every screen with realistic numbers.
               </p>
-              <Link href="/login" className="mk-btn mk-btn-primary">
-                Sign in <Arrow />
+              <Link href="/register" className="mk-btn mk-btn-primary">
+                Start free trial <Arrow />
+              </Link>
+              <Link href="/login" className="mk-btn mk-btn-ghost">
+                Sign in
               </Link>
             </div>
           )}

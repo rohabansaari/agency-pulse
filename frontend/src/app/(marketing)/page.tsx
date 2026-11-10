@@ -145,11 +145,11 @@ export default function HomePage() {
             so you see margin by client and project while the work is still happening.
           </p>
           <div className="mk-fade-in" style={vars({ "--d": "1100ms", display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" })}>
-            <Link href="/demo" className="mk-btn mk-btn-primary">
-              Book a demo <Arrow />
+            <Link href="/register" className="mk-btn mk-btn-primary">
+              Start free trial <Arrow />
             </Link>
-            <Link href="/product" className="mk-btn mk-btn-ghost">
-              Tour the product
+            <Link href="/demo" className="mk-btn mk-btn-ghost">
+              Book a demo
             </Link>
           </div>
           <div className="mk-hero-shot mk-hero-overlap" style={{ width: "100%", marginTop: 40 }}>

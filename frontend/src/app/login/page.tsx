@@ -6,6 +6,7 @@ import { Alert } from "@/components/ui/EmptyState";
 import { FormField, Input, PasswordInput } from "@/components/ui/Input";
 import { ApiError, formatApiErrors, login, resolvePostAuthPath } from "@/lib/api";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -36,7 +37,18 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell title="Sign in" subtitle="Use the email your organization invited.">
+    <AuthShell
+      title="Sign in"
+      subtitle="Use the email your organization invited."
+      footer={
+        <>
+          New to AgencyPulse?{" "}
+          <Link href="/register" className="font-medium text-[var(--primary)] hover:underline">
+            Create your agency workspace
+          </Link>
+        </>
+      }
+    >
       <motion.form
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}

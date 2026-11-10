@@ -67,8 +67,8 @@ export function MarketingHeader() {
         <Link href="/login" className="mk-btn mk-btn-ghost mk-hide-sm">
           Sign in
         </Link>
-        <Link href="/demo" className="mk-btn mk-btn-primary mk-hide-sm">
-          Book a demo
+        <Link href="/register" className="mk-btn mk-btn-primary mk-hide-sm">
+          Start free trial
         </Link>
         <button
           type="button"
@@ -114,8 +114,8 @@ export function MarketingHeader() {
             <Link href="/login" className="mk-btn mk-btn-ghost" style={{ flex: 1 }}>
               Sign in
             </Link>
-            <Link href="/demo" className="mk-btn mk-btn-primary" style={{ flex: 1 }}>
-              Book a demo
+            <Link href="/register" className="mk-btn mk-btn-primary" style={{ flex: 1 }}>
+              Start free trial
             </Link>
           </div>
         </nav>
