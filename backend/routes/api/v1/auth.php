@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\InvitationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:signup');
 
 Route::get('/invitation', [InvitationController::class, 'show']);
 Route::post('/accept-invitation', [InvitationController::class, 'accept']);

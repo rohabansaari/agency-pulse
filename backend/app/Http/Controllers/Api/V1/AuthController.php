@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\OrganizationMemberStatus;
+use App\Enums\OrganizationStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
@@ -17,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
@@ -26,12 +28,18 @@ class AuthController extends Controller
         private readonly MembershipRoleSync $membershipRoleSync
     ) {}
 
+    /**
+     * Public sign-up: creates an agency workspace (on trial) with the person
+     * signing up as its admin, and signs them in. They land in onboarding.
+     */
     public function register(RegisterRequest $request): JsonResponse
     {
+        abort_unless(config('auth.self_signup'), 404);
+
         $payload = DB::transaction(function () use ($request) {
             $organization = Organization::create([
-                'name' => $request->validated('organization_name')
-                    ?? $request->validated('name')."'s Organization",
+                'name' => $request->validated('organization_name'),
+                'status' => OrganizationStatus::Trial,
             ]);
 
             $user = User::create([
@@ -56,6 +64,11 @@ class AuthController extends Controller
         });
 
         $token = $payload['user']->createToken('api-token')->plainTextToken;
+
+        Log::info('Self sign-up: new organization', [
+            'organization_id' => $payload['organization']->id,
+            'organization' => $payload['organization']->name,
+        ]);
 
         return response()->json([
             'user' => new UserResource($payload['user']),

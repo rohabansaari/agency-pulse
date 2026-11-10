@@ -172,6 +172,27 @@ export async function login(
   return response;
 }
 
+/** Public sign-up: creates an agency workspace with you as its admin, and signs you in. */
+export async function register(body: {
+  name: string;
+  organization_name: string;
+  email: string;
+  password: string;
+  /** Honeypot: always empty for people. */
+  website?: string;
+}): Promise<AuthResponse> {
+  const response = await apiFetch<AuthResponse>("/auth/register", {
+    method: "POST",
+    auth: false,
+    tenant: false,
+    body: JSON.stringify(body),
+  });
+
+  persistAuthSession(response);
+
+  return response;
+}
+
 export interface InvitationPreview {
   name: string;
   email: string;

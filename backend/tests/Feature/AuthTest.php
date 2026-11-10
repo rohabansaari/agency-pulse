@@ -24,15 +24,62 @@ class AuthTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_register_route_is_not_available(): void
+    private function signup(array $overrides = []): \Illuminate\Testing\TestResponse
     {
-        $response = $this->postJson('/api/v1/auth/register', [
+        return $this->postJson('/api/v1/auth/register', array_merge([
             'name' => 'Jane Doe',
-            'email' => 'jane@example.com',
-            'password' => 'password123',
-        ]);
+            'organization_name' => 'Northwind Creative',
+            'email' => 'Jane@Example.com',
+            'password' => 'agency2026',
+        ], $overrides));
+    }
 
-        $response->assertNotFound();
+    public function test_anyone_can_create_an_agency_workspace_and_lands_in_onboarding(): void
+    {
+        $response = $this->signup()->assertCreated()
+            ->assertJsonStructure(['user', 'memberships', 'current_organization_id', 'token'])
+            ->assertJsonPath('user.role', 'admin')
+            ->assertJsonPath('user.email', 'jane@example.com');
+
+        $organization = \App\Models\Organization::query()->findOrFail($response->json('current_organization_id'));
+        $this->assertSame('Northwind Creative', $organization->name);
+        $this->assertSame('trial', $organization->status->value);
+
+        $headers = ['X-Organization-Id' => (string) $organization->id];
+        $this->withToken($response->json('token'))->getJson('/api/v1/auth/me')->assertOk();
+        $this->withToken($response->json('token'))->withHeaders($headers)
+            ->getJson('/api/v1/onboarding/status')
+            ->assertOk()
+            ->assertJsonPath('requires_onboarding', true);
+    }
+
+    public function test_signup_rejects_taken_emails_weak_passwords_and_bots(): void
+    {
+        $this->signup()->assertCreated();
+
+        $this->signup(['organization_name' => 'Other'])->assertStatus(422)->assertJsonValidationErrors('email');
+        $this->signup(['email' => 'new@example.com', 'password' => 'short'])->assertStatus(422)->assertJsonValidationErrors('password');
+        $this->signup(['email' => 'new@example.com', 'organization_name' => ''])->assertStatus(422)->assertJsonValidationErrors('organization_name');
+        $this->signup(['email' => 'bot@example.com', 'website' => 'http://spam.example'])->assertStatus(422);
+
+        $this->assertSame(1, \App\Models\Organization::query()->count());
+    }
+
+    public function test_signup_is_rate_limited_per_ip(): void
+    {
+        for ($i = 1; $i <= 5; $i++) {
+            $this->signup(['email' => "user{$i}@example.com"])->assertCreated();
+        }
+
+        $this->signup(['email' => 'user6@example.com'])->assertStatus(429);
+    }
+
+    public function test_signup_can_be_switched_off(): void
+    {
+        config(['auth.self_signup' => false]);
+
+        $this->signup()->assertNotFound();
+        $this->assertSame(0, User::query()->count());
     }
 
     public function test_user_can_login_and_receive_token(): void
@@ -90,17 +137,6 @@ class AuthTest extends TestCase
         $response->assertOk()
             ->assertJsonStructure(['user', 'token'])
             ->assertHeaderMissing('Set-Cookie');
-    }
-
-    public function test_register_endpoint_rejects_public_signup(): void
-    {
-        for ($i = 1; $i <= 3; $i++) {
-            $this->postJson('/api/v1/auth/register', [
-                'name' => "User {$i}",
-                'email' => "user{$i}@example.com",
-                'password' => 'password123',
-            ])->assertNotFound();
-        }
     }
 
     public function test_user_can_logout(): void

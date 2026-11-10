@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use App\Services\Mail\MailConfiguration;
 use App\Services\Payroll\Deductions\PayrollDeductionEngine;
 use App\Services\Payroll\Deductions\PercentagePayrollDeductionCalculator;
@@ -26,6 +29,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         JsonResource::withoutWrapping();
+
+        // Public sign-up: a few tries a minute and a cap per day for each IP address.
+        RateLimiter::for('signup', fn (Request $request) => [
+            Limit::perMinute(5)->by('signup-min:'.$request->ip()),
+            Limit::perDay(20)->by('signup-day:'.$request->ip()),
+        ]);
 
         $mailConfiguration = $this->app->make(MailConfiguration::class);
         $mailConfiguration->applyRuntimeFixes();

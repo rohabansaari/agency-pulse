@@ -30,6 +30,9 @@ function Footer() {
         </nav>
         <nav aria-label="Account" style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 15 }}>
           <span style={{ color: "#fff", fontWeight: 600 }}>Get started</span>
+          <Link href="/register" style={{ color: "var(--night-muted)", textDecoration: "none" }}>
+            Start free trial
+          </Link>
           <Link href="/demo" style={{ color: "var(--night-muted)", textDecoration: "none" }}>
             Book a demo
           </Link>

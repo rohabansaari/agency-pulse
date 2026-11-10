@@ -217,11 +217,11 @@ export function PageIntro({
         </p>
         {actions ? (
           <div className="mk-fade-in" style={vars({ "--d": "800ms", display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" })}>
-            <Link href="/demo" className="mk-btn mk-btn-primary">
-              Book a demo <Arrow />
+            <Link href="/register" className="mk-btn mk-btn-primary">
+              Start free trial <Arrow />
             </Link>
-            <Link href="/login" className="mk-btn mk-btn-ghost">
-              Sign in
+            <Link href="/demo" className="mk-btn mk-btn-ghost">
+              Book a demo
             </Link>
           </div>
         ) : null}
@@ -293,11 +293,11 @@ export function CtaBand() {
           </p>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <Link href="/demo" className="mk-btn mk-btn-primary">
-            Book a demo <Arrow />
+          <Link href="/register" className="mk-btn mk-btn-primary">
+            Start free trial <Arrow />
           </Link>
-          <Link href="/pricing" className="mk-btn mk-btn-ghost">
-            See pricing
+          <Link href="/demo" className="mk-btn mk-btn-ghost">
+            Book a demo
           </Link>
         </div>
       </div>
