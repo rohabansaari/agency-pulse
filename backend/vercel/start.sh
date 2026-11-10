@@ -18,6 +18,11 @@ if [ "${RUN_MIGRATIONS_ON_BOOT:-true}" = "true" ]; then
     (
         php artisan migrate --force --no-interaction >&2 || echo "WARN: migrations failed" >&2
         php artisan super-admin:ensure --no-interaction >&2 || echo "WARN: super-admin:ensure failed" >&2
+        # One-off: SAMPLE_DATA_FOR=<organization id, exact name, or "only"> loads Settings → Sample data.
+        # It skips companies that already have it; unset it again after the deploy.
+        if [ -n "$SAMPLE_DATA_FOR" ]; then
+            php artisan sample-data:load "$SAMPLE_DATA_FOR" --no-interaction >&2 || echo "WARN: sample-data:load failed" >&2
+        fi
     ) &
 fi
 

@@ -1,6 +1,6 @@
 import { DemoForm } from "@/components/marketing/DemoForm";
 import { Arrow, Crop, Notes, Split, Words } from "@/components/marketing/parts";
-import attention from "@/components/marketing/img/crop-attention.jpg";
+import attention from "@/components/marketing/img/crop-attention.webp";
 import type { Metadata } from "next";
 import Link from "next/link";
 

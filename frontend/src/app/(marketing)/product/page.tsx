@@ -1,9 +1,9 @@
 import { Crop, CtaBand, Heading, MoreLink, Notes, PageIntro, Section, Shot, Split, vars } from "@/components/marketing/parts";
-import queue from "@/components/marketing/img/crop-queue.jpg";
-import employees from "@/components/marketing/img/employees.jpg";
-import leave from "@/components/marketing/img/leave.jpg";
-import projects from "@/components/marketing/img/projects.jpg";
-import reports from "@/components/marketing/img/reports.jpg";
+import queue from "@/components/marketing/img/crop-queue.webp";
+import employees from "@/components/marketing/img/employees.webp";
+import leave from "@/components/marketing/img/leave.webp";
+import projects from "@/components/marketing/img/projects.webp";
+import reports from "@/components/marketing/img/reports.webp";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

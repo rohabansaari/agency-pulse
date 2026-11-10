@@ -190,4 +190,22 @@ class SampleDataTest extends TestCase
             ->getJson('/api/v1/reports/profitability')
             ->assertOk();
     }
+
+    public function test_command_loads_sample_data_once_for_the_named_company(): void
+    {
+        $orgId = $this->admin->organization_id;
+
+        $this->artisan('sample-data:load', ['organization' => (string) $orgId])
+            ->expectsOutputToContain('Loaded sample data')
+            ->assertExitCode(0);
+        $this->assertSame(6, Project::query()->where('organization_id', $orgId)->count());
+
+        // A second run (the next deploy with the flag still set) changes nothing.
+        $this->artisan('sample-data:load', ['organization' => (string) $orgId])
+            ->expectsOutputToContain('already loaded')
+            ->assertExitCode(0);
+        $this->assertSame(6, Project::query()->where('organization_id', $orgId)->count());
+
+        $this->artisan('sample-data:load', ['organization' => 'No Such Company'])->assertExitCode(1);
+    }
 }

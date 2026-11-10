@@ -85,3 +85,63 @@ Artisan::command('timers:pause-offline-agents', function (\App\Services\Time\Age
 Schedule::command('timers:pause-offline-agents')->everyFiveMinutes();
 Schedule::command('idempotency:purge')->daily();
 Schedule::command('screenshots:purge-expired')->daily();
+
+/*
+ * Loads the Settings → Sample data set into an organization from the command
+ * line (or at boot via SAMPLE_DATA_FOR, see vercel/start.sh). `organization`
+ * is an id, an exact name, or "only" for a database with a single company.
+ * Does nothing if sample data is already loaded there.
+ */
+Artisan::command('sample-data:load {organization}', function (string $organization) {
+    $companies = \App\Models\Organization::query()->orderBy('id')->get();
+
+    $target = match (true) {
+        $organization === 'only' => $companies->count() === 1 ? $companies->first() : null,
+        ctype_digit($organization) => $companies->firstWhere('id', (int) $organization),
+        default => $companies->firstWhere('name', $organization),
+    };
+
+    if ($target === null) {
+        $this->error("No single organization matches \"{$organization}\". Organizations:");
+        foreach ($companies as $company) {
+            $this->line("  #{$company->id} {$company->name}");
+        }
+
+        return 1;
+    }
+
+    $admin = User::query()
+        ->where('organization_id', $target->id)
+        ->where('role', UserRole::Admin)
+        ->orderBy('id')
+        ->first();
+
+    if ($admin === null) {
+        $this->error("Organization #{$target->id} {$target->name} has no admin.");
+
+        return 1;
+    }
+
+    \App\Services\Tenant\TenantContext::set($target);
+
+    try {
+        $service = app(\App\Services\SampleData\SampleDataService::class);
+
+        if ($service->status()['loaded']) {
+            $this->info("Sample data is already loaded in #{$target->id} {$target->name}.");
+
+            return 0;
+        }
+
+        $created = $service->load($admin);
+        $this->info("Loaded sample data into #{$target->id} {$target->name}: ".json_encode($created));
+
+        return 0;
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        $this->error(collect($e->errors())->flatten()->implode(' '));
+
+        return 1;
+    } finally {
+        \App\Services\Tenant\TenantContext::forget();
+    }
+})->purpose('Load the sample data set into an organization');

@@ -89,11 +89,11 @@ export function Shot({
       </div>
       {pan ? (
         <div className="mk-pan-box">
-          <Image className="mk-pan" src={src} alt={alt} sizes={sizes} placeholder="blur" />
+          <Image className="mk-pan" src={src} alt={alt} sizes={sizes} placeholder="blur" unoptimized />
         </div>
       ) : (
         <div style={{ position: "relative" }}>
-          <Image src={src} alt={alt} sizes={sizes} placeholder="blur" priority={priority} />
+          <Image src={src} alt={alt} sizes={sizes} placeholder="blur" unoptimized priority={priority} />
           {pins.map(([x, y], index) => (
             <span key={index} className="mk-pin" style={vars({ left: `${x}%`, top: `${y}%`, "--pd": index })} aria-hidden="true">
               {index + 1}
@@ -133,7 +133,7 @@ export function Crop({
   return (
     <div className={reveal} style={{ ...vars({ "--d": `${delay}ms` }), ...style }}>
       <figure className="mk-crop">
-        <Image src={src} alt={alt} sizes={sizes} placeholder="blur" />
+        <Image src={src} alt={alt} sizes={sizes} placeholder="blur" unoptimized />
       </figure>
     </div>
   );
