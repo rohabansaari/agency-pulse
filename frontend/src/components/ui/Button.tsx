@@ -1,6 +1,8 @@
 "use client";
 
+import { useReadOnly } from "@/components/ui/ReadOnlyContext";
 import { cn } from "@/lib/cn";
+import { announceReadOnlyBlock, READ_ONLY_MESSAGE } from "@/lib/read-only";
 import type { ButtonHTMLAttributes } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -28,11 +30,41 @@ export function Button({
   size = "md",
   className,
   children,
+  allowReadOnly = false,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Keep this button usable while the workspace is waiting for approval. */
+  allowReadOnly?: boolean;
 }) {
+  // Primary and danger buttons change things: in preview mode they stay visible but can't be used.
+  const locked = useReadOnly() && !allowReadOnly && (variant === "primary" || variant === "danger");
+
+  if (locked) {
+    // Not disabled, so the title still shows on hover and a tap can explain why.
+    return (
+      <button
+        className={cn(
+          "inline-flex cursor-not-allowed items-center justify-center font-medium opacity-50",
+          variantStyles[variant],
+          sizeStyles[size],
+          className,
+        )}
+        {...props}
+        type="button"
+        aria-disabled="true"
+        title={READ_ONLY_MESSAGE}
+        onClick={(event) => {
+          event.preventDefault();
+          announceReadOnlyBlock();
+        }}
+      >
+        {children}
+      </button>
+    );
+  }
+
   return (
     <button
       className={cn(

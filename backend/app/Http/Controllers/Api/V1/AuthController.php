@@ -13,24 +13,32 @@ use App\Http\Resources\UserResource;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use App\Mail\NoticeMail;
 use App\Services\Auth\MembershipRoleSync;
+use App\Services\SampleData\SampleDataService;
+use App\Services\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Spatie\Permission\PermissionRegistrar;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     public function __construct(
-        private readonly MembershipRoleSync $membershipRoleSync
+        private readonly MembershipRoleSync $membershipRoleSync,
+        private readonly SampleDataService $sampleData,
     ) {}
 
     /**
-     * Public sign-up: creates an agency workspace (on trial) with the person
-     * signing up as its admin, and signs them in. They land in onboarding.
+     * Public sign-up: creates an agency workspace with the person signing up
+     * as its admin, and signs them in. The workspace waits for a platform
+     * admin's approval: until then it is read-only and shows the sample
+     * company, so they can see every screen.
      */
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -39,7 +47,7 @@ class AuthController extends Controller
         $payload = DB::transaction(function () use ($request) {
             $organization = Organization::create([
                 'name' => $request->validated('organization_name'),
-                'status' => OrganizationStatus::Trial,
+                'status' => OrganizationStatus::Pending,
             ]);
 
             $user = User::create([
@@ -70,6 +78,9 @@ class AuthController extends Controller
             'organization' => $payload['organization']->name,
         ]);
 
+        $this->loadPreviewData($payload['organization'], $payload['user']);
+        $this->notifyPlatformAdmins($payload['organization'], $payload['user']);
+
         return response()->json([
             'user' => new UserResource($payload['user']),
             'memberships' => OrganizationMemberResource::collection(
@@ -78,6 +89,52 @@ class AuthController extends Controller
             'current_organization_id' => $payload['organization']->id,
             'token' => $token,
         ], 201);
+    }
+
+    /** Fills a new workspace with the sample company and a sample team (best effort). */
+    private function loadPreviewData(Organization $organization, User $admin): void
+    {
+        TenantContext::set($organization);
+        app(PermissionRegistrar::class)->setPermissionsTeamId($organization->id);
+
+        try {
+            $this->sampleData->load($admin, withSampleTeam: true);
+        } catch (\Throwable $e) {
+            Log::warning('Self sign-up: sample data not loaded.', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage(),
+            ]);
+        } finally {
+            TenantContext::forget();
+            app(PermissionRegistrar::class)->setPermissionsTeamId(null);
+        }
+    }
+
+    /** Tells the platform admins a workspace is waiting for approval (best effort). */
+    private function notifyPlatformAdmins(Organization $organization, User $admin): void
+    {
+        $recipients = User::query()->where('role', UserRole::SuperAdmin)->pluck('email')->filter()->all();
+
+        if ($recipients === []) {
+            return;
+        }
+
+        try {
+            Mail::to($recipients)->send(new NoticeMail(
+                "New sign-up waiting for approval: {$organization->name}",
+                [
+                    "{$admin->name} ({$admin->email}) signed up {$organization->name}.",
+                    'They can look around the sample company now. Approve the workspace to let them edit.',
+                ],
+                rtrim((string) config('app.frontend_url', config('app.url')), '/').'/platform',
+                'Review in the platform admin',
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('Self sign-up: platform admin email not sent.', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function login(LoginRequest $request): JsonResponse

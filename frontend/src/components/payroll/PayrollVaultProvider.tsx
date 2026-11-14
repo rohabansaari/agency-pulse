@@ -212,7 +212,7 @@ function PayrollVaultGate() {
               />
             </FormField>
           ) : null}
-          <Button type="submit" size="lg" disabled={submitting} className="w-full">
+          <Button type="submit" size="lg" disabled={submitting} className="w-full" allowReadOnly>
             {submitting ? "Verifying…" : needsSetup ? "Save payroll PIN" : "Continue to payroll"}
           </Button>
         </form>

@@ -13,6 +13,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ResolveTenant
 {
+    public const PENDING_MESSAGE = 'Your workspace is waiting for approval. You can look around, and editing unlocks once it is approved.';
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -53,6 +55,13 @@ class ResolveTenant
             ], 403);
         }
 
+        if ($organization->status === OrganizationStatus::Pending && ! $this->allowedWhilePending($request)) {
+            return response()->json([
+                'message' => self::PENDING_MESSAGE,
+                'code' => 'ORG_PENDING_APPROVAL',
+            ], 403);
+        }
+
         TenantContext::set($organization);
         app(PermissionRegistrar::class)->setPermissionsTeamId($organization->id);
 
@@ -70,6 +79,24 @@ class ResolveTenant
             TenantContext::forget();
             app(PermissionRegistrar::class)->setPermissionsTeamId(null);
         }
+    }
+
+    /**
+     * A workspace waiting for approval is read-only. Reads are fine, and so is
+     * the payroll PIN, which only guards what's on screen.
+     */
+    private function allowedWhilePending(Request $request): bool
+    {
+        if ($request->isMethodSafe()) {
+            return true;
+        }
+
+        return $request->is(
+            'api/v1/auth/*',
+            'api/v1/payroll/vault/initialize',
+            'api/v1/payroll/vault/unlock',
+            'api/v1/payroll/vault/lock',
+        );
     }
 
     private function resolveOrganizationId(Request $request, $user): ?int

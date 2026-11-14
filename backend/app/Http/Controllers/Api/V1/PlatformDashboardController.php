@@ -29,6 +29,9 @@ class PlatformDashboardController extends Controller
             'organizations_suspended' => Organization::query()
                 ->where('status', OrganizationStatus::Suspended)
                 ->count(),
+            'organizations_pending' => Organization::query()
+                ->where('status', OrganizationStatus::Pending)
+                ->count(),
             'tenant_users_total' => $this->platformOrganizations->tenantUsersTotal(),
         ]);
     }

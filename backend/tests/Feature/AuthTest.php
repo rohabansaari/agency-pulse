@@ -34,23 +34,52 @@ class AuthTest extends TestCase
         ], $overrides));
     }
 
-    public function test_anyone_can_create_an_agency_workspace_and_lands_in_onboarding(): void
+    public function test_signup_creates_a_read_only_preview_workspace_until_approved(): void
     {
+        \Illuminate\Support\Facades\Mail::fake();
+        config(['app.super_admin_email' => 'owner@example.com', 'app.super_admin_password' => 'a-platform-password-1']);
+        \App\Services\Auth\SuperAdminBootstrap::ensureExists();
+        $platformAdmin = User::query()->where('role', UserRole::SuperAdmin)->firstOrFail();
+
         $response = $this->signup()->assertCreated()
             ->assertJsonStructure(['user', 'memberships', 'current_organization_id', 'token'])
             ->assertJsonPath('user.role', 'admin')
-            ->assertJsonPath('user.email', 'jane@example.com');
+            ->assertJsonPath('user.email', 'jane@example.com')
+            ->assertJsonPath('memberships.0.organization_status', 'pending');
 
-        $organization = \App\Models\Organization::query()->findOrFail($response->json('current_organization_id'));
+        $organization = Organization::query()->findOrFail($response->json('current_organization_id'));
         $this->assertSame('Northwind Creative', $organization->name);
-        $this->assertSame('trial', $organization->status->value);
+        $this->assertSame(OrganizationStatus::Pending, $organization->status);
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\NoticeMail::class, fn ($mail) => $mail->hasTo('owner@example.com'));
 
+        $token = $response->json('token');
         $headers = ['X-Organization-Id' => (string) $organization->id];
-        $this->withToken($response->json('token'))->getJson('/api/v1/auth/me')->assertOk();
-        $this->withToken($response->json('token'))->withHeaders($headers)
-            ->getJson('/api/v1/onboarding/status')
+        $tenant = fn () => $this->withToken($token)->withHeaders($headers);
+
+        // Every screen has the sample company to look at, with no onboarding first.
+        $tenant()->getJson('/api/v1/onboarding/status')->assertOk()->assertJsonPath('requires_onboarding', false);
+        $tenant()->getJson('/api/v1/sample-data')->assertOk()->assertJsonPath('loaded', true);
+        $this->assertGreaterThan(0, \App\Models\Project::query()->where('organization_id', $organization->id)->count());
+        $tenant()->getJson('/api/v1/projects')->assertOk();
+
+        // Nothing can be changed yet, except the payroll PIN that guards the payroll screens.
+        $tenant()->postJson('/api/v1/teams', ['name' => 'Design'])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'ORG_PENDING_APPROVAL');
+        $tenant()->deleteJson('/api/v1/sample-data')->assertForbidden();
+        $tenant()->postJson('/api/v1/payroll/vault/initialize', ['payroll_pin' => '2468', 'payroll_pin_confirmation' => '2468'])->assertCreated();
+
+        // A platform admin approves it: the trial starts and editing unlocks.
+        Sanctum::actingAs($platformAdmin);
+        $this->postJson("/api/v1/platform/organizations/{$organization->id}/approve")
             ->assertOk()
-            ->assertJsonPath('requires_onboarding', true);
+            ->assertJsonPath('organization.status', 'trial');
+        $this->postJson("/api/v1/platform/organizations/{$organization->id}/approve")->assertStatus(422);
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\NoticeMail::class, fn ($mail) => $mail->hasTo('jane@example.com'));
+
+        $this->app['auth']->forgetGuards();
+        $tenant()->postJson('/api/v1/teams', ['name' => 'Design'])->assertCreated();
+        $tenant()->deleteJson('/api/v1/sample-data')->assertOk();
     }
 
     public function test_signup_rejects_taken_emails_weak_passwords_and_bots(): void

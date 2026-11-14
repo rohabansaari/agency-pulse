@@ -15,6 +15,7 @@ import {
   resendPlatformAdminInvitation,
   sendPlatformMailTest,
   updatePlatformOrganization,
+  approvePlatformOrganization,
   updateSuperAdminPassword,
 } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -90,6 +91,12 @@ export default function PlatformPage() {
   }
 
   const actions = {
+    onApprove: (organization: PlatformOrganization) =>
+      void runRowAction(
+        organization,
+        async () => (await approvePlatformOrganization(organization.id)).message,
+        "Failed to approve organization.",
+      ),
     onEditEmail: (organization: PlatformOrganization) => setDialog({ kind: "edit-email", organization }),
     onSuspend: (organization: PlatformOrganization) => setDialog({ kind: "suspend", organization }),
     onDelete: (organization: PlatformOrganization) => setDialog({ kind: "delete", organization }),
@@ -159,7 +166,11 @@ export default function PlatformPage() {
                 icon={<Building2 className="h-4 w-4" />}
                 label="Organizations"
                 value={data.organizations_total}
-                detail={`${data.organizations_active} active`}
+                detail={
+                  data.organizations_pending
+                    ? `${data.organizations_active} active · ${data.organizations_pending} waiting for approval`
+                    : `${data.organizations_active} active`
+                }
                 dot="var(--primary)"
               />
               <StatCard

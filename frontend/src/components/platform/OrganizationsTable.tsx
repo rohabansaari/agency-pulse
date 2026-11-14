@@ -11,18 +11,21 @@ const STATUS_LABELS: Record<PlatformOrganization["status"], string> = {
   active: "Active",
   trial: "Trial",
   suspended: "Suspended",
+  pending: "Waiting for approval",
 };
 
 const STATUS_BADGE: Record<PlatformOrganization["status"], string> = {
   active: "bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)]",
   trial: "bg-[var(--primary-muted)] text-[var(--primary)]",
   suspended: "bg-[var(--accent-coral-soft)] text-[var(--accent-coral)]",
+  pending: "bg-[var(--accent-copper-soft)] text-[var(--accent-copper)]",
 };
 
 const rowButton =
   "inline-flex min-h-9 items-center rounded-lg border px-3 text-[0.8125rem] font-medium transition disabled:opacity-50";
 
 export type OrganizationActions = {
+  onApprove: (organization: PlatformOrganization) => void;
   onEditEmail: (organization: PlatformOrganization) => void;
   onResendInvitation: (organization: PlatformOrganization) => void;
   onSuspend: (organization: PlatformOrganization) => void;
@@ -43,7 +46,7 @@ export function OrganizationsTable({
   const [query, setQuery] = useState("");
 
   const counts = useMemo(() => {
-    const result: Record<StatusFilter, number> = { all: organizations.length, active: 0, trial: 0, suspended: 0 };
+    const result: Record<StatusFilter, number> = { all: organizations.length, active: 0, trial: 0, suspended: 0, pending: 0 };
     for (const org of organizations) result[org.status] += 1;
     return result;
   }, [organizations]);
@@ -59,7 +62,7 @@ export function OrganizationsTable({
     });
   }, [organizations, filter, query]);
 
-  const tabs: StatusFilter[] = ["all", "active", ...(counts.trial ? (["trial"] as const) : []), "suspended"];
+  const tabs: StatusFilter[] = ["all", ...(counts.pending ? (["pending"] as const) : []), "active", ...(counts.trial ? (["trial"] as const) : []), "suspended"];
 
   return (
     <section
@@ -153,6 +156,7 @@ function OrganizationRow({
   actions: OrganizationActions;
 }) {
   const suspended = organization.status === "suspended";
+  const awaitingApproval = organization.status === "pending";
   const adminPending = organization.admin_status === "invited";
 
   return (
@@ -187,6 +191,16 @@ function OrganizationRow({
       </td>
       <td className="px-5 py-4">
         <div className="flex flex-wrap justify-end gap-1.5">
+          {awaitingApproval ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => actions.onApprove(organization)}
+              className={cn(rowButton, "border-transparent bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)] hover:brightness-95")}
+            >
+              Approve
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={busy || !organization.admin_email}

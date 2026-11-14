@@ -2,6 +2,7 @@
 
 namespace App\Services\Onboarding;
 
+use App\Enums\OrganizationStatus;
 use App\Enums\UserRole;
 use App\Models\Organization;
 use App\Models\Project;
@@ -30,6 +31,11 @@ class OnboardingService
         }
 
         if ($user->currentRole() !== UserRole::Admin) {
+            return false;
+        }
+
+        // Waiting for approval: they browse the sample company instead.
+        if ($organization->status === OrganizationStatus::Pending) {
             return false;
         }
 

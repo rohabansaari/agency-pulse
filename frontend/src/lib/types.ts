@@ -4,6 +4,8 @@ export interface OrganizationMembership {
   id: number;
   organization_id: number;
   organization_name?: string;
+  /** "pending" while a self sign-up waits for approval (read-only preview). */
+  organization_status?: "active" | "trial" | "suspended" | "pending" | null;
   role: UserRole;
   status: string;
   joined_at: string | null;
@@ -510,6 +512,7 @@ export interface PlatformDashboard {
   organizations_total: number;
   organizations_active: number;
   organizations_suspended: number;
+  organizations_pending?: number;
   tenant_users_total: number;
 }
 
@@ -546,7 +549,7 @@ export interface PlatformOrganization {
   id: number;
   name: string;
   slug: string;
-  status: "active" | "suspended" | "trial";
+  status: "active" | "suspended" | "trial" | "pending";
   employee_count: number;
   admin_user_id?: number | null;
   admin_name?: string | null;

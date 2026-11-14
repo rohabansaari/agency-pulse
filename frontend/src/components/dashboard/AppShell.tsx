@@ -6,9 +6,12 @@ import { DesktopAgentBanner } from "@/components/screenshots/DesktopAgentBanner"
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { PageTransition } from "@/components/motion/PageTransition";
 import type { User } from "@/lib/types";
+import { PreviewModeBanner } from "@/components/dashboard/PreviewMode";
+import { ReadOnlyContext } from "@/components/ui/ReadOnlyContext";
+import { setReadOnlyMode } from "@/lib/read-only";
 import { Menu } from "lucide-react";
 import Link from "next/link";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export interface AppSession {
   user: User;
@@ -30,9 +33,15 @@ export function useAppSession(): AppSession {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, organizationName, loading, error, loggingOut, handleLogout } =
+  const { user, organizationName, awaitingApproval, loading, error, loggingOut, handleLogout } =
     useAuthSession();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // The API client checks this before sending a write (see lib/read-only.ts).
+  useEffect(() => {
+    setReadOnlyMode(awaitingApproval);
+    return () => setReadOnlyMode(false);
+  }, [awaitingApproval]);
 
   if (loading) {
     return (
@@ -62,6 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={session}>
+      <ReadOnlyContext.Provider value={awaitingApproval}>
       <div className="theme-ledger app-layout min-h-screen">
         <aside className="app-sidebar hidden border-r border-[var(--sidebar-border)] lg:block">
           <DashboardSidebar user={user} onLogout={handleLogout} loggingOut={loggingOut} />
@@ -92,6 +102,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="mx-auto w-full max-w-7xl min-[100rem]:max-w-[120rem]">
+              {awaitingApproval ? <PreviewModeBanner organizationName={organizationName} /> : null}
               <PageTransition>
                 {user.role === "employee" || user.role === "manager" ? (
                   <DesktopAgentBanner user={user} />
@@ -125,6 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         </aside>
       </div>
+      </ReadOnlyContext.Provider>
     </AuthContext.Provider>
   );
 }

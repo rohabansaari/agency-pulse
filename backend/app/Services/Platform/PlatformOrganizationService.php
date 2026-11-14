@@ -11,7 +11,10 @@ use App\Models\User;
 use App\Services\Auth\InvitationService;
 use App\Services\Auth\MembershipRoleSync;
 use Illuminate\Support\Collection;
+use App\Mail\NoticeMail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class PlatformOrganizationService
@@ -123,6 +126,46 @@ class PlatformOrganizationService
 
             return $this->formatOrganization($organization);
         });
+    }
+
+    /**
+     * Approves a self sign-up: the workspace moves on to its trial and can be
+     * edited. The admin gets an email (best effort).
+     *
+     * @return array{organization: array<string, mixed>, email_sent: bool}
+     */
+    public function approve(Organization $organization): array
+    {
+        if ($organization->status !== OrganizationStatus::Pending) {
+            throw ValidationException::withMessages([
+                'organization' => ['Only organizations waiting for approval can be approved.'],
+            ]);
+        }
+
+        $organization->update(['status' => OrganizationStatus::Trial]);
+
+        $admin = $this->resolvePrimaryAdmin($organization);
+        $emailSent = false;
+
+        if ($admin) {
+            try {
+                Mail::to($admin->email)->send(new NoticeMail(
+                    'Your AgencyPulse workspace is approved',
+                    [
+                        "Hi {$admin->name},",
+                        "{$organization->name} is approved. You can now add your team, set up projects and start tracking time.",
+                        'The sample company is still loaded so you can compare. Remove it any time from Settings → Sample data.',
+                    ],
+                    rtrim((string) config('app.frontend_url', config('app.url')), '/').'/login',
+                    'Open AgencyPulse',
+                ));
+                $emailSent = true;
+            } catch (\Throwable $e) {
+                Log::warning('Approval email not sent.', ['organization_id' => $organization->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return ['organization' => $this->formatOrganization($organization->refresh()), 'email_sent' => $emailSent];
     }
 
     public function deleteOrganization(Organization $organization): void

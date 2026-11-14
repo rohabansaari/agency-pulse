@@ -74,10 +74,16 @@ export function useAuthSession() {
           (m) => m.organization_id === session.current_organization_id,
         )?.organization_name ?? session?.memberships[0]?.organization_name ?? null;
 
+  const currentMembership =
+    session?.memberships.find((m) => m.organization_id === session.current_organization_id) ??
+    session?.memberships[0];
+  const awaitingApproval = user?.role !== "super_admin" && currentMembership?.organization_status === "pending";
+
   return {
     user,
     session,
     organizationName,
+    awaitingApproval,
     loading,
     error,
     loggingOut,

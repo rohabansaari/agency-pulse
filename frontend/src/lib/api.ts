@@ -1,5 +1,6 @@
 import { clearToken, getOrganizationId, getToken, setOrganizationId, setToken, clearOrganizationId } from "./auth";
 import { getPayrollPin } from "./payroll-pin";
+import { announceReadOnlyBlock, isBlockedWrite, isReadOnlyMode, READ_ONLY_MESSAGE } from "./read-only";
 import type {
   ApiValidationError,
   AuthResponse,
@@ -123,6 +124,11 @@ async function apiFetch<T>(
 
   const organizationId = tenant ? getOrganizationId() : null;
 
+  if (tenant && isReadOnlyMode() && isBlockedWrite(path, rest.method)) {
+    announceReadOnlyBlock();
+    throw new ApiError(403, { message: READ_ONLY_MESSAGE });
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     cache: "no-store",
     ...rest,
@@ -140,6 +146,9 @@ async function apiFetch<T>(
   const data = parseApiResponseBody(raw) as T & ApiValidationError;
 
   if (!response.ok) {
+    if ((data as { code?: string }).code === "ORG_PENDING_APPROVAL") {
+      announceReadOnlyBlock();
+    }
     throw new ApiError(response.status, data);
   }
 
@@ -566,6 +575,15 @@ export async function resendPlatformAdminInvitation(
       method: "POST",
       tenant: false,
     },
+  );
+}
+
+export async function approvePlatformOrganization(
+  organizationId: number,
+): Promise<{ message: string; organization: PlatformOrganization }> {
+  return apiFetch<{ message: string; organization: PlatformOrganization }>(
+    `/platform/organizations/${organizationId}/approve`,
+    { method: "POST", tenant: false },
   );
 }
 

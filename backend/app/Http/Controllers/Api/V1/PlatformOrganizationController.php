@@ -80,7 +80,7 @@ class PlatformOrganizationController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->ignore($admin?->id),
             ],
-            'status' => ['sometimes', 'required', Rule::in(['active', 'suspended', 'trial'])],
+            'status' => ['sometimes', 'required', Rule::in(['active', 'suspended', 'trial', 'pending'])],
         ]);
 
         $updated = $this->platformOrganizations->updateOrganization($organization, $validated);
@@ -88,6 +88,19 @@ class PlatformOrganizationController extends Controller
         return response()->json([
             'message' => 'Organization updated.',
             'organization' => $updated,
+        ]);
+    }
+
+    /** Lets a self sign-up workspace start editing (it moves on to its trial). */
+    public function approve(Organization $organization): JsonResponse
+    {
+        $result = $this->platformOrganizations->approve($organization);
+
+        return response()->json([
+            'message' => $result['email_sent']
+                ? 'Organization approved. The admin has been emailed.'
+                : 'Organization approved. The admin can edit now (the email could not be sent).',
+            'organization' => $result['organization'],
         ]);
     }
 

@@ -17,6 +17,7 @@ class OrganizationMemberResource extends JsonResource
             'id' => $this->id,
             'organization_id' => $this->organization_id,
             'organization_name' => $this->organization?->name,
+            'organization_status' => $this->organization?->status?->value,
             'role' => $this->role->value,
             'status' => $this->status->value,
             'joined_at' => $this->joined_at,
