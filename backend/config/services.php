@@ -27,6 +27,12 @@ return [
         'key' => env('MAILERSEND_API_KEY'),
     ],
 
+    // AI summaries on the dashboard (Claude). Without a key, alerts still work.
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'summary_model' => env('AI_SUMMARY_MODEL', 'claude-opus-5-5'),
+    ],
+
     // Vercel Cron sends "Authorization: Bearer <CRON_SECRET>".
     'cron' => [
         'secret' => env('CRON_SECRET'),

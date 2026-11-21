@@ -19,6 +19,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(\App\Services\Insights\SummaryWriter::class, \App\Services\Insights\ClaudeSummaryWriter::class);
+
         $this->app->singleton(PayrollDeductionEngine::class, function () {
             return new PayrollDeductionEngine([
                 new PercentagePayrollDeductionCalculator,

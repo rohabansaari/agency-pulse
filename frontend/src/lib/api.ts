@@ -661,6 +661,45 @@ export async function stopTimer(): Promise<TimeActionResponse> {
   });
 }
 
+export interface InsightAlert {
+  type: "project" | "activity_drop" | "overtime" | "idle_kept" | "approvals";
+  severity: "critical" | "warning" | "info";
+  title: string;
+  detail: string;
+  user_id?: number;
+  project_id?: number;
+}
+
+export interface InsightSummary {
+  headline: string;
+  highlights: string[];
+  concerns: string[];
+  suggestions: string[];
+  period_start: string;
+  period_end: string;
+  generated_at: string;
+}
+
+export interface InsightOverview {
+  alerts: InsightAlert[];
+  summary: InsightSummary | null;
+  ai_available: boolean;
+}
+
+/** Dashboard alerts and the latest weekly AI summary (admins and managers). */
+export async function fetchInsights(): Promise<InsightOverview> {
+  return apiFetch<InsightOverview>("/insights");
+}
+
+/** Ask the AI for a fresh weekly summary (rate limited server-side). */
+export async function generateInsightSummary(): Promise<InsightSummary> {
+  const response = await apiFetch<{ summary: InsightSummary }>("/insights/summary", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  return response.summary;
+}
+
 export interface PayslipSummary {
   id: number;
   period_start: string;
