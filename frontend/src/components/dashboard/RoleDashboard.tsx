@@ -1,5 +1,6 @@
 "use client";
 
+import { InsightsPanel } from "@/components/dashboard/InsightsPanel";
 import { AdminDashboardView } from "@/components/dashboard/AdminDashboardView";
 import { useAppSession } from "@/components/dashboard/AppShell";
 import { Avatar } from "@/components/ledger/Avatar";
@@ -271,6 +272,8 @@ function ManagerView({ data, filter }: { data: ManagerDashboard; filter?: ReactN
           detail="Tracked vs. expected hours"
         />
       </section>
+
+      <InsightsPanel canOpenPeople={false} />
 
       <div className="flex flex-wrap items-start gap-6">
         <div className="min-w-0 flex-[999_1_35rem]">

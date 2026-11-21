@@ -1,5 +1,6 @@
 "use client";
 
+import { InsightsPanel } from "@/components/dashboard/InsightsPanel";
 import { useAppSession } from "@/components/dashboard/AppShell";
 import { Metric } from "@/components/ledger/Metric";
 import { ActivityMeter } from "@/components/ledger/Activity";
@@ -98,6 +99,8 @@ export function AdminDashboardView({ data, filter }: { data: AdminDashboard; fil
           detail={`${hoursLabel(data.overtime_summary?.approved_seconds ?? 0)} approved in range`}
         />
       </section>
+
+      {data.role === "admin" ? <InsightsPanel canOpenPeople /> : null}
 
       <section
         aria-label="Organization"
