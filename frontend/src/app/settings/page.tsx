@@ -6,16 +6,18 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { PasswordChangeForm } from "@/components/settings/PasswordChangeForm";
 import { PayrollPinChangeForm } from "@/components/settings/PayrollPinChangeForm";
 import { SampleDataPanel } from "@/components/settings/SampleDataPanel";
+import { TimeTrackingSettingsPanel } from "@/components/settings/TimeTrackingSettingsPanel";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { cn } from "@/lib/cn";
 import { isAdmin, ROLE_LABELS } from "@/lib/navigation";
-import { Database, KeyRound, Lock, User } from "lucide-react";
+import { Database, KeyRound, Lock, Timer, User } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, type ReactNode } from "react";
 
 const SECTIONS = [
   { id: "profile", label: "Profile", icon: User },
+  { id: "time-tracking", label: "Time tracking", icon: Timer },
   { id: "payroll-pin", label: "Payroll PIN", icon: Lock },
   { id: "password", label: "Password", icon: KeyRound },
   { id: "sample-data", label: "Sample data", icon: Database },
@@ -122,6 +124,16 @@ function SettingsContent() {
                 description="Change the PIN that protects payroll and salary data. Your current PIN is required."
               >
                 <PayrollPinChangeForm />
+              </SettingsSection>
+            ) : null}
+
+            {activeSection === "time-tracking" ? (
+              <SettingsSection
+                id="settings-time-tracking"
+                title="Time tracking"
+                description="Choose when timers pause automatically because nobody is at the computer."
+              >
+                <TimeTrackingSettingsPanel />
               </SettingsSection>
             ) : null}
 

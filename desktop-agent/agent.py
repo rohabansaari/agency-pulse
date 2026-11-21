@@ -15,7 +15,7 @@ import sys
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, TypeVar
 
@@ -28,6 +28,8 @@ TIMER_POLL_INTERVAL_SECONDS = 15
 # While the timer is off the agent is paused: it only checks (lightly) whether the
 # timer has started. Starting the timer in the web app also wakes it immediately.
 IDLE_POLL_INTERVAL_SECONDS = 30
+# Input within this many seconds means the employee is back at the computer.
+USER_BACK_SECONDS = 5
 CAPTURE_INTERVAL_SECONDS = 300
 MAX_IMAGE_WIDTH = 1600
 JPEG_QUALITY = 60
@@ -42,7 +44,7 @@ LEGACY_API_BASE_URLS = {
 }
 PROTOCOL = "agencypulse"
 # Shown in the log and tray menu so it's clear which build is running.
-AGENT_VERSION = "1.3.2"
+AGENT_VERSION = "1.4.0"
 
 CONFIG_DIR = Path.home() / ".agencypulse"
 CONFIG_PATH = CONFIG_DIR / "agent-config.json"
@@ -75,6 +77,18 @@ def last_input_tick() -> int | None:
     if not ctypes.windll.user32.GetLastInputInfo(ctypes.byref(info)):
         return None
     return int(info.dwTime)
+
+
+def idle_seconds() -> float | None:
+    """Seconds since the last keyboard/mouse input (Windows), or None where unsupported."""
+    tick = last_input_tick()
+    if tick is None:
+        return None
+    import ctypes
+
+    now = int(ctypes.windll.kernel32.GetTickCount()) & 0xFFFFFFFF
+    # Both ticks are 32-bit and wrap every ~49.7 days.
+    return ((now - tick) & 0xFFFFFFFF) / 1000.0
 
 
 class ActivityMonitor:
@@ -553,7 +567,7 @@ def signal_wake() -> None:
     log("Wake signal sent to running agent.")
 
 
-def sleep_until(seconds: float) -> None:
+def sleep_until(seconds: float, *, wake_on_input: bool = False) -> None:
     deadline = time.time() + seconds
     while time.time() < deadline:
         if WAKE_PATH.exists():
@@ -561,6 +575,10 @@ def sleep_until(seconds: float) -> None:
             return
         if SHOW_UI_PATH.exists() or QUIT_PATH.exists():
             return
+        if wake_on_input:
+            idle = idle_seconds()
+            if idle is not None and idle < USER_BACK_SECONDS:
+                return
         time.sleep(min(0.5, max(0.0, deadline - time.time())))
 
 
@@ -1124,7 +1142,8 @@ def send_heartbeat(config: dict, offline: bool) -> bool:
     return False
 
 
-def fetch_active_timer(config: dict) -> dict | None:
+def fetch_timer_state(config: dict) -> dict | None:
+    """The /time/today meta (active_timer, paused_timer, idle_timeout_minutes), or None on failure."""
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             response = requests.get(
@@ -1152,11 +1171,203 @@ def fetch_active_timer(config: dict) -> dict | None:
             continue
 
         payload = response.json()
-        meta = payload.get("meta") or {}
-        return meta.get("active_timer")
+        return payload.get("meta") or {}
 
     log("Timer poll failed after maximum retries.")
     return None
+
+
+def post_time_action(config: dict, path: str, payload: dict, label: str) -> bool:
+    """POST to /time/<path>; True on success. Raises RuntimeError when the session expired."""
+    try:
+        response = requests.post(
+            f"{config['api_base_url']}/time/{path}",
+            headers=headers(config),
+            json=payload,
+            timeout=30,
+        )
+    except requests.RequestException as error:
+        log(f"{label} failed: {error}")
+        return False
+
+    if response.status_code == 401:
+        raise RuntimeError("Session expired.")
+    if response.status_code >= 400:
+        log(f"{label} rejected ({response.status_code}): {parse_api_error(response)}")
+        return False
+    return True
+
+
+def local_time_label(iso_value: str | None) -> str:
+    """'2:10 PM' for an API timestamp, in this computer's local time."""
+    if not iso_value:
+        return ""
+    try:
+        moment = datetime.fromisoformat(str(iso_value).replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return moment.astimezone().strftime("%I:%M %p").lstrip("0")
+
+
+def idle_minutes_since(iso_value: str | None) -> int | None:
+    if not iso_value:
+        return None
+    try:
+        moment = datetime.fromisoformat(str(iso_value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return max(0, round((datetime.now(timezone.utc) - moment).total_seconds() / 60))
+
+
+def prompt_idle_gui(paused_at_label: str, idle_minutes: int | None) -> tuple[str, bool] | None:
+    """Ask what to do with idle time. Returns (action, resume), or None if the window was closed."""
+    import tkinter as tk
+
+    BG = "#f3f1ec"
+    CARD = "#faf9f6"
+    FOREGROUND = "#1a1917"
+    MUTED = "#6b6560"
+    BORDER = "#ddd8cf"
+    PRIMARY = "#9d2a8c"
+    PRIMARY_HOVER = "#84227a"
+
+    choice: dict[str, tuple[str, bool] | None] = {"value": None}
+
+    root = tk.Tk()
+    root.title("AgencyPulse: you were away")
+    root.resizable(False, False)
+    root.configure(bg=BG)
+
+    outer = tk.Frame(root, bg=BG, padx=24, pady=24)
+    outer.pack(fill="both", expand=True)
+    card = tk.Frame(outer, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=24, pady=24)
+    card.pack(fill="both", expand=True)
+
+    away = f" for {idle_minutes} min" if idle_minutes is not None else ""
+    since = f" (since {paused_at_label})" if paused_at_label else ""
+    tk.Label(
+        card,
+        text=f"You were away{away}",
+        font=("Segoe UI", 16, "bold"),
+        fg=FOREGROUND,
+        bg=CARD,
+    ).pack(anchor="w")
+    tk.Label(
+        card,
+        text=(
+            f"There was no keyboard or mouse use{since}, so your timer paused.\n"
+            "Were you working, for example on a call or in a meeting?"
+        ),
+        font=("Segoe UI", 10),
+        fg=MUTED,
+        bg=CARD,
+        justify="left",
+    ).pack(anchor="w", pady=(8, 16))
+
+    def choose(action: str, resume: bool) -> None:
+        choice["value"] = (action, resume)
+        root.destroy()
+
+    tk.Button(
+        card,
+        text="Yes, keep this time and continue",
+        command=lambda: choose("keep", True),
+        font=("Segoe UI", 10, "bold"),
+        fg="#ffffff",
+        bg=PRIMARY,
+        activebackground=PRIMARY_HOVER,
+        activeforeground="#ffffff",
+        relief="flat",
+        padx=16,
+        pady=9,
+        cursor="hand2",
+        borderwidth=0,
+    ).pack(fill="x", pady=(0, 8))
+    tk.Button(
+        card,
+        text="No, discard it and continue",
+        command=lambda: choose("discard", True),
+        font=("Segoe UI", 10),
+        fg=FOREGROUND,
+        bg="#ffffff",
+        activebackground="#ebe6de",
+        relief="solid",
+        bd=1,
+        padx=16,
+        pady=9,
+        cursor="hand2",
+    ).pack(fill="x", pady=(0, 8))
+    tk.Button(
+        card,
+        text="Discard it and stop the timer",
+        command=lambda: choose("discard", False),
+        font=("Segoe UI", 10),
+        fg=MUTED,
+        bg=CARD,
+        activebackground="#ebe6de",
+        relief="flat",
+        padx=16,
+        pady=8,
+        cursor="hand2",
+        borderwidth=0,
+    ).pack(fill="x")
+
+    prepare_tk_window(root, 460, 330)
+    root.attributes("-topmost", True)  # stay above other windows until answered
+    root.mainloop()
+    return choice["value"]
+
+
+def handle_idle_pause(config: dict, session: "TimerSession", paused: dict) -> bool:
+    """Timer paused for idle: once the employee is back, ask keep/discard. True if resolved."""
+    entry_id = paused.get("id")
+    paused_at = paused.get("end_time")
+    session.show_idle_pause(local_time_label(paused_at))
+
+    idle = idle_seconds()
+    # Generous window: the state fetch after the first input can take a few seconds.
+    if idle is None or idle >= 60 or session.idle_prompted_entry_id == entry_id:
+        return False  # still away, or they closed the window: they can decide on the Time page
+
+    session.idle_prompted_entry_id = entry_id
+    log("Employee is back after idle; asking whether to keep the idle time.")
+    try:
+        choice = prompt_idle_gui(local_time_label(paused_at), idle_minutes_since(paused_at))
+    except Exception as error:
+        log(f"Unable to show the idle window: {error}")
+        choice = None
+
+    if choice is None:
+        TRAY.set_state(
+            "paused",
+            session.tray_detail,
+            notify="Timer paused while you were away. Keep or discard that time on the Time page.",
+        )
+        return False
+
+    action, resume = choice
+    send_heartbeat(config, False)  # resuming needs a recent check-in; the window may have been open a while
+    if post_time_action(config, "idle/resolve", {"action": action, "resume": resume}, "Idle decision"):
+        log(f"Idle time {'kept' if action == 'keep' else 'discarded'}; timer {'continues' if resume else 'stopped'}.")
+        return True
+    TRAY.set_state("paused", session.tray_detail, notify="Couldn't save your choice. Use the Time page instead.")
+    return False
+
+
+def check_idle(config: dict, session: "TimerSession", idle_limit_minutes: int) -> bool:
+    """While tracking: pause the timer once there's been no input for the idle limit. True if paused."""
+    if idle_limit_minutes < 1 or session.active_entry_id is None:
+        return False
+    idle = idle_seconds()
+    if idle is None or idle < idle_limit_minutes * 60:
+        return False
+
+    idle_since = datetime.now(timezone.utc) - timedelta(seconds=idle)
+    log(f"No keyboard/mouse input for {int(idle // 60)} min; pausing the timer at the last input.")
+    if not post_time_action(config, "idle", {"idle_since": idle_since.isoformat()}, "Idle pause"):
+        return False
+    session.clear(reason="idle", since=idle_since)
+    return True
 
 
 def capture_screen_base64() -> str:
@@ -1233,22 +1444,36 @@ class TimerSession:
         self.project_id: int | None = None
         self.last_capture_at: float = 0.0
         self.tray_detail = "Paused: not tracking"
+        # Paused-for-idle entry we already asked about (closing the window doesn't ask again).
+        self.idle_prompted_entry_id: int | None = None
 
-    def clear(self) -> None:
+    def clear(self, reason: str | None = None, since: datetime | None = None) -> None:
         was_tracking = self.active_entry_id is not None
         if was_tracking:
             log("Timer stopped or paused. Agent paused: no screenshots or activity tracking until the timer runs again.")
         ACTIVITY.stop()
-        self.tray_detail = "Paused: not tracking"
-        TRAY.set_state(
-            "paused",
-            self.tray_detail,
-            notify="Tracking paused. Nothing is recorded until your timer runs again." if was_tracking else None,
-        )
+        if reason == "idle":
+            moment = since or datetime.now(timezone.utc)
+            self.tray_detail = f"Paused: away since {local_time_label(moment.isoformat())}"
+            notify = "Timer paused: no keyboard or mouse use. You'll be asked about the time when you're back."
+        else:
+            self.tray_detail = "Paused: not tracking"
+            notify = "Tracking paused. Nothing is recorded until your timer runs again."
+        TRAY.set_state("paused", self.tray_detail, notify=notify if was_tracking else None)
         self.active_entry_id = None
         self.session_id = None
         self.project_id = None
         self.last_capture_at = 0.0
+
+
+    def show_idle_pause(self, since_label: str) -> None:
+        """Tray shows the idle pause (also after an agent restart, from the server's state)."""
+        if self.active_entry_id is not None:
+            self.clear()
+        detail = f"Paused: away since {since_label}" if since_label else "Paused: you were away"
+        if detail != self.tray_detail:
+            self.tray_detail = detail
+            TRAY.set_state("paused", detail)
 
 
 def is_timer_running(timer: dict | None) -> bool:
@@ -1358,13 +1583,25 @@ def run_agent(*, interactive: bool = False) -> None:
                         session.tray_detail,
                     )
 
-            timer = fetch_active_timer(config)
+            meta = fetch_timer_state(config) or {}
+            timer = meta.get("active_timer")
+            paused = meta.get("paused_timer")
+            idle_limit = int(meta.get("idle_timeout_minutes") or 0)
+
+            if not is_timer_running(timer) and isinstance(paused, dict) and paused.get("pause_reason") == "idle":
+                if handle_idle_pause(config, session, paused):
+                    continue  # decision saved: pick up the new timer state right away
+                sleep_until(IDLE_POLL_INTERVAL_SECONDS, wake_on_input=True)
+                continue
+
             handle_timer_state(
                 config,
                 session,
                 timer,
                 force_capture=wake_received,
             )
+            if check_idle(config, session, idle_limit):
+                continue
         except RuntimeError as error:
             log(str(error))
             config = clear_auth(config)

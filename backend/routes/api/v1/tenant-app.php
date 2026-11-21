@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\SampleDataController;
+use App\Http\Controllers\Api\V1\TimeTrackingSettingsController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,6 +13,10 @@ Route::middleware('rbac:admin')->prefix('sample-data')->group(function () {
     Route::get('/', [SampleDataController::class, 'show']);
     Route::post('/', [SampleDataController::class, 'store']);
     Route::delete('/', [SampleDataController::class, 'destroy']);
+});
+Route::middleware('rbac:admin')->prefix('settings/time-tracking')->group(function () {
+    Route::get('/', [TimeTrackingSettingsController::class, 'show']);
+    Route::patch('/', [TimeTrackingSettingsController::class, 'update']);
 });
 Route::prefix('reports')->group(base_path('routes/api/v1/reports.php'));
 Route::prefix('invoices')->group(base_path('routes/api/v1/invoices.php'));

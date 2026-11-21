@@ -6,6 +6,7 @@ import {
   fetchTodayTime,
   formatApiErrors,
   pauseTimer,
+  resolveIdleTime,
   resumeTimer,
   startTimer,
   stopTimer,
@@ -18,6 +19,7 @@ import { OvertimeRequestList } from "@/components/time/OvertimeRequestList";
 import { hoursLabel } from "@/components/ledger/format";
 import { Panel } from "@/components/ledger/Panel";
 import { Segmented, type SegmentedOption } from "@/components/ledger/Segmented";
+import { Button } from "@/components/ui/Button";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { TimerFocusPanel } from "@/components/time/TimerFocusPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -100,6 +102,9 @@ function TodayPanel({
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <span className="num text-sm font-semibold text-[var(--foreground)]">{formatDuration(duration)}</span>
+                  {entry.idle_kept ? (
+                    <span className="text-[0.6875rem] font-medium text-[var(--accent-copper)]">Idle time kept</span>
+                  ) : null}
                   {isRunning ? (
                     <span className="inline-flex items-center gap-1 text-[0.6875rem] font-medium text-[var(--accent-emerald)]">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--accent-emerald)]" aria-hidden="true" />
@@ -113,6 +118,54 @@ function TodayPanel({
         </ul>
       )}
     </Panel>
+  );
+}
+
+/** Timer paused for idle: the employee keeps or discards the idle time. */
+function IdleNotice({
+  pausedAt,
+  disabled,
+  onKeep,
+  onDiscard,
+  onKeepAndStop,
+}: {
+  pausedAt: string | null | undefined;
+  disabled: boolean;
+  onKeep: () => void;
+  onDiscard: () => void;
+  onKeepAndStop: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const idleMinutes = pausedAt ? Math.max(0, Math.round((now - new Date(pausedAt).getTime()) / 60_000)) : null;
+
+  return (
+    <div
+      role="status"
+      className="rounded-xl border border-[var(--accent-copper)]/30 bg-[var(--accent-copper-soft)] px-4 py-3 text-sm text-[var(--foreground)]"
+    >
+      <p className="font-medium">
+        You&apos;ve been away{idleMinutes !== null ? ` for ${idleMinutes} min` : ""}
+        {pausedAt ? `, since ${formatTime(pausedAt)}` : ""}.
+      </p>
+      <p className="mt-0.5 text-[var(--muted)]">
+        No keyboard or mouse use, so your timer paused. Were you working, for example on a call or in a meeting?
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" onClick={onKeep} disabled={disabled}>
+          Yes, keep it and continue
+        </Button>
+        <Button size="sm" variant="secondary" onClick={onDiscard} disabled={disabled}>
+          No, discard it and continue
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onKeepAndStop} disabled={disabled}>
+          Keep it and stop the timer
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -337,6 +390,17 @@ export function TimeTracker({ user }: { user?: User }) {
     void runTimerAction(pauseTimer, "Timer paused — screenshots paused too", "Unable to pause timer.");
   }
 
+  function handleIdle(action: "keep" | "discard", resume: boolean) {
+    void runTimerAction(
+      async () => {
+        await resolveIdleTime(action, resume);
+        if (resume) wakeDesktopAgent();
+      },
+      action === "keep" ? "Idle time kept" : "Idle time discarded",
+      "Unable to save your choice.",
+    );
+  }
+
   function handleResume() {
     void runTimerAction(
       async () => {
@@ -469,6 +533,15 @@ export function TimeTracker({ user }: { user?: User }) {
               {pausedTimer.end_time ? ` at ${formatTime(pausedTimer.end_time)}` : ""} because the desktop agent stopped
               running. Open AgencyPulseAgent, then press Resume to continue the same session.
             </p>
+          ) : null}
+          {!activeTimer && pausedTimer?.pause_reason === "idle" ? (
+            <IdleNotice
+              pausedAt={pausedTimer.end_time}
+              disabled={actionLoading}
+              onKeep={() => handleIdle("keep", true)}
+              onDiscard={() => handleIdle("discard", true)}
+              onKeepAndStop={() => handleIdle("keep", false)}
+            />
           ) : null}
           {successMessage ? (
             <p role="status" className="rounded-xl bg-[var(--accent-emerald-soft)] px-4 py-2.5 text-sm font-medium text-[var(--accent-emerald)]">

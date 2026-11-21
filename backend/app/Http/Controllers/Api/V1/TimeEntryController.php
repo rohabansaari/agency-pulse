@@ -21,12 +21,15 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class TimeEntryController extends TenantAppController
 {
+    public const PAUSE_REASON_IDLE = 'idle';
+
     public function __construct(
         private readonly ProjectAccessService $projectAccess,
         private readonly ReportingService $reporting,
@@ -197,6 +200,151 @@ class TimeEntryController extends TenantAppController
         ]);
     }
 
+    /**
+     * The desktop agent saw no keyboard/mouse input for the company's idle limit:
+     * pause the timer back at the last input, so idle time isn't counted unless
+     * the employee chooses to keep it when they return.
+     */
+    public function idle(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $this->assertCanTrack($user);
+
+        $validated = $request->validate([
+            'idle_since' => ['required', 'date'],
+        ]);
+
+        $timeout = (int) TenantContext::get()->idle_timeout_minutes;
+
+        if ($timeout < 1) {
+            throw ValidationException::withMessages([
+                'idle' => ['Idle detection is turned off for your company.'],
+            ]);
+        }
+
+        $entry = $this->runningEntry($user->id);
+
+        if (! $entry) {
+            throw ValidationException::withMessages([
+                'timer' => ['No running timer to pause.'],
+            ]);
+        }
+
+        $idleSince = Carbon::parse($validated['idle_since']);
+
+        // The agent reports once the limit is reached; allow a minute of clock drift.
+        if ($idleSince->greaterThan(now()->subMinutes($timeout)->addMinute())) {
+            throw ValidationException::withMessages([
+                'idle_since' => ["The idle limit is {$timeout} minutes."],
+            ]);
+        }
+
+        $this->payrollLock->assertTimeEntryModifiable($entry);
+
+        $endTime = $idleSince->lessThan($entry->start_time) ? $entry->start_time->copy() : $idleSince;
+
+        $entry->update([
+            'end_time' => $endTime,
+            'duration' => (int) $entry->start_time->diffInSeconds($endTime),
+            'status' => TimeEntryStatus::Stopped,
+            'paused' => true,
+            'pause_reason' => self::PAUSE_REASON_IDLE,
+        ]);
+
+        return response()->json([
+            'message' => 'Timer paused: no activity for '.$timeout.' minutes.',
+            'entry' => new TimeEntryResource($entry->fresh()->load('project')),
+        ]);
+    }
+
+    /**
+     * The employee decides what happens to time the timer was paused for idle:
+     * keep it (a call or meeting) or discard it, then continue or stop.
+     */
+    public function resolveIdle(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $this->assertCanTrack($user);
+
+        $validated = $request->validate([
+            'action' => ['required', Rule::in(['keep', 'discard'])],
+            'resume' => ['required', 'boolean'],
+        ]);
+
+        $paused = $this->runningEntry($user->id) ? null : $this->pausedSegment($user->id);
+
+        if (! $paused || $paused->pause_reason !== self::PAUSE_REASON_IDLE) {
+            throw ValidationException::withMessages([
+                'idle' => ['There is no idle time waiting for a decision.'],
+            ]);
+        }
+
+        $keep = $validated['action'] === 'keep';
+        $resume = (bool) $validated['resume'];
+        $idleFrom = $paused->end_time->copy();
+        $now = now();
+
+        if ($keep) {
+            $maxMinutes = max(1, (int) config('screenshots.idle_keep_max_minutes', 240));
+
+            if ($idleFrom->diffInMinutes($now) > $maxMinutes) {
+                throw ValidationException::withMessages([
+                    'idle' => [
+                        'Idle time longer than '.intdiv($maxMinutes, 60).' hours can\'t be kept. Discard it and add the work as manual time instead.',
+                    ],
+                ]);
+            }
+
+            $this->payrollLock->assertDateModifiable($idleFrom->copy()->startOfDay());
+        }
+
+        if ($resume) {
+            $this->assertAgentConnected($user);
+            $this->payrollLock->assertDateModifiable(Carbon::today()->startOfDay());
+        }
+
+        $entry = DB::transaction(function () use ($paused, $keep, $resume, $idleFrom, $now, $user) {
+            $paused->update(['paused' => false, 'pause_reason' => null]);
+            $latest = $paused;
+
+            if ($keep) {
+                $latest = TimeEntry::create([
+                    'user_id' => $user->id,
+                    'organization_id' => TenantContext::id(),
+                    'type' => TimeEntryType::Tracked,
+                    'project_id' => $paused->project_id,
+                    'start_time' => $idleFrom,
+                    'end_time' => $now,
+                    'duration' => (int) $idleFrom->diffInSeconds($now),
+                    'status' => TimeEntryStatus::Stopped,
+                    'timer_session' => $paused->timer_session,
+                    'idle_kept' => true,
+                ]);
+            }
+
+            if ($resume) {
+                $latest = TimeEntry::create([
+                    'user_id' => $user->id,
+                    'organization_id' => TenantContext::id(),
+                    'type' => TimeEntryType::Tracked,
+                    'project_id' => $paused->project_id,
+                    'start_time' => $now,
+                    'status' => TimeEntryStatus::Running,
+                    'timer_session' => $paused->timer_session ?? (string) Str::uuid(),
+                ]);
+            }
+
+            return $latest;
+        });
+
+        $message = ($keep ? 'Idle time kept' : 'Idle time discarded').($resume ? '; timer running.' : '; timer stopped.');
+
+        return response()->json([
+            'message' => $message,
+            'entry' => new TimeEntryResource($entry->fresh()->load('project')),
+        ], $resume ? 201 : 200);
+    }
+
     private function assertCanTrack($user): void
     {
         if ($user->currentRole()?->isOperationalAdmin()) {
@@ -329,6 +477,7 @@ class TimeEntryController extends TenantAppController
                     ? new TimeEntryResource($pausedTimer->load('project'))
                     : null,
                 'session_elapsed' => $this->sessionBankedSeconds($activeTimer ?? $pausedTimer),
+                'idle_timeout_minutes' => (int) TenantContext::get()->idle_timeout_minutes,
                 'by_project' => $byProject,
             ],
         ]);
