@@ -33,6 +33,7 @@ class TimeEntry extends Model
         'timer_session',
         'paused',
         'pause_reason',
+        'idle_kept',
         'approved_by',
         'approved_at',
     ];
@@ -48,6 +49,7 @@ class TimeEntry extends Model
             'duration' => 'integer',
             'status' => TimeEntryStatus::class,
             'paused' => 'boolean',
+            'idle_kept' => 'boolean',
             'approved_at' => 'datetime',
         ];
     }

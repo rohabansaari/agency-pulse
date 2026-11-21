@@ -10,6 +10,8 @@ Route::post('/start', [TimeEntryController::class, 'start']);
 Route::post('/pause', [TimeEntryController::class, 'pause']);
 Route::post('/resume', [TimeEntryController::class, 'resume']);
 Route::post('/stop', [TimeEntryController::class, 'stop']);
+Route::post('/idle', [TimeEntryController::class, 'idle']);
+Route::post('/idle/resolve', [TimeEntryController::class, 'resolveIdle']);
 Route::get('/today', [TimeEntryController::class, 'today']);
 Route::get('/personal-report', [TimeEntryController::class, 'personalReport']);
 

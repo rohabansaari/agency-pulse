@@ -661,6 +661,29 @@ export async function stopTimer(): Promise<TimeActionResponse> {
   });
 }
 
+/** Decide what happens to time the timer was paused for idle, then continue or stop. */
+export async function resolveIdleTime(action: "keep" | "discard", resume: boolean): Promise<TimeActionResponse> {
+  return apiFetch<TimeActionResponse>("/time/idle/resolve", {
+    method: "POST",
+    body: JSON.stringify({ action, resume }),
+  });
+}
+
+export interface TimeTrackingSettings {
+  idle_timeout_minutes: number;
+}
+
+export async function fetchTimeTrackingSettings(): Promise<TimeTrackingSettings> {
+  return apiFetch<TimeTrackingSettings>("/settings/time-tracking");
+}
+
+export async function updateTimeTrackingSettings(settings: TimeTrackingSettings): Promise<TimeTrackingSettings> {
+  return apiFetch<TimeTrackingSettings>("/settings/time-tracking", {
+    method: "PATCH",
+    body: JSON.stringify(settings),
+  });
+}
+
 export async function fetchTodayTime(): Promise<TimeTodayResponse> {
   return apiFetch<TimeTodayResponse>("/time/today");
 }

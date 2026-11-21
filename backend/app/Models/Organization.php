@@ -22,6 +22,7 @@ class Organization extends Model
         'onboarding_skipped_steps',
         'invoice_settings',
         'timezone',
+        'idle_timeout_minutes',
         'logo_url',
         'website',
         'payroll_pin',
@@ -38,6 +39,7 @@ class Organization extends Model
             'invoice_settings' => 'array',
             'payroll_pin' => 'encrypted',
             'payroll_pin_created_at' => 'datetime',
+            'idle_timeout_minutes' => 'integer',
         ];
     }
 

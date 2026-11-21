@@ -235,6 +235,8 @@ export interface TimeEntry {
   paused?: boolean;
   /** "agent_offline" when the timer was paused automatically because the desktop agent stopped. */
   pause_reason?: string | null;
+  /** A segment of idle time the employee chose to keep. */
+  idle_kept?: boolean;
 }
 
 export interface LeaveBreakdownPeriod {
@@ -337,6 +339,8 @@ export interface TimeTodayResponse {
     paused_timer?: TimeEntry | null;
     /** Seconds already banked in the current timer session (excludes the running segment). */
     session_elapsed?: number;
+    /** Minutes without input before the agent pauses the timer; 0 = off. */
+    idle_timeout_minutes?: number;
     by_project: TimeByProject[];
   };
 }
