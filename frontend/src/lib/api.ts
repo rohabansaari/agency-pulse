@@ -661,6 +661,52 @@ export async function stopTimer(): Promise<TimeActionResponse> {
   });
 }
 
+export interface PayslipSummary {
+  id: number;
+  period_start: string;
+  period_end: string;
+  period_label: string;
+  pay_date: string | null;
+  net_pay: number;
+  currency: string;
+}
+
+export interface PayslipLine {
+  name: string;
+  amount: number;
+}
+
+export interface Payslip {
+  id: number;
+  status: "finalized" | "locked";
+  period_start: string;
+  period_end: string;
+  period_label: string;
+  pay_date: string | null;
+  currency: string;
+  company: { name: string; address: string; logo_url: string | null };
+  employee: { id: number; name: string | null; email: string | null };
+  salary_type: string;
+  hours: { payable_seconds: number; regular_seconds: number; overtime_seconds: number };
+  earnings: PayslipLine[];
+  deductions: PayslipLine[];
+  total_earnings: number;
+  total_deductions: number;
+  net_pay: number;
+}
+
+/** The signed-in person's payslips from finalized payroll, newest first. */
+export async function fetchPayslips(): Promise<PayslipSummary[]> {
+  const response = await apiFetch<{ data: PayslipSummary[] }>("/payslips");
+  return response.data;
+}
+
+/** One payslip: your own, or anyone's for an admin with the payroll PIN unlocked. */
+export async function fetchPayslip(id: number): Promise<Payslip> {
+  const response = await apiFetch<{ data: Payslip }>(`/payslips/${id}`, { payrollPin: true });
+  return response.data;
+}
+
 /** Decide what happens to time the timer was paused for idle, then continue or stop. */
 export async function resolveIdleTime(action: "keep" | "discard", resume: boolean): Promise<TimeActionResponse> {
   return apiFetch<TimeActionResponse>("/time/idle/resolve", {

@@ -18,6 +18,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Leave", href: "/leave", roles: ["employee"] },
   { label: "Leave", href: "/leave/approvals", roles: ["manager"] },
   { label: "Advance Salary", href: "/advances", roles: ["employee", "manager"] },
+  { label: "Payslips", href: "/payslips", roles: ["employee", "manager"] },
   { label: "Advance Salary", href: "/admin/advances", roles: ["admin"] },
   { label: "Leave Management", href: "/admin/leave", roles: ["admin", "sub_admin"] },
   { label: "Overtime Management", href: "/admin/overtime", roles: ["admin", "sub_admin"] },
@@ -31,8 +32,18 @@ export const NAV_ITEMS: NavItem[] = [
 
 const ROLE_NAV: Record<UserRole, string[]> = {
   super_admin: ["Platform"],
-  employee: ["Dashboard", "Time Tracking", "My Projects", "Screenshots", "Leave", "Advance Salary"],
-  manager: ["Dashboard", "Time Tracking", "My Teams", "Projects", "Leave", "Advance Salary", "Reports", "Screenshots"],
+  employee: ["Dashboard", "Time Tracking", "My Projects", "Screenshots", "Leave", "Advance Salary", "Payslips"],
+  manager: [
+    "Dashboard",
+    "Time Tracking",
+    "My Teams",
+    "Projects",
+    "Leave",
+    "Advance Salary",
+    "Payslips",
+    "Reports",
+    "Screenshots",
+  ],
   sub_admin: [
     "Dashboard",
     "Teams",

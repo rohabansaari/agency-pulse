@@ -16,6 +16,7 @@ import {
   Camera,
   Clock,
   DollarSign,
+  FileText,
   FolderKanban,
   LayoutDashboard,
   LogOut,
@@ -50,6 +51,7 @@ const ICONS: Record<string, ComponentType<{ className?: string; strokeWidth?: nu
   "Overtime Management": Clock,
   Payroll: DollarSign,
   "Advance Salary": Wallet,
+  Payslips: FileText,
   Reports: BarChart3,
   Profitability: PiggyBank,
   Invoices: ReceiptText,
@@ -79,13 +81,13 @@ const GROUPS: Record<UserRole, { id: string; label: string; labels: string[] }[]
   manager: [
     { id: "overview", label: "Overview", labels: ["Dashboard"] },
     { id: "work", label: "Work", labels: ["Time Tracking", "My Teams", "Projects", "Screenshots"] },
-    { id: "people", label: "People", labels: ["Leave", "Advance Salary"] },
+    { id: "people", label: "People", labels: ["Leave", "Advance Salary", "Payslips"] },
     { id: "insights", label: "Insights", labels: ["Reports"] },
   ],
   employee: [
     { id: "overview", label: "Overview", labels: ["Dashboard"] },
     { id: "work", label: "Work", labels: ["Time Tracking", "My Projects", "Screenshots"] },
-    { id: "people", label: "Time off", labels: ["Leave", "Advance Salary"] },
+    { id: "people", label: "Time off & pay", labels: ["Leave", "Advance Salary", "Payslips"] },
   ],
 };
 

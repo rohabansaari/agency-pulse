@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\PayslipController;
 use App\Http\Controllers\Api\V1\SampleDataController;
 use App\Http\Controllers\Api\V1\TimeTrackingSettingsController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -18,6 +19,8 @@ Route::middleware('rbac:admin')->prefix('settings/time-tracking')->group(functio
     Route::get('/', [TimeTrackingSettingsController::class, 'show']);
     Route::patch('/', [TimeTrackingSettingsController::class, 'update']);
 });
+Route::get('/payslips', [PayslipController::class, 'index']);
+Route::get('/payslips/{payslip}', [PayslipController::class, 'show'])->whereNumber('payslip');
 Route::prefix('reports')->group(base_path('routes/api/v1/reports.php'));
 Route::prefix('invoices')->group(base_path('routes/api/v1/invoices.php'));
 Route::prefix('time')->group(base_path('routes/api/v1/time.php'));

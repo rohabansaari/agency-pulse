@@ -8,7 +8,8 @@ import { cn } from "@/lib/cn";
 import { formatPKRCompact } from "@/lib/currency";
 import { formatDuration } from "@/lib/time";
 import type { PayrollRunEmployeeRecord } from "@/lib/types";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, FileText } from "lucide-react";
+import Link from "next/link";
 import { Fragment, useState } from "react";
 
 const COLUMN_COUNT = 9;
@@ -28,9 +29,12 @@ function Amount({ value, masked, strong = false }: { value: string | null | unde
 export function PayrollEmployeeLines({
   records,
   financialUnlocked,
+  payslipsIssued = false,
 }: {
   records: PayrollRunEmployeeRecord[] | undefined;
   financialUnlocked: boolean;
+  /** Finalized or locked run: each line links to the employee's payslip. */
+  payslipsIssued?: boolean;
 }) {
   const [openId, setOpenId] = useState<number | null>(null);
 
@@ -93,7 +97,17 @@ export function PayrollEmployeeLines({
                   <td className={cn(ledgerTable.td, "text-right")}>
                     <Amount value={record.net_salary_snapshot} masked={masked} strong />
                   </td>
-                  <td className={cn(ledgerTable.td, "text-right")}>
+                  <td className={cn(ledgerTable.td, "whitespace-nowrap text-right")}>
+                    {payslipsIssued && !masked ? (
+                      <Link
+                        href={`/payslips/${record.id}`}
+                        aria-label={`Payslip for ${name}`}
+                        title="Payslip"
+                        className={cn(rowButton, "mr-1 w-9 justify-center px-0")}
+                      >
+                        <FileText className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    ) : null}
                     <button
                       type="button"
                       aria-expanded={open}
