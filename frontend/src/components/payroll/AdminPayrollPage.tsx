@@ -645,6 +645,7 @@ export function AdminPayrollPage() {
                                   <PayrollEmployeeLines
                                     records={detail?.employee_records}
                                     financialUnlocked={financialUnlocked}
+                                    payslipsIssued={run.status !== "draft"}
                                   />
                                 )}
                               </div>

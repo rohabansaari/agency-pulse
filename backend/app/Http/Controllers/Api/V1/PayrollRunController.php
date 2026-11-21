@@ -7,6 +7,7 @@ use App\Http\Resources\PayrollRunResource;
 use App\Models\PayrollRun;
 use App\Services\Payroll\PayrollRunService;
 use App\Services\Payroll\PayrollVaultService;
+use App\Services\Payroll\PayslipService;
 use App\Support\DisplayDate;
 use App\Support\ReportDateRange;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +18,8 @@ class PayrollRunController extends TenantAppController
 {
     public function __construct(
         private readonly PayrollRunService $payrollRuns,
-        private readonly PayrollVaultService $payrollVault
+        private readonly PayrollVaultService $payrollVault,
+        private readonly PayslipService $payslips,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -96,9 +98,12 @@ class PayrollRunController extends TenantAppController
         $this->payrollVault->assertUnlocked($request->user());
 
         $run = $this->payrollRuns->finalize($payrollRun, $request->user());
+        $emailed = $this->payslips->sendReadyEmails($run);
 
         return response()->json([
-            'message' => 'Payroll run finalized. Time entries in this period are now locked.',
+            'message' => 'Payroll run finalized. Time entries in this period are now locked. '
+                .($emailed === 1 ? '1 payslip email sent.' : "{$emailed} payslip emails sent."),
+            'payslips_emailed' => $emailed,
             'payroll_run' => new PayrollRunResource($run),
         ]);
     }
