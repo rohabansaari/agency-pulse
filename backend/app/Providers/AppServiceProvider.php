@@ -19,7 +19,14 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(\App\Services\Insights\SummaryWriter::class, \App\Services\Insights\ClaudeSummaryWriter::class);
+        $this->app->bind(\App\Services\Insights\SummaryWriter::class, function ($app) {
+            $provider = config('services.ai_provider')
+                ?: ((string) config('services.gemini.key') !== '' ? 'gemini' : 'anthropic');
+
+            return $provider === 'gemini'
+                ? $app->make(\App\Services\Insights\GeminiSummaryWriter::class)
+                : $app->make(\App\Services\Insights\ClaudeSummaryWriter::class);
+        });
 
         $this->app->singleton(PayrollDeductionEngine::class, function () {
             return new PayrollDeductionEngine([

@@ -27,7 +27,15 @@ return [
         'key' => env('MAILERSEND_API_KEY'),
     ],
 
-    // AI summaries on the dashboard (Claude). Without a key, alerts still work.
+    // AI summaries on the dashboard. Without a key, alerts still work.
+    // "gemini" or "anthropic"; empty picks Gemini when GEMINI_API_KEY is set, else Claude.
+    'ai_provider' => env('AI_PROVIDER'),
+
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-4-hydrogen'),
+    ],
+
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),
         'summary_model' => env('AI_SUMMARY_MODEL', 'claude-opus-5-5'),

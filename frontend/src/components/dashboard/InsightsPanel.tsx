@@ -128,7 +128,7 @@ export function InsightsPanel({ canOpenPeople }: { canOpenPeople: boolean }) {
             <p className="mt-3 text-sm text-[var(--muted)]">
               {data.ai_available
                 ? "Get a one-minute briefing on last week: who worked what, what changed and what to look at."
-                : "AI summaries aren't set up yet. Add an Anthropic API key to the server settings to turn them on. Alerts work without it."}
+                : "AI summaries aren't set up yet. Add a Gemini or Anthropic API key to the server settings to turn them on. Alerts work without it."}
             </p>
           )}
         </section>
