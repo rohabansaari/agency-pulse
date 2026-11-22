@@ -85,4 +85,35 @@ class AiSummaryProvidersTest extends TestCase
         $this->expectExceptionMessage('declined');
         (new GeminiSummaryWriter)->write([]);
     }
+
+    public function test_gemini_retries_then_falls_back_when_the_model_is_busy(): void
+    {
+        config([
+            'services.gemini.key' => 'g-key',
+            'services.gemini.model' => 'gemini-4-hydrogen',
+            'services.gemini.fallback_model' => 'gemini-flash-latest',
+            'services.gemini.retry_delay_ms' => 0,
+        ]);
+        $busy = Http::response(['error' => ['status' => 'UNAVAILABLE']], 503);
+        Http::fakeSequence('generativelanguage.googleapis.com/*')
+            ->pushResponse($busy)
+            ->pushResponse($busy)
+            ->push($this->geminiReply(json_encode(self::SUMMARY)));
+
+        $this->assertSame(self::SUMMARY, (new GeminiSummaryWriter)->write([]));
+
+        $urls = Http::recorded()->map(fn ($pair) => $pair[0]->url())->all();
+        $this->assertCount(3, $urls);
+        $this->assertStringContainsString('/gemini-4-hydrogen:', $urls[1]);
+        $this->assertStringContainsString('/gemini-flash-latest:', $urls[2]);
+    }
+
+    public function test_gemini_busy_everywhere_says_try_again(): void
+    {
+        config(['services.gemini.key' => 'g-key', 'services.gemini.retry_delay_ms' => 0]);
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['error' => ['status' => 'UNAVAILABLE']], 503)]);
+
+        $this->expectExceptionMessage('busy right now');
+        (new GeminiSummaryWriter)->write([]);
+    }
 }

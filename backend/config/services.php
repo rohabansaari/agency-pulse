@@ -34,6 +34,9 @@ return [
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-4-hydrogen'),
+        // Used when the main model stays busy (UNAVAILABLE) after one retry.
+        'fallback_model' => env('GEMINI_FALLBACK_MODEL', 'gemini-flash-latest'),
+        'retry_delay_ms' => (int) env('GEMINI_RETRY_DELAY_MS', 1500),
     ],
 
     'anthropic' => [
