@@ -15,6 +15,9 @@ class GeminiSummaryWriter implements SummaryWriter
 {
     private const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent';
 
+    /** Overloaded or temporarily down: worth a retry, then the fallback model. */
+    private const BUSY_STATUSES = [500, 502, 503, 504];
+
     public function available(): bool
     {
         return (string) config('services.gemini.key') !== '';
@@ -43,17 +46,21 @@ class GeminiSummaryWriter implements SummaryWriter
             ],
         ];
 
-        $response = $this->send($body);
+        $response = $this->generate($body);
 
         // If this model or API version rejects the schema field, fall back to plain
         // JSON mode; the prompt already names the four fields.
         if ($response->status() === 400) {
             unset($body['generationConfig']['responseJsonSchema']);
-            $response = $this->send($body);
+            $response = $this->generate($body);
         }
 
         if ($response->status() === 429) {
             throw new RuntimeException('The free AI quota is used up for now. Try again later.');
+        }
+
+        if (in_array($response->status(), self::BUSY_STATUSES, true)) {
+            throw new RuntimeException('The AI service is busy right now. Try again in a minute.');
         }
 
         if ($response->failed()) {
@@ -74,13 +81,37 @@ class GeminiSummaryWriter implements SummaryWriter
         return SummaryPrompt::parse($text);
     }
 
+    /**
+     * Calls the main model, retrying once when it is busy, then tries the
+     * fallback model (GEMINI_FALLBACK_MODEL) if the main one is still busy.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    private function generate(array $body): \Illuminate\Http\Client\Response
+    {
+        $response = $this->send($this->model(), $body);
+        if (! in_array($response->status(), self::BUSY_STATUSES, true)) {
+            return $response;
+        }
+
+        usleep((int) config('services.gemini.retry_delay_ms', 1500) * 1000);
+        $response = $this->send($this->model(), $body);
+
+        $fallback = (string) config('services.gemini.fallback_model', '');
+        if (in_array($response->status(), self::BUSY_STATUSES, true) && $fallback !== '' && $fallback !== $this->model()) {
+            $response = $this->send($fallback, $body);
+        }
+
+        return $response;
+    }
+
     /** @param array<string, mixed> $body */
-    private function send(array $body): \Illuminate\Http\Client\Response
+    private function send(string $model, array $body): \Illuminate\Http\Client\Response
     {
         try {
             return Http::timeout(60)
                 ->withHeaders(['x-goog-api-key' => (string) config('services.gemini.key')])
-                ->post(sprintf(self::ENDPOINT, rawurlencode($this->model())), $body);
+                ->post(sprintf(self::ENDPOINT, rawurlencode($model)), $body);
         } catch (ConnectionException $e) {
             throw new RuntimeException('Could not reach the AI service.', 0, $e);
         }
