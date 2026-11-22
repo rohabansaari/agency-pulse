@@ -64,7 +64,7 @@ class InsightService
     {
         if (! $this->writer->available()) {
             throw ValidationException::withMessages([
-                'summary' => ['AI summaries are not set up yet. Add an Anthropic API key to turn them on.'],
+                'summary' => ['AI summaries are not set up yet. Add a Gemini or Anthropic API key to turn them on.'],
             ]);
         }
 
