@@ -180,6 +180,7 @@ export async function register(body: {
   password: string;
   /** Honeypot: always empty for people. */
   website?: string;
+  accept_terms: boolean;
 }): Promise<AuthResponse> {
   const response = await apiFetch<AuthResponse>("/auth/register", {
     method: "POST",
@@ -218,6 +219,15 @@ export async function acceptInvitation(
     auth: false,
     tenant: false,
     body: JSON.stringify({ token, password, password_confirmation }),
+  });
+}
+
+/** Records the monitoring notice (and, for admins, the Terms) for the signed-in person. */
+export async function acceptAgreements(body: { monitoring_notice: true; terms?: boolean }): Promise<{ user: User }> {
+  return apiFetch<{ user: User }>("/auth/agreements", {
+    method: "POST",
+    tenant: false,
+    body: JSON.stringify(body),
   });
 }
 

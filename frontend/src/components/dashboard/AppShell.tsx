@@ -1,6 +1,7 @@
 "use client";
 
 import { PulseLogo } from "@/components/brand/PulseLogo";
+import { AgreementGate } from "@/components/dashboard/AgreementGate";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DesktopAgentBanner } from "@/components/screenshots/DesktopAgentBanner";
 import { useAuthSession } from "@/hooks/useAuthSession";
@@ -30,7 +31,7 @@ export function useAppSession(): AppSession {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, organizationName, loading, error, loggingOut, handleLogout } =
+  const { user, organizationName, loading, error, loggingOut, handleLogout, updateUser } =
     useAuthSession();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -55,6 +56,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
       </div>
+    );
+  }
+
+  if (user.monitoring_consent_required || user.terms_acceptance_required) {
+    return (
+      <AgreementGate user={user} organizationName={organizationName} onAccepted={updateUser} onLogout={handleLogout} />
     );
   }
 

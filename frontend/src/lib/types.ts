@@ -16,6 +16,10 @@ export interface User {
   role: UserRole;
   organization_id?: number;
   email_verified_at: string | null;
+  /** Must acknowledge the time, activity and screenshot notice before tracking. */
+  monitoring_consent_required?: boolean;
+  /** Admin who hasn't accepted the current Terms of Service and Privacy Policy. */
+  terms_acceptance_required?: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -31,6 +31,7 @@ class AuthTest extends TestCase
             'organization_name' => 'Northwind Creative',
             'email' => 'Jane@Example.com',
             'password' => 'agency2026',
+            'accept_terms' => true,
         ], $overrides));
     }
 

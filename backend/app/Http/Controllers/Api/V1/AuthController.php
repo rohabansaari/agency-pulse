@@ -49,6 +49,10 @@ class AuthController extends Controller
                 'password' => $request->validated('password'),
                 'role' => UserRole::Admin,
             ]);
+            $user->forceFill([
+                'terms_accepted_at' => now(),
+                'terms_version' => config('legal.terms_version'),
+            ])->save();
 
             $membership = OrganizationMember::create([
                 'organization_id' => $organization->id,

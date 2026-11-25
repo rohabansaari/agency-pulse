@@ -24,6 +24,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [website, setWebsite] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -35,7 +36,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await register({ name, organization_name: agency, email, password, website });
+      const response = await register({ name, organization_name: agency, email, password, website, accept_terms: acceptTerms });
       router.push(await resolvePostAuthPath(response.user.role));
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
@@ -149,7 +150,28 @@ export default function RegisterPage() {
           />
         </div>
 
-        <Button type="submit" disabled={loading || !passwordOk} className="w-full" size="lg">
+        <label className="flex items-start gap-2.5 text-sm text-[var(--muted)]">
+          <input
+            type="checkbox"
+            required
+            checked={acceptTerms}
+            onChange={(event) => setAcceptTerms(event.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]"
+          />
+          <span>
+            I agree to the{" "}
+            <Link href="/terms" target="_blank" className="font-medium text-[var(--primary)] hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" target="_blank" className="font-medium text-[var(--primary)] hover:underline">
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
+
+        <Button type="submit" disabled={loading || !passwordOk || !acceptTerms} className="w-full" size="lg">
           {loading ? "Creating your workspace…" : "Create workspace"}
         </Button>
 
