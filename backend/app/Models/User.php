@@ -38,9 +38,25 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
+            'monitoring_consent_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
         ];
+    }
+
+    /** True until this person has acknowledged the current time, activity and screenshot notice. */
+    public function needsMonitoringConsent(): bool
+    {
+        return $this->monitoring_consent_at === null
+            || $this->monitoring_consent_version !== config('legal.monitoring_notice_version');
+    }
+
+    /** Admins accept the Terms of Service and Privacy Policy for their company. */
+    public function needsTermsAcceptance(): bool
+    {
+        return $this->currentRole() === UserRole::Admin
+            && $this->terms_version !== config('legal.terms_version');
     }
 
     public function currentRole(): ?UserRole

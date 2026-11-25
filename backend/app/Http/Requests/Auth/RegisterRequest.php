@@ -22,6 +22,7 @@ class RegisterRequest extends FormRequest
             'organization_name' => ['required', 'string', 'min:2', 'max:120'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', Password::min(8)->letters()->numbers()],
+            'accept_terms' => ['accepted'],
             // Honeypot: hidden on the form, so only bots fill it in.
             'website' => ['prohibited'],
         ];
@@ -43,6 +44,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'email.unique' => 'An account with this email already exists. Sign in instead.',
+            'accept_terms.accepted' => 'Please agree to the Terms of Service and Privacy Policy.',
             'website.prohibited' => 'Something went wrong. Please try again.',
         ];
     }

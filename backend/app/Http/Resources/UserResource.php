@@ -22,6 +22,8 @@ class UserResource extends JsonResource
             'role' => ($currentRole ?? $this->role)->value,
             'organization_id' => $this->organization_id,
             'email_verified_at' => $this->email_verified_at,
+            'monitoring_consent_required' => ! $this->isSuperAdmin() && $this->needsMonitoringConsent(),
+            'terms_acceptance_required' => $this->needsTermsAcceptance(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -29,6 +29,10 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'role' => UserRole::Employee,
             'remember_token' => Str::random(10),
+            'monitoring_consent_at' => now(),
+            'monitoring_consent_version' => config('legal.monitoring_notice_version'),
+            'terms_accepted_at' => now(),
+            'terms_version' => config('legal.terms_version'),
         ];
     }
 
@@ -53,6 +57,17 @@ class UserFactory extends Factory
 
             app(MembershipRoleSync::class)->syncFromMembership($membership);
         });
+    }
+
+    /** Someone who hasn't yet seen the time tracking notice or the terms. */
+    public function withoutAgreements(): static
+    {
+        return $this->state(fn () => [
+            'monitoring_consent_at' => null,
+            'monitoring_consent_version' => null,
+            'terms_accepted_at' => null,
+            'terms_version' => null,
+        ]);
     }
 
     public function admin(): static

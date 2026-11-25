@@ -6,9 +6,9 @@ use App\Http\Controllers\Api\V1\OvertimeRequestController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/start', [TimeEntryController::class, 'start']);
+Route::post('/start', [TimeEntryController::class, 'start'])->middleware('monitoring.consent');
 Route::post('/pause', [TimeEntryController::class, 'pause']);
-Route::post('/resume', [TimeEntryController::class, 'resume']);
+Route::post('/resume', [TimeEntryController::class, 'resume'])->middleware('monitoring.consent');
 Route::post('/stop', [TimeEntryController::class, 'stop']);
 Route::post('/idle', [TimeEntryController::class, 'idle']);
 Route::post('/idle/resolve', [TimeEntryController::class, 'resolveIdle']);

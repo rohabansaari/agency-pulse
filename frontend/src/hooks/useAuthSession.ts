@@ -82,5 +82,6 @@ export function useAuthSession() {
     error,
     loggingOut,
     handleLogout,
+    updateUser: setUser,
   };
 }

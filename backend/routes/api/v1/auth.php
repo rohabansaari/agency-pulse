@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AgreementController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +13,7 @@ Route::post('/accept-invitation', [InvitationController::class, 'accept']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/agreements', [AgreementController::class, 'store']);
     Route::patch('/password', [AuthController::class, 'updatePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
 });

@@ -55,7 +55,15 @@ function Footer() {
           color: "var(--night-muted)",
         }}
       >
-        <span>© {new Date().getFullYear()} AgencyPulse</span>
+        <span style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          <span>© {new Date().getFullYear()} AgencyPulse</span>
+          <Link href="/privacy" style={{ color: "var(--night-muted)" }}>
+            Privacy
+          </Link>
+          <Link href="/terms" style={{ color: "var(--night-muted)" }}>
+            Terms
+          </Link>
+        </span>
         <span>Product screenshots use the built-in sample company.</span>
       </div>
     </footer>
